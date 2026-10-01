@@ -1,0 +1,131 @@
+import type { UploadInstructions } from 'payload'
+
+import { del, list } from '@vercel/blob'
+import { put } from '@vercel/blob/client'
+import dotenv from 'dotenv'
+import { readFileSync } from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { expect } from 'vitest'
+
+import { test } from '../../__helpers/int/vitest.js'
+import { prefix } from '../shared.js'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+dotenv.config({ path: path.resolve(dirname, '../../plugin-cloud-storage/.env.emulated') })
+
+const uploadInstructionsPath = '/upload-instructions'
+
+type VercelBlobUploadInstructions = {
+  data: {
+    pathname: string
+    token: string
+  }
+  file: UploadInstructions['file']
+  name: 'uploadToVercelBlob'
+  type: 'dispatch'
+}
+
+const uploadMetadata = (collectionSlug?: string, filesize = 1) => ({
+  collectionSlug,
+  filename: 'image.png',
+  filesize,
+  mimeType: 'image/png',
+})
+
+test.suite('@payloadcms/storage-vercel-blob clientUploads', { config: './config.ts' }, () => {
+  test.afterEach(async () => {
+    const { blobs } = await list()
+    if (blobs.length > 0) {
+      await del(blobs.map((b) => b.url))
+    }
+  })
+
+  test('should upload a file via client upload flow', async ({ restClient }) => {
+    const file = readFileSync(path.resolve(dirname, '../../uploads/image.png'))
+    const instructionsResponse = await restClient.POST(uploadInstructionsPath, {
+      body: JSON.stringify(uploadMetadata('media', file.length)),
+    })
+
+    expect(instructionsResponse.status).toBe(200)
+
+    const instructions = (await instructionsResponse.json()) as VercelBlobUploadInstructions
+    expect(instructions.type).toBe('dispatch')
+    expect(instructions.name).toBe('uploadToVercelBlob')
+    expect(instructions.file).toMatchObject({
+      mimeType: 'image/png',
+      size: file.length,
+      uploadReference: {
+        _objectKey: expect.stringMatching(/^[0-9a-f-]+$/),
+        prefix: '',
+        signedReceipt: expect.any(String),
+      },
+    })
+    expect(instructions.file.filename).toBe('image.png')
+    expect(instructions.data.pathname).toBe(
+      `${(instructions.file.uploadReference as { _objectKey: string })._objectKey}/${instructions.file.filename}`,
+    )
+
+    const result = await put(instructions.data.pathname, new Blob([file], { type: 'image/png' }), {
+      access: 'public',
+      contentType: 'image/png',
+      token: instructions.data.token,
+    })
+
+    expect(result.url).toBeDefined()
+    expect(result.url).toContain(instructions.file.filename)
+
+    const { blobs } = await list()
+    const uploaded = blobs.find((b) => b.pathname === instructions.data.pathname)
+    expect(uploaded).toBeDefined()
+  })
+
+  test("should reject upload when 'x-disallow-access' header is set", async ({ restClient }) => {
+    const file = readFileSync(path.resolve(dirname, '../../uploads/image.png'))
+
+    const response = await restClient.POST(uploadInstructionsPath, {
+      body: JSON.stringify(uploadMetadata('media', file.length)),
+      headers: { 'x-disallow-access': 'true' },
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  test('should reject invalid upload metadata', async ({ restClient }) => {
+    for (const body of [
+      uploadMetadata(),
+      uploadMetadata('constructor'),
+      { ...uploadMetadata('media'), docPrefix: 1 },
+    ]) {
+      const response = await restClient.POST(uploadInstructionsPath, {
+        body: JSON.stringify(body),
+      })
+
+      expect(response.ok).toBe(false)
+    }
+  })
+
+  test('should upload a file with prefix via client upload flow', async ({ restClient }) => {
+    const file = readFileSync(path.resolve(dirname, '../../uploads/image.png'))
+    const instructionsResponse = await restClient.POST(uploadInstructionsPath, {
+      body: JSON.stringify(uploadMetadata('media-with-prefix', file.length)),
+    })
+    const instructions = (await instructionsResponse.json()) as VercelBlobUploadInstructions
+
+    const result = await put(instructions.data.pathname, new Blob([file], { type: 'image/png' }), {
+      access: 'public',
+      contentType: 'image/png',
+      token: instructions.data.token,
+    })
+
+    expect(result.url).toBeDefined()
+    expect(result.url).toContain(prefix)
+    expect(result.url).toContain(instructions.file.filename)
+
+    const { blobs } = await list()
+    const uploaded = blobs.find((b) => b.pathname === instructions.data.pathname)
+    expect(uploaded).toBeDefined()
+  })
+})

@@ -1,0 +1,38 @@
+'use client'
+import type { JSX } from 'react'
+
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { ContentEditable } from '@lexical/react/LexicalContentEditable.js'
+import { useTranslation } from '@payloadcms/ui'
+
+import './ContentEditable.css'
+
+import * as React from 'react'
+
+import type { SanitizedClientEditorConfig } from '../config/types.js'
+
+export function LexicalContentEditable({
+  className,
+  editorConfig,
+  instructionsID,
+}: {
+  className?: string
+  editorConfig: SanitizedClientEditorConfig
+  instructionsID?: string
+}): JSX.Element {
+  const { t } = useTranslation<{}, string>()
+  const [_, { getTheme }] = useLexicalComposerContext()
+  const theme = getTheme()
+  return (
+    <ContentEditable
+      aria-describedby={instructionsID}
+      aria-placeholder={t('lexical:general:placeholder')}
+      className={className ?? 'ContentEditable__root'}
+      placeholder={
+        <p className={theme?.placeholder}>
+          {editorConfig?.admin?.placeholder ?? t('lexical:general:placeholder')}
+        </p>
+      }
+    />
+  )
+}

@@ -1,0 +1,635 @@
+import crypto from 'crypto'
+
+import type { CollectionSlug, FindOptions, JsonObject } from '../../index.js'
+import type {
+  Document,
+  PayloadRequest,
+  PopulateType,
+  SelectType,
+  TransformCollectionWithSelect,
+} from '../../types/index.js'
+import type {
+  Collection,
+  DataFromCollectionSlug,
+  RequiredDataFromCollectionSlug,
+  SelectFromCollectionSlug,
+} from '../config/types.js'
+
+import { ensureUsernameOrEmail } from '../../auth/ensureUsernameOrEmail.js'
+import { executeAccess } from '../../auth/executeAccess.js'
+import { sendVerificationEmail } from '../../auth/sendVerificationEmail.js'
+import { registerLocalStrategy } from '../../auth/strategies/local/register.js'
+import { getDuplicateDocumentData } from '../../duplicateDocument/index.js'
+import { APIError } from '../../errors/index.js'
+import { fillEmptyLocalizedSlugs } from '../../fields/baseFields/slug/fillEmptyLocalizedSlugs.js'
+import { afterChange } from '../../fields/hooks/afterChange/index.js'
+import { afterRead } from '../../fields/hooks/afterRead/index.js'
+import { beforeChange } from '../../fields/hooks/beforeChange/index.js'
+import { beforeValidate } from '../../fields/hooks/beforeValidate/index.js'
+import { saveVersion } from '../../index.js'
+import { generateFileData } from '../../uploads/generateFileData.js'
+import {
+  getExternalUploadSource,
+  getUploadDestination,
+  sanitizeUploadData,
+} from '../../uploads/sanitizeUploadData.js'
+import { unlinkTempFiles } from '../../uploads/unlinkTempFiles.js'
+import { uploadFiles } from '../../uploads/uploadFiles.js'
+import { commitTransaction } from '../../utilities/commitTransaction.js'
+import {
+  hasDraftsEnabled,
+  hasDraftValidationEnabled,
+  hasLocalizeStatusEnabled,
+} from '../../utilities/getVersionsConfig.js'
+import { initTransaction } from '../../utilities/initTransaction.js'
+import { killTransaction } from '../../utilities/killTransaction.js'
+import { resolveSelect } from '../../utilities/resolveSelect.js'
+import { sanitizeInternalFields } from '../../utilities/sanitizeInternalFields.js'
+import { sanitizeSelect } from '../../utilities/sanitizeSelect.js'
+import {
+  buildAllLocalesPublicationHookDoc,
+  getAllLocalesPublicationStatus,
+  hasAuthorizedAllLocalesPublicationStatus,
+  normalizeAllLocalesPublicationStatus,
+  reconcileAllLocalesPublicationStatus,
+} from '../../versions/allLocalesPublicationStatus.js'
+import { buildAfterOperation } from './utilities/buildAfterOperation.js'
+import { buildBeforeOperation } from './utilities/buildBeforeOperation.js'
+
+export type Arguments<TSlug extends CollectionSlug> = {
+  autosave?: boolean
+  collection: Collection
+  data: RequiredDataFromCollectionSlug<TSlug>
+  depth?: number
+  disableTransaction?: boolean
+  disableVerificationEmail?: boolean
+  draft?: boolean
+  duplicateFromID?: DataFromCollectionSlug<TSlug>['id']
+  overrideAccess?: boolean
+  overwriteExistingFiles?: boolean
+  populate?: PopulateType
+  publishAllLocales?: boolean
+  req: PayloadRequest
+  selectedLocales?: string[]
+  showHiddenFields?: boolean
+} & Pick<FindOptions<TSlug, SelectType>, 'select'>
+
+export const createOperation = async <
+  TSlug extends CollectionSlug,
+  TSelect extends SelectFromCollectionSlug<TSlug>,
+>(
+  incomingArgs: Arguments<TSlug>,
+): Promise<TransformCollectionWithSelect<TSlug, TSelect>> => {
+  let args = incomingArgs
+  let externalUploadSource: ReturnType<typeof getExternalUploadSource>
+
+  try {
+    const shouldCommit = !args.disableTransaction && (await initTransaction(args.req))
+
+    // Keep a remote URL only as an ephemeral file source, then strip all submitted generated
+    // identity before untrusted create hooks run. The fetched file receives new server-owned
+    // identity before persistence.
+    if (args.collection.config.upload && !args.overrideAccess) {
+      externalUploadSource = getExternalUploadSource(args.data)
+      const { objectKey, prefix } = getUploadDestination({ data: args.data, file: args.req.file })
+      const sanitizedData = sanitizeUploadData(args.data, 'create')
+
+      args = {
+        ...args,
+        data:
+          typeof sanitizedData === 'object' && sanitizedData !== null
+            ? {
+                ...sanitizedData,
+                ...(prefix !== undefined ? { prefix } : {}),
+                ...(objectKey !== undefined ? { _objectKey: objectKey } : {}),
+              }
+            : sanitizedData,
+      }
+    }
+
+    const initialCollectionConfig = args.collection.config
+    const initialPublishAllLocales =
+      !args.draft && (args.publishAllLocales ?? !hasLocalizeStatusEnabled(initialCollectionConfig))
+    const initialAllLocalesPublicationStatus = getAllLocalesPublicationStatus({
+      hasLocalizedStatus: Boolean(
+        args.req.payload.config.localization && hasLocalizeStatusEnabled(initialCollectionConfig),
+      ),
+      publishAllLocales: initialPublishAllLocales,
+      unpublishAllLocales: false,
+    })
+
+    const initialAllLocalesPublicationIntent = normalizeAllLocalesPublicationStatus({
+      data: args.data,
+      status: initialAllLocalesPublicationStatus,
+    })
+    ensureUsernameOrEmail<TSlug>({
+      authOptions: args.collection.config.auth,
+      collectionSlug: args.collection.config.slug,
+      data: args.data,
+      operation: 'create',
+      req: args.req,
+    })
+
+    // /////////////////////////////////////
+    // beforeOperation - Collection
+    // /////////////////////////////////////
+
+    args = await buildBeforeOperation({
+      args,
+      collection: args.collection.config,
+      operation: 'create',
+      overrideAccess: args.overrideAccess!,
+    })
+
+    const {
+      autosave = false,
+      collection: { config: collectionConfig },
+      collection,
+      depth,
+      disableVerificationEmail,
+      draft = false,
+      duplicateFromID,
+      overrideAccess,
+      overwriteExistingFiles = false,
+      populate,
+      publishAllLocales: publishAllLocalesArg,
+      req: {
+        fallbackLocale,
+        locale,
+        payload,
+        payload: { config },
+      },
+      req,
+      select: incomingSelect,
+      selectedLocales,
+      showHiddenFields,
+    } = args
+
+    let { data } = args
+
+    // For creates there is no existing doc — always publish all locales when not a draft.
+    let publishAllLocales =
+      !draft && (publishAllLocalesArg ?? !hasLocalizeStatusEnabled(collectionConfig))
+    const requestedAllLocalesPublicationStatus = getAllLocalesPublicationStatus({
+      hasLocalizedStatus: Boolean(
+        config.localization && hasLocalizeStatusEnabled(collectionConfig),
+      ),
+      publishAllLocales,
+      unpublishAllLocales: false,
+    })
+    const allLocalesPublicationStatus = reconcileAllLocalesPublicationStatus({
+      data,
+      intent: initialAllLocalesPublicationIntent,
+      status: requestedAllLocalesPublicationStatus,
+    })
+
+    if (requestedAllLocalesPublicationStatus && !allLocalesPublicationStatus) {
+      publishAllLocales = false
+    }
+
+    const isSavingDraft = Boolean(draft && hasDraftsEnabled(collectionConfig) && !publishAllLocales)
+
+    if (isSavingDraft) {
+      data._status = 'draft'
+    }
+
+    const isDuplicating = duplicateFromID !== undefined && duplicateFromID !== null
+
+    if (isDuplicating && collectionConfig.disableDuplicate === true) {
+      throw new APIError(
+        `The collection with slug ${String(collectionConfig.slug)} cannot be duplicated.`,
+        400,
+      )
+    }
+
+    let duplicatedFromDocWithLocales: JsonObject = {}
+    let duplicatedFromDoc: JsonObject = {}
+
+    if (isDuplicating) {
+      const duplicateResult = await getDuplicateDocumentData({
+        id: duplicateFromID,
+        collectionConfig,
+        draftArg: isSavingDraft,
+        overrideAccess,
+        req,
+        selectedLocales,
+      })
+
+      duplicatedFromDoc = duplicateResult.duplicatedFromDoc
+      duplicatedFromDocWithLocales = duplicateResult.duplicatedFromDocWithLocales
+    }
+
+    // /////////////////////////////////////
+    // Access
+    // /////////////////////////////////////
+
+    if (!overrideAccess) {
+      await executeAccess(
+        { slug: collectionConfig.slug, data, req },
+        collectionConfig.access.create,
+      )
+    }
+
+    // /////////////////////////////////////
+    // Generate data for all files and sizes
+    // /////////////////////////////////////
+
+    const { data: newFileData, files: filesToUpload } = await generateFileData({
+      collection,
+      config,
+      data,
+      draft: isSavingDraft,
+      externalUploadSource,
+      isDuplicating,
+      operation: 'create',
+      originalDoc: duplicatedFromDoc,
+      overwriteExistingFiles,
+      req,
+      throwOnMissingFile:
+        !isSavingDraft && collection.config.upload.filesRequiredOnCreate !== false,
+    })
+
+    data = newFileData
+
+    // /////////////////////////////////////
+    // beforeValidate - Fields
+    // /////////////////////////////////////
+
+    let statusFieldAccess = false
+    const publicationFieldPolicyDoc = buildAllLocalesPublicationHookDoc({
+      doc: duplicatedFromDoc,
+      docWithLocales: duplicatedFromDocWithLocales,
+      status:
+        data._status === allLocalesPublicationStatus ? allLocalesPublicationStatus : undefined,
+    })
+
+    data = await beforeValidate({
+      collection: collectionConfig,
+      context: req.context,
+      data,
+      doc: duplicatedFromDoc,
+      docForHooks: publicationFieldPolicyDoc,
+      global: null,
+      onFieldAccess: ({ accessResult, path }) => {
+        if (path === '_status') {
+          statusFieldAccess = accessResult
+        }
+      },
+      operation: 'create',
+      overrideAccess: overrideAccess!,
+      req,
+    })
+
+    const publicationHookDoc = buildAllLocalesPublicationHookDoc({
+      doc: duplicatedFromDoc,
+      docWithLocales: duplicatedFromDocWithLocales,
+      status:
+        statusFieldAccess && data._status === allLocalesPublicationStatus
+          ? allLocalesPublicationStatus
+          : undefined,
+    })
+
+    // /////////////////////////////////////
+    // beforeValidate - Collections
+    // /////////////////////////////////////
+
+    if (collectionConfig.hooks.beforeValidate?.length) {
+      for (const hook of collectionConfig.hooks.beforeValidate) {
+        data =
+          (await hook({
+            collection: collectionConfig,
+            context: req.context,
+            data,
+            operation: 'create',
+            originalDoc: publicationHookDoc,
+            req,
+          })) || data
+      }
+    }
+
+    // /////////////////////////////////////
+    // beforeChange - Collection
+    // /////////////////////////////////////
+
+    if (collectionConfig.hooks?.beforeChange?.length) {
+      for (const hook of collectionConfig.hooks.beforeChange) {
+        data =
+          (await hook({
+            collection: collectionConfig,
+            context: req.context,
+            data,
+            operation: 'create',
+            originalDoc: publicationHookDoc,
+            req,
+          })) || data
+      }
+    }
+
+    const publicationData = { ...data }
+
+    // /////////////////////////////////////
+    // beforeChange - Fields
+    // /////////////////////////////////////
+
+    let statusFieldValue: unknown
+    const docWithLocalesForFields = !statusFieldAccess
+      ? { ...duplicatedFromDocWithLocales, _status: {} }
+      : duplicatedFromDocWithLocales
+
+    const dataWithLocales = await beforeChange<JsonObject>({
+      collection: collectionConfig,
+      context: req.context,
+      data,
+      doc: publicationHookDoc,
+      docWithLocales: docWithLocalesForFields,
+      global: null,
+      onDataProcessed: (processedData) => {
+        statusFieldValue = processedData._status
+      },
+      operation: 'create',
+      overrideAccess,
+      req,
+      skipValidation: isSavingDraft && !hasDraftValidationEnabled(collectionConfig),
+    })
+
+    const hasAuthorizedPublicationStatus = hasAuthorizedAllLocalesPublicationStatus({
+      data: publicationData,
+      fieldAccessDenied: !statusFieldAccess,
+      fieldValue: statusFieldValue,
+      status: allLocalesPublicationStatus,
+    })
+
+    if (
+      allLocalesPublicationStatus &&
+      !hasAuthorizedPublicationStatus &&
+      statusFieldAccess &&
+      typeof statusFieldValue === 'undefined' &&
+      typeof duplicatedFromDocWithLocales._status === 'object' &&
+      duplicatedFromDocWithLocales._status !== null
+    ) {
+      dataWithLocales._status = { ...duplicatedFromDocWithLocales._status }
+    }
+
+    // When locale='all' or when beforeChange doesn't convert the string (e.g. no locale hook ran),
+    // the localized _status remains a plain string. Expand it to a per-locale object so MongoDB
+    // doesn't reject the write. This covers both draft and non-draft operations.
+    if (
+      config.localization &&
+      hasLocalizeStatusEnabled(collectionConfig) &&
+      typeof dataWithLocales._status === 'string'
+    ) {
+      const statusStr = dataWithLocales._status
+
+      if (
+        hasAuthorizedPublicationStatus &&
+        typeof duplicatedFromDocWithLocales._status === 'object' &&
+        duplicatedFromDocWithLocales._status !== null
+      ) {
+        dataWithLocales._status = { ...duplicatedFromDocWithLocales._status }
+      } else {
+        dataWithLocales._status = {}
+      }
+
+      if (!hasAuthorizedPublicationStatus) {
+        for (const localeCode of config.localization.localeCodes) {
+          ;(dataWithLocales._status as Record<string, unknown>)[localeCode] = statusStr
+        }
+      }
+    }
+
+    if (
+      config.localization &&
+      hasLocalizeStatusEnabled(collectionConfig) &&
+      hasAuthorizedPublicationStatus
+    ) {
+      let accessibleLocaleCodes = config.localization.localeCodes
+
+      if (config.localization.filterAvailableLocales) {
+        const filteredLocales = await config.localization.filterAvailableLocales({
+          locales: config.localization.locales,
+          req,
+        })
+        accessibleLocaleCodes = filteredLocales.map((locale) =>
+          typeof locale === 'string' ? locale : locale.code,
+        )
+      }
+
+      if (typeof dataWithLocales._status !== 'object' || dataWithLocales._status === null) {
+        dataWithLocales._status = {}
+      }
+
+      for (const localeCode of accessibleLocaleCodes) {
+        dataWithLocales._status[localeCode] = 'published'
+      }
+    }
+
+    // Fill every locale of a localized slug so switching locales never lands on an empty slug. The
+    // slug field hook only sees the active locale, so the rest are seeded here on create.
+    if (config.localization) {
+      await fillEmptyLocalizedSlugs({
+        collection: collectionConfig,
+        data: dataWithLocales,
+        overrideAccess,
+        req,
+      })
+    }
+
+    // /////////////////////////////////////
+    // Write files to local storage
+    // /////////////////////////////////////
+
+    if (!collectionConfig.upload.disableLocalStorage) {
+      await uploadFiles(payload, filesToUpload, req)
+    }
+
+    // /////////////////////////////////////
+    // Create
+    // /////////////////////////////////////
+
+    let doc
+
+    const select = sanitizeSelect({
+      fields: collectionConfig.flattenedFields,
+      select: resolveSelect({
+        config: collectionConfig.select,
+        operation: 'create',
+        req,
+        select: incomingSelect,
+      }),
+    })
+
+    if (collectionConfig.auth && !collectionConfig.auth.disableLocalStrategy) {
+      if (collectionConfig.auth.verify) {
+        dataWithLocales._verified = Boolean(dataWithLocales._verified) || false
+        dataWithLocales._verificationToken = crypto.randomBytes(20).toString('hex')
+      }
+
+      doc = await registerLocalStrategy({
+        collection: collectionConfig,
+        doc: dataWithLocales,
+        password: data.password as string,
+        payload: req.payload,
+        req,
+      })
+    } else {
+      doc = await payload.db.create({
+        collection: collectionConfig.slug,
+        data: dataWithLocales,
+        req,
+      })
+    }
+
+    const verificationToken = doc._verificationToken
+    let resultWithLocales: Document = sanitizeInternalFields(doc)
+
+    // /////////////////////////////////////
+    // Add collection property for auth collections
+    // /////////////////////////////////////
+
+    if (collectionConfig.auth) {
+      resultWithLocales = { ...resultWithLocales, collection: collectionConfig.slug }
+    }
+
+    // /////////////////////////////////////
+    // Create version
+    // /////////////////////////////////////
+
+    if (collectionConfig.versions) {
+      await saveVersion({
+        id: resultWithLocales.id,
+        autosave,
+        collection: collectionConfig,
+        docWithLocales: resultWithLocales,
+        operation: 'create',
+        payload,
+        req,
+        returning: false,
+      })
+    }
+
+    // /////////////////////////////////////
+    // Send verification email if applicable
+    // /////////////////////////////////////
+
+    if (collectionConfig.auth && collectionConfig.auth.verify && resultWithLocales.email) {
+      await sendVerificationEmail({
+        collection: { config: collectionConfig },
+        config: payload.config,
+        disableEmail: disableVerificationEmail!,
+        email: payload.email,
+        req,
+        token: verificationToken,
+        user: resultWithLocales,
+      })
+    }
+
+    // /////////////////////////////////////
+    // afterRead - Fields
+    // /////////////////////////////////////
+
+    let result: Document = await afterRead({
+      collection: collectionConfig,
+      context: req.context,
+      depth: depth!,
+      doc: resultWithLocales,
+      draft,
+      fallbackLocale: fallbackLocale!,
+      global: null,
+      locale: locale!,
+      overrideAccess: overrideAccess!,
+      populate,
+      req,
+      select,
+      showHiddenFields: showHiddenFields!,
+    })
+
+    // /////////////////////////////////////
+    // afterRead - Collection
+    // /////////////////////////////////////
+
+    if (collectionConfig.hooks?.afterRead?.length) {
+      for (const hook of collectionConfig.hooks.afterRead) {
+        result =
+          (await hook({
+            collection: collectionConfig,
+            context: req.context,
+            doc: result,
+            overrideAccess,
+            req,
+          })) || result
+      }
+    }
+
+    // /////////////////////////////////////
+    // afterChange - Fields
+    // /////////////////////////////////////
+
+    result = await afterChange({
+      collection: collectionConfig,
+      context: req.context,
+      data,
+      doc: result,
+      global: null,
+      operation: 'create',
+      previousDoc: {},
+      req,
+    })
+
+    // /////////////////////////////////////
+    // afterChange - Collection
+    // /////////////////////////////////////
+
+    if (collectionConfig.hooks?.afterChange?.length) {
+      for (const hook of collectionConfig.hooks.afterChange) {
+        result =
+          (await hook({
+            collection: collectionConfig,
+            context: req.context,
+            data,
+            doc: result,
+            operation: 'create',
+            overrideAccess,
+            previousDoc: {},
+            req: args.req,
+            select,
+          })) || result
+      }
+    }
+
+    // /////////////////////////////////////
+    // afterOperation - Collection
+    // /////////////////////////////////////
+
+    result = await buildAfterOperation<TSlug>({
+      args,
+      collection: collectionConfig,
+      operation: 'create',
+      overrideAccess: args.overrideAccess!,
+      result,
+    })
+
+    await unlinkTempFiles({ collectionConfig, config, req }).catch((unlinkError) => {
+      req.payload.logger.error({ err: unlinkError, msg: 'Failed to remove temp file' })
+    })
+
+    // /////////////////////////////////////
+    // Return results
+    // /////////////////////////////////////
+
+    if (shouldCommit) {
+      await commitTransaction(req)
+    }
+
+    return result
+  } catch (error: unknown) {
+    await unlinkTempFiles({
+      collectionConfig: args.collection.config,
+      config: args.req.payload.config,
+      req: args.req,
+    }).catch((unlinkError) => {
+      args.req.payload.logger.error({ err: unlinkError, msg: 'Failed to remove temp file' })
+    })
+    await killTransaction(args.req)
+    throw error
+  }
+}
