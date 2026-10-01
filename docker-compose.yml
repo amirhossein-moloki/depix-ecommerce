@@ -6,15 +6,15 @@ services:
     container_name: depix-postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-depix_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,10 +45,10 @@ services:
       - "${MEDUSA_PORT:-9000}:9000"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: ${MEDUSA_DATABASE_URL:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${MEDUSA_DB_NAME:-medusa_db}}
+      DATABASE_URL: ${MEDUSA_DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      JWT_SECRET: ${MEDUSA_JWT_SECRET:-}
-      COOKIE_SECRET: ${MEDUSA_COOKIE_SECRET:-}
+      JWT_SECRET: ${MEDUSA_JWT_SECRET}
+      COOKIE_SECRET: ${MEDUSA_COOKIE_SECRET}
       PORT: 9000
     command: sh -c "corepack enable && yarn dev"
     depends_on:
@@ -69,8 +69,8 @@ services:
       - "${PAYLOAD_PORT:-3000}:3000"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: ${PAYLOAD_DATABASE_URL:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${PAYLOAD_DB_NAME:-payload_db}}
-      PAYLOAD_SECRET: ${PAYLOAD_SECRET:-}
+      DATABASE_URL: ${PAYLOAD_DATABASE_URL}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET}
       PORT: 3000
     command: sh -c "corepack enable && pnpm dev"
     depends_on:
