@@ -69,7 +69,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront application directory present in workspace root.
 **What exists:** Nginx reverse proxy configuration in `infrastructure/nginx/nginx.conf` proxies `/` route.
 **What is missing:** Complete Storefront frontend web application (e.g., Next.js / Remix / Nuxt).
-**Evidence:** Repository search confirms no storefront package or application exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront application directory present in workspace root.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront frontend package / repository. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Complete Storefront frontend web application (e.g., Next.js / Remix / Nuxt).)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront frontend package / repository.
 **Required Work:** Build Next.js storefront application and connect to Medusa Store API and Payload CMS API.
 **Conclusion:** Feature represents frontend UI only.
@@ -80,7 +91,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront application in repository.
 **What exists:** Payload CMS framework package `payload/packages/plugin-nested-docs` natively available for nested menu structures.
 **What is missing:** Storefront Header, Footer, and Menu navigation UI components.
-**Evidence:** Framework capability exists in `payload/packages/plugin-nested-docs`, but no storefront navigation component exists.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront application in repository.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront frontend application, Payload Globals/Collections. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Storefront Header, Footer, and Menu navigation UI components.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront frontend application, Payload Globals/Collections.
 **Required Work:** Configure navigation global in Payload CMS and render in Storefront UI.
 **Conclusion:** Storefront layout components absent.
@@ -91,7 +113,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront application in workspace.
 **What exists:** Payload Admin UI (`payload/packages/ui`) contains responsive CSS/React layouts.
 **What is missing:** Responsive Tailwind CSS / CSS grid/flex layout for Storefront.
-**Evidence:** Storefront UI code is missing entirely.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront application in workspace.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront CSS framework setup. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Responsive Tailwind CSS / CSS grid/flex layout for Storefront.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront CSS framework setup.
 **Required Work:** Implement mobile-first responsive layout in storefront app.
 **Conclusion:** Frontend presentation capability.
@@ -102,7 +135,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront application in workspace.
 **What exists:** Default framework assets in `medusa/` and `payload/`.
 **What is missing:** Custom design system, branding theme, custom React components.
-**Evidence:** Repository contains framework source trees without custom project design system.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront application in workspace.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Frontend design system and UI library. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Custom design system, branding theme, custom React components.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Frontend design system and UI library.
 **Required Work:** Build custom UI theme and design system for storefront.
 **Conclusion:** Frontend design task.
@@ -113,7 +157,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront routing app found.
 **What exists:** Payload CMS core package (`payload/packages/payload`) supports static pages capability.
 **What is missing:** About Us page collection item in Payload CMS and frontend page route.
-**Evidence:** Framework capability exists in Payload core, but project lacks static page instance or route.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront routing app found.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload Pages collection, Storefront page route. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (About Us page collection item in Payload CMS and frontend page route.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload Pages collection, Storefront page route.
 **Required Work:** Create About Us page in Payload CMS and route in Storefront.
 **Conclusion:** Page content and frontend route missing.
@@ -124,7 +179,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront contact route or form component.
 **What exists:** Payload Form Builder plugin (`payload/packages/plugin-form-builder`).
 **What is missing:** Contact form component and submission API handler in storefront.
-**Evidence:** Framework package `@payloadcms/plugin-form-builder` exists in `payload/packages/plugin-form-builder`, but storefront component is missing.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront contact route or form component.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload Form Builder, Storefront UI form. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Contact form component and submission API handler in storefront.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload Form Builder, Storefront UI form.
 **Required Work:** Configure contact form in Payload CMS and build UI on storefront.
 **Conclusion:** Storefront UI form missing.
@@ -135,7 +201,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront catalog app found.
 **What exists:** Medusa Product Module API (`GET /store/products`) in `medusa/packages/medusa/src/api/store/products`.
 **What is missing:** Storefront product catalog grid, filters, and product card components.
-**Evidence:** Framework API exists in Medusa, but project lacks storefront catalog frontend.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront catalog app found.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product API, Storefront UI. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Storefront product catalog grid, filters, and product card components.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product API, Storefront UI.
 **Required Work:** Implement product catalog page in storefront fetching from Medusa API.
 **Conclusion:** Backend API natively available in framework; Storefront UI missing.
@@ -146,7 +223,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront category page.
 **What exists:** Medusa Product Category API (`GET /store/product-categories`) in `medusa/packages/medusa/src/api/store/product-categories`.
 **What is missing:** Category listing page and category navigation menu in storefront.
-**Evidence:** Category endpoint exists in Medusa framework source code; storefront frontend is absent.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront category page.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module, Storefront UI. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Category listing page and category navigation menu in storefront.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module, Storefront UI.
 **Required Work:** Fetch product categories from Medusa API and render in storefront.
 **Conclusion:** Storefront category page missing.
@@ -157,7 +245,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront product detail route.
 **What exists:** Medusa Product API (`GET /store/products/:id`) in `medusa/packages/medusa/src/api/store/products`.
 **What is missing:** Storefront PDP (Product Details Page) component, variant selector, price display.
-**Evidence:** Endpoint exists in Medusa framework source code; storefront app is missing.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront product detail route.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product & Pricing Modules, Storefront PDP UI. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Storefront PDP (Product Details Page) component, variant selector, price display.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product & Pricing Modules, Storefront PDP UI.
 **Required Work:** Create product detail page component in storefront app.
 **Conclusion:** Storefront UI component missing.
@@ -168,7 +267,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront media components.
 **What exists:** Medusa product schema supports `images` array in `medusa/packages/modules/product/src/models/product.ts`.
 **What is missing:** Frontend image carousel / lightbox / thumbnail selector component.
-**Evidence:** Medusa Product model supports image attachments; storefront UI component does not exist.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront media components.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront image slider component. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Frontend image carousel / lightbox / thumbnail selector component.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront image slider component.
 **Required Work:** Build product image gallery component in storefront.
 **Conclusion:** Storefront UI component missing.
@@ -179,7 +289,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No search bar component in storefront.
 **What exists:** Medusa Product API query filter (`GET /store/products?q=`) in `medusa/packages/medusa/src/api/store/products`.
 **What is missing:** Search input header bar and search results page on storefront.
-**Evidence:** Medusa core supports keyword search query parameter; storefront search bar is missing.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No search bar component in storefront.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront header search input. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Search input header bar and search results page on storefront.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront header search input.
 **Required Work:** Add search input control to storefront header.
 **Conclusion:** Storefront UI component missing.
@@ -190,12 +311,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No WhatsApp order button component.
 **What exists:** None.
 **What is missing:** Storefront WhatsApp deep-link builder (`https://wa.me/...`) formatting cart/product items into message text.
-**Evidence:** Repository search confirms no WhatsApp URL generator script exists.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No WhatsApp order button component.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront PDP / Cart UI. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Storefront WhatsApp deep-link builder (`https://wa.me/...`) formatting cart/product items into message text.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront PDP / Cart UI.
 **Required Work:** Build helper function formatting product/cart details into WhatsApp URL link.
 **Conclusion:** Storefront UI feature.
-
-## 2. Product Management
 
 ### 13. پنل مدیریت ساده (Basic Admin Panel)
 **Status:** 🔵 NATIVE_AVAILABLE
@@ -203,7 +333,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/admin/dashboard`, `payload/packages/ui` | Project integration: NOT FOUND
 **What exists:** Medusa Admin Dashboard package and Payload Admin UI package exist in framework source trees.
 **What is missing:** Custom admin workspace application configuration, build step, and deployed admin routes.
-**Evidence:** Framework source code exists in `medusa/packages/admin` and `payload/packages/ui`. Workspace lacks custom admin entry configuration.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/admin/dashboard`, `payload/packages/ui` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Admin, Payload Admin. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa Admin Dashboard package and Payload Admin UI package exist in framework source trees.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Admin, Payload Admin.
 **Required Work:** Configure and deploy admin dashboard applications.
 **Conclusion:** Framework capability exists, project integration missing.
@@ -214,7 +355,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND
 **What exists:** Full CRUD capabilities for products, titles, descriptions, options, and variants in Medusa Product Module.
 **What is missing:** Custom product schema extensions, workspace seed scripts, or configured product management instance.
-**Evidence:** Product Module source exists in `medusa/packages/modules/product`. No custom project configuration exists.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Full CRUD capabilities for products, titles, descriptions, options, and variants in Medusa Product Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module.
 **Required Work:** Deploy Medusa backend and use Admin API/UI for product CRUD.
 **Conclusion:** Framework capability exists natively; project integration missing.
@@ -225,7 +377,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND
 **What exists:** Hierarchical category tree management service and API (`/admin/product-categories`) in Medusa Product Module.
 **What is missing:** Workspace category configuration or seed data.
-**Evidence:** Category model and service exist in `medusa/packages/modules/product/src/models/product-category.ts`. No workspace category instance configured.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Hierarchical category tree management service and API (`/admin/product-categories`) in Medusa Product Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module.
 **Required Work:** Configure and manage product categories via Medusa Admin API.
 **Conclusion:** Native Medusa framework feature; project integration missing.
@@ -236,7 +399,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload` | Project integration: NOT FOUND
 **What exists:** Payload CMS Global / Collection architectural capabilities for slide banners.
 **What is missing:** `Banners` collection definition in custom `payload.config.ts`.
-**Evidence:** Payload framework supports Globals and Collections. Project lacks custom Payload config file.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payload CMS Global / Collection architectural capabilities for slide banners.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Define `Banners` collection in project Payload configuration.
 **Conclusion:** Framework capability exists in Payload; project configuration missing.
@@ -247,7 +421,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No storefront auth pages in repository.
 **What exists:** Medusa Auth Module (`medusa/packages/modules/auth`) provides `/store/auth/emailpass` endpoints.
 **What is missing:** Storefront Sign Up and Login pages and form handlers.
-**Evidence:** Medusa backend auth endpoints exist natively in framework; storefront auth UI is missing.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No storefront auth pages in repository.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Auth Module, Storefront Auth UI. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Storefront Sign Up and Login pages and form handlers.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Auth Module, Storefront Auth UI.
 **Required Work:** Build customer login and registration pages on storefront.
 **Conclusion:** Storefront authentication UI missing.
@@ -258,7 +443,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No customer account dashboard in storefront.
 **What exists:** Medusa Customer Module API (`/store/customers/me`) in `medusa/packages/modules/customer`.
 **What is missing:** Customer profile page, account settings forms, and address manager UI on storefront.
-**Evidence:** Medusa Customer API exists in framework; storefront account dashboard missing.
+
+### Evidence
+- **Source:** Framework capability: PARTIAL | Project implementation: NOT FOUND. (No customer account dashboard in storefront.)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Customer Module, Storefront UI. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** Storefront UI / route component missing in workspace. (Customer profile page, account settings forms, and address manager UI on storefront.)
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Customer Module, Storefront UI.
 **Required Work:** Create customer profile dashboard page on storefront.
 **Conclusion:** Storefront UI component missing.
@@ -269,7 +465,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/customer` | Project integration: NOT FOUND
 **What exists:** Customer address CRUD API (`/store/customers/me/addresses`) and entity in Medusa Customer Module.
 **What is missing:** Storefront address book forms and workspace address schema customizations.
-**Evidence:** Address model exists in `medusa/packages/modules/customer/src/models/address.ts`. Workspace lacks storefront address form integration.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/customer` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Customer Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Customer address CRUD API (`/store/customers/me/addresses`) and entity in Medusa Customer Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Customer Module.
 **Required Work:** Integrate Medusa Customer Address API with storefront address book component.
 **Conclusion:** Native Medusa framework capability; project storefront integration missing.
@@ -280,12 +487,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/cart` | Project integration: NOT FOUND
 **What exists:** Medusa Cart Module allows creating carts with `email` without requiring `customer_id`.
 **What is missing:** Storefront guest checkout UI workflow step.
-**Evidence:** Cart schema in `medusa/packages/modules/cart/src/models/cart.ts` permits null `customer_id`. Storefront UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/cart` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Cart Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa Cart Module allows creating carts with `email` without requiring `customer_id`.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Cart Module.
 **Required Work:** Implement guest checkout form and email prompt on storefront.
 **Conclusion:** Native Medusa framework capability; project storefront workflow missing.
-
-## 3. Commerce
 
 ### 21. سبد خرید (Cart Management)
 **Status:** 🔵 NATIVE_AVAILABLE
@@ -293,7 +509,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/cart` | Project integration: NOT FOUND
 **What exists:** Complete Cart lifecycle API (`/store/carts`, add/update/remove line items) in Medusa Cart Module.
 **What is missing:** Storefront cart drawer / cart page UI components and local storage synchronization logic.
-**Evidence:** Service implemented in `medusa/packages/modules/cart/src/services/cart-module-service.ts`. Project storefront UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/cart` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Cart Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Complete Cart lifecycle API (`/store/carts`, add/update/remove line items) in Medusa Cart Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Cart Module.
 **Required Work:** Connect storefront cart drawer to Medusa Cart Store API.
 **Conclusion:** Native framework feature; project storefront integration missing.
@@ -304,7 +531,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND
 **What exists:** Order creation from completed cart workflow (`POST /store/carts/:id/complete`) in Medusa Order Module.
 **What is missing:** Custom order completion handler or post-order processing logic in workspace.
-**Evidence:** Order Module and completion workflows exist in `medusa/packages/modules/order`. Workspace custom integration missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Cart & Order Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Order creation from completed cart workflow (`POST /store/carts/:id/complete`) in Medusa Order Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Cart & Order Modules.
 **Required Work:** Wire storefront checkout submit button to cart completion API.
 **Conclusion:** Native framework capability; project integration missing.
@@ -315,7 +553,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/cart`, `medusa/packages/modules/payment` | Project integration: NOT FOUND
 **What exists:** Address selection, shipping method assignment, and payment collection initialization APIs in Medusa core.
 **What is missing:** Storefront multi-step checkout wizard component.
-**Evidence:** Checkout step endpoints exist in Medusa framework source code; storefront checkout flow is missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/cart`, `medusa/packages/modules/payment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Cart, Fulfillment, Payment Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Address selection, shipping method assignment, and payment collection initialization APIs in Medusa core.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Cart, Fulfillment, Payment Modules.
 **Required Work:** Build multi-step checkout UI in storefront app.
 **Conclusion:** Native Medusa capability; storefront UI missing.
@@ -326,7 +575,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND
 **What exists:** Medusa Payment Module engine and default system payment provider (`system`).
 **What is missing:** Custom payment provider plugin for Iranian payment gateways (ZarinPal, Shaparak, IdPay).
-**Evidence:** Payment Module engine exists in `medusa/packages/modules/payment`. No Iranian payment gateway plugin installed or configured in workspace.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Payment Provider Plugin, Iranian Payment Gateway REST API. (installed in monorepo packages, project integration missing).
+- **Backend:** Requires external provider/service integration. (Medusa Payment Module engine and default system payment provider (`system`).)
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Payment Provider Plugin, Iranian Payment Gateway REST API.
 **Required Work:** Build or install a Medusa payment provider plugin for Iranian payment gateway.
 **Conclusion:** Requires third-party external payment provider integration.
@@ -337,7 +597,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND
 **What exists:** Payment collections, payment captures, refunds, and transaction status models in Medusa Payment Module.
 **What is missing:** Iranian bank reference number tracking customization.
-**Evidence:** Models exist in `medusa/packages/modules/payment/src/models/payment.ts`. Custom workspace transaction handlers missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Payment Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payment collections, payment captures, refunds, and transaction status models in Medusa Payment Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Payment Module.
 **Required Work:** Utilize Medusa payment capture/refund APIs in admin operations.
 **Conclusion:** Native Medusa framework capability; project integration missing.
@@ -348,7 +619,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND
 **What exists:** Shipping options, fulfillment providers architecture, and shipping profile models in Medusa Fulfillment Module.
 **What is missing:** Project configuration for local delivery options or courier plugins.
-**Evidence:** Service implemented in `medusa/packages/modules/fulfillment/src/services/fulfillment-module-service.ts`. Workspace options not configured.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Fulfillment Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Shipping options, fulfillment providers architecture, and shipping profile models in Medusa Fulfillment Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Fulfillment Module.
 **Required Work:** Configure shipping options and fulfillment providers in Medusa Admin.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -359,7 +641,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND
 **What exists:** Flat rate and calculated price rules engine for shipping options in Medusa Fulfillment Module.
 **What is missing:** API integration with Iranian courier/post services (Tipax, Pishro) for dynamic rate calculation.
-**Evidence:** Shipping price calculation logic exists in `medusa/packages/modules/fulfillment`. Project dynamic rate provider missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Fulfillment & Pricing Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Flat rate and calculated price rules engine for shipping options in Medusa Fulfillment Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Fulfillment & Pricing Modules.
 **Required Work:** Set flat rate shipping prices or build dynamic fulfillment provider.
 **Conclusion:** Native framework capability; project integration missing.
@@ -370,7 +663,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND
 **What exists:** Promo codes, rule-based discounts, and promotion application service in Medusa Promotion Module.
 **What is missing:** Storefront promo code input field and cart discount display.
-**Evidence:** Service implemented in `medusa/packages/modules/promotion/src/services/promotion-module-service.ts`. Storefront component missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Promotion Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Promo codes, rule-based discounts, and promotion application service in Medusa Promotion Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Promotion Module.
 **Required Work:** Add coupon code input field to storefront cart/checkout.
 **Conclusion:** Native Medusa framework capability; storefront UI missing.
@@ -381,7 +685,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No review database model or module found in repository.
 **What exists:** None.
 **What is missing:** Product review database entity, submission API, review list endpoint, and admin moderation.
-**Evidence:** Repository search in `medusa/` and `payload/` confirms no Product Review schema or module exists.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Custom Medusa Module or Payload CMS collection. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Custom Medusa Module or Payload CMS collection.
 **Required Work:** Build custom `Reviews` collection in Payload CMS or custom Medusa module.
 **Conclusion:** Capability completely absent from workspace.
@@ -392,7 +707,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No rating model found in repository.
 **What exists:** None.
 **What is missing:** Rating aggregation calculation logic, rating score field on products.
-**Evidence:** Search confirms no rating field or average score calculation logic exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Product Reviews feature. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Product Reviews feature.
 **Required Work:** Add average rating calculation and field to product metadata or review module.
 **Conclusion:** Capability completely absent.
@@ -403,7 +729,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND
 **What exists:** Order status state machine, fulfillment creation, cancellation, item edits in Medusa Order Module.
 **What is missing:** Custom invoice PDF exporter or Persian SMS status dispatches.
-**Evidence:** Admin Order APIs exist in `medusa/packages/medusa/src/api/admin/orders`. Workspace custom handlers missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Order Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Order status state machine, fulfillment creation, cancellation, item edits in Medusa Order Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Order Module.
 **Required Work:** Use Medusa Admin for order processing and status management.
 **Conclusion:** Native Medusa framework capability; project integration missing.
@@ -414,7 +751,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/inventory`, `medusa/packages/modules/stock-location` | Project integration: NOT FOUND
 **What exists:** Multi-location inventory tracking, stock reservations, and inventory levels in Medusa Inventory Module.
 **What is missing:** Low stock SMS/email alerts or custom inventory sync scripts.
-**Evidence:** Service implemented in `medusa/packages/modules/inventory/src/services/inventory-module-service.ts`. Project seed/config missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/inventory`, `medusa/packages/modules/stock-location` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Inventory Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Multi-location inventory tracking, stock reservations, and inventory levels in Medusa Inventory Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Inventory Module.
 **Required Work:** Manage inventory levels and stock locations via Medusa Admin API.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -425,7 +773,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/rbac`, `medusa/packages/modules/auth` | Project integration: NOT FOUND
 **What exists:** Medusa RBAC module, JWT sessions, Admin and Customer authentication in framework source code.
 **What is missing:** Project specific role definitions and permission policies.
-**Evidence:** Service implemented in `medusa/packages/modules/rbac/src/services/rbac-module-service.ts`. Custom policies missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/rbac`, `medusa/packages/modules/auth` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa RBAC & Auth Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa RBAC module, JWT sessions, Admin and Customer authentication in framework source code.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa RBAC & Auth Modules.
 **Required Work:** Configure custom RBAC roles and permissions policies.
 **Conclusion:** Native framework capability; project configuration missing.
@@ -436,7 +795,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND
 **What exists:** Product options and key-value JSONB `metadata` field on products in Medusa Product Module.
 **What is missing:** Project-specific attribute schema definitions and attribute filtering UI.
-**Evidence:** Schema in `medusa/packages/modules/product/src/models/product.ts` contains `metadata` and `options`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Product options and key-value JSONB `metadata` field on products in Medusa Product Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module.
 **Required Work:** Define product attributes in product metadata and render on storefront.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -447,7 +817,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND
 **What exists:** Product variants with arbitrary option combinations (e.g., Size, Color) in Medusa Product Module.
 **What is missing:** Storefront color swatch picker and size selection UI components.
-**Evidence:** Model defined in `medusa/packages/modules/product/src/models/product-variant.ts`. Storefront UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Product variants with arbitrary option combinations (e.g., Size, Color) in Medusa Product Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module.
 **Required Work:** Create product variants with options in Medusa Admin and build variant selector on storefront.
 **Conclusion:** Native Medusa framework capability; storefront UI missing.
@@ -458,7 +839,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No related product relationship module found in repository.
 **What exists:** Product Collections in Medusa can group products.
 **What is missing:** Explicit cross-sell / upsell / related products entity or join relationship.
-**Evidence:** Search confirms no `related_products` field or relation table exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module extension or metadata. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module extension or metadata.
 **Required Work:** Store array of related product IDs in product metadata or build custom link module.
 **Conclusion:** Capability absent.
@@ -469,7 +861,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No sales badge logic or featured tags collection in workspace custom code.
 **What exists:** Product tags in Medusa (`medusa/packages/modules/product`).
 **What is missing:** Automated sales calculation for "Best Sellers" badge or custom "Featured" flag logic.
-**Evidence:** Repository search confirms no automated sales badge calculation exists.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product & Order Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product & Order Modules.
 **Required Work:** Add custom flags to product metadata or construct sales query subscribers.
 **Conclusion:** Capability absent.
@@ -480,7 +883,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND
 **What exists:** Filter parameters by price, category, collection, tags, and options in Medusa Store API.
 **What is missing:** Storefront sidebar filter control component and query string state manager.
-**Evidence:** Filter params supported in `medusa/packages/medusa/src/api/store/products`. Storefront UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Filter parameters by price, category, collection, tags, and options in Medusa Store API.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module.
 **Required Work:** Build multi-attribute filter sidebar in storefront app.
 **Conclusion:** Native framework capability; storefront UI missing.
@@ -491,7 +905,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND
 **What exists:** Sorting parameters (`created_at`, `title`, price) in Medusa `/store/products` API.
 **What is missing:** Storefront sort selector dropdown component.
-**Evidence:** `order` query parameter supported in Medusa product API handlers. Storefront selector UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/product` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Sorting parameters (`created_at`, `title`, price) in Medusa `/store/products` API.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module.
 **Required Work:** Add sort dropdown component to storefront product catalog.
 **Conclusion:** Native Medusa framework capability; storefront UI missing.
@@ -502,7 +927,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No comparison module or storefront component found.
 **What exists:** None.
 **What is missing:** Product comparison drawer, matrix logic comparing variant attributes.
-**Evidence:** Search confirms no product comparison code exists in repository.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront state management / Product options. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront state management / Product options.
 **Required Work:** Build product comparison drawer and comparison table component in storefront.
 **Conclusion:** Capability completely absent.
@@ -513,7 +949,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No wishlist module or entity found in repository.
 **What exists:** None (Wishlist is not a core Medusa v2 module).
 **What is missing:** `Wishlist` database entity, CRUD API endpoints, storefront toggle button.
-**Evidence:** Search in `medusa/` confirms no wishlist module or plugin exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Customer Module & Custom Module/Plugin. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Customer Module & Custom Module/Plugin.
 **Required Work:** Build custom Medusa module for Wishlist or store items in Customer metadata.
 **Conclusion:** Capability absent.
@@ -524,7 +971,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/auth` | Project integration: NOT FOUND
 **What exists:** Medusa Auth Module supports custom identity providers (`AuthIdentityProvider`).
 **What is missing:** Iranian SMS Provider plugin (Kavenegar, FarazSMS, Ghasedak) and OTP generation/validation service.
-**Evidence:** Auth Module exists in `medusa/packages/modules/auth`. No Iranian SMS provider plugin installed in workspace.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/auth` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Auth Module, Iranian SMS Gateway REST API. (installed in monorepo packages, project integration missing).
+- **Backend:** Requires external provider/service integration. (Medusa Auth Module supports custom identity providers (`AuthIdentityProvider`).)
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Auth Module, Iranian SMS Gateway REST API.
 **Required Work:** Build custom Medusa Auth Provider plugin for SMS OTP.
 **Conclusion:** External SMS gateway integration required.
@@ -535,7 +993,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND
 **What exists:** Customer order listing API (`GET /store/orders?customer_id=me`) in Medusa Order Module.
 **What is missing:** Storefront customer order history table and detail page.
-**Evidence:** Medusa Store API supports customer order queries out-of-the-box. Storefront UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Order & Customer Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Customer order listing API (`GET /store/orders?customer_id=me`) in Medusa Order Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Order & Customer Modules.
 **Required Work:** Build customer order history page on storefront dashboard.
 **Conclusion:** Native Medusa framework capability; storefront UI missing.
@@ -546,7 +1015,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND
 **What exists:** Fulfillment tracking numbers field on order fulfillments in Medusa Fulfillment Module.
 **What is missing:** Public guest order tracking lookup page on storefront.
-**Evidence:** Model in `medusa/packages/modules/fulfillment/src/models/fulfillment.ts` includes `tracking_numbers`. Storefront lookup page missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Fulfillment Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Fulfillment tracking numbers field on order fulfillments in Medusa Fulfillment Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Fulfillment Module.
 **Required Work:** Build guest order tracking lookup form on storefront.
 **Conclusion:** Native framework capability; storefront page missing.
@@ -557,7 +1037,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No invoice generation service found in workspace.
 **What exists:** Order line items and amounts in Medusa Order Module.
 **What is missing:** PDF generation library integration (e.g. PDFKit / Puppeteer), Persian invoice HTML layout template.
-**Evidence:** Search confirms no PDF generation package or invoice template exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Order Module, PDF generation library. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Order Module, PDF generation library.
 **Required Work:** Build workflow generating downloadable PDF invoices for completed orders.
 **Conclusion:** Capability absent.
@@ -568,7 +1059,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND
 **What exists:** Order cancellation API and refund workflow (`POST /admin/orders/:id/cancel`) in Medusa Order Module.
 **What is missing:** Storefront customer-initiated order cancellation request button.
-**Evidence:** Cancellation logic implemented in `medusa/packages/modules/order`. Storefront request button missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/order` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Order Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Order cancellation API and refund workflow (`POST /admin/orders/:id/cancel`) in Medusa Order Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Order Module.
 **Required Work:** Add order cancellation request button to customer storefront account.
 **Conclusion:** Native Medusa framework capability; storefront button missing.
@@ -579,7 +1081,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND
 **What exists:** Target promotion rules restricting discounts to specific product IDs or Category IDs in Medusa Promotion Module.
 **What is missing:** Storefront discount tags on product cards and workspace rule seeds.
-**Evidence:** Condition engine in `medusa/packages/modules/promotion` supports product/category target rules.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Promotion Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Target promotion rules restricting discounts to specific product IDs or Category IDs in Medusa Promotion Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Promotion Module.
 **Required Work:** Configure product/category promotions via Medusa Admin API.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -590,7 +1103,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND
 **What exists:** Time-bounded campaign promotions with start and end dates in Medusa Promotion Module.
 **What is missing:** Storefront countdown timer banner component and workspace campaign instances.
-**Evidence:** Entity in `medusa/packages/modules/promotion/src/models/campaign.ts` includes `start_date` and `end_date`. Storefront timer UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Promotion Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Time-bounded campaign promotions with start and end dates in Medusa Promotion Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Promotion Module.
 **Required Work:** Configure campaign in Medusa Admin and add countdown component to storefront PDP.
 **Conclusion:** Native Medusa framework capability; storefront UI component missing.
@@ -601,7 +1125,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No review moderation logic found in repository.
 **What exists:** None.
 **What is missing:** Review approval status field (`pending`, `approved`, `rejected`), admin moderation dashboard interface.
-**Evidence:** Dependent on absent Product Reviews feature (#29).
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Product Reviews feature. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Product Reviews feature.
 **Required Work:** Add approval status workflow to Payload CMS reviews collection or custom Medusa module.
 **Conclusion:** Capability absent.
@@ -612,12 +1147,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No review reply field found in repository.
 **What exists:** None.
 **What is missing:** Admin reply field on review entity, storefront reply display layout.
-**Evidence:** Dependent on absent Product Reviews feature (#29).
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Product Reviews feature. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Product Reviews feature.
 **Required Work:** Add admin reply field to review schema and display on storefront.
 **Conclusion:** Capability absent.
-
-## 4. Admin / Reporting
 
 ### 51. داشبورد مدیریتی (Admin Analytics Dashboard)
 **Status:** 🔵 NATIVE_AVAILABLE
@@ -625,7 +1169,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/admin` | Project integration: NOT FOUND
 **What exists:** Medusa Admin panel package with order metrics, sales overview, and customer list widgets.
 **What is missing:** Persian localization and Jalali calendar integration.
-**Evidence:** Dashboard source exists in `medusa/packages/admin/dashboard`. Workspace deployment configuration missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/admin` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Admin. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa Admin panel package with order metrics, sales overview, and customer list widgets.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Admin.
 **Required Work:** Build and deploy Medusa Admin dashboard app.
 **Conclusion:** Native framework capability; project deployment missing.
@@ -636,7 +1191,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/customer` | Project integration: NOT FOUND
 **What exists:** Customer listing, detail editing, customer groups, and metadata management in Medusa Customer Module.
 **What is missing:** Custom customer tagging or segments configuration in workspace.
-**Evidence:** Admin customer APIs exist in `medusa/packages/medusa/src/api/admin/customers`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/customer` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Customer Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Customer listing, detail editing, customer groups, and metadata management in Medusa Customer Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Customer Module.
 **Required Work:** Manage customers via Medusa Admin panel.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -647,7 +1213,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/user` | Project integration: NOT FOUND
 **What exists:** Admin user creation, invite system, and password reset flows in Medusa User Module.
 **What is missing:** Custom administrative onboarding workflow in workspace.
-**Evidence:** Service implemented in `medusa/packages/modules/user/src/services/user-module-service.ts`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/user` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa User Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Admin user creation, invite system, and password reset flows in Medusa User Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa User Module.
 **Required Work:** Invite admin users via Medusa Admin API.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -658,7 +1235,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/rbac` | Project integration: NOT FOUND
 **What exists:** Granular access policy definitions for routes and resources in Medusa RBAC Module.
 **What is missing:** Project-specific role definitions (e.g. store manager, order packer).
-**Evidence:** Service implemented in `medusa/packages/modules/rbac/src/services/rbac-module-service.ts`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/rbac` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa RBAC Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Granular access policy definitions for routes and resources in Medusa RBAC Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa RBAC Module.
 **Required Work:** Configure permission policies for custom admin roles.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -669,12 +1257,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No custom sales report exporter found in repository.
 **What exists:** Basic order metrics in Medusa Admin.
 **What is missing:** Date-filtered sales report exporter (CSV/Excel), revenue breakdown logic.
-**Evidence:** Search confirms no custom sales export service or script exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Order Module, CSV export utility. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Order Module, CSV export utility.
 **Required Work:** Build custom sales report exporter service/API endpoint.
 **Conclusion:** Capability absent.
-
-## 5. Blog / CMS
 
 ### 56. وبلاگ (Blog Base System)
 **Status:** 🔵 NATIVE_AVAILABLE
@@ -682,7 +1279,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload` | Project integration: NOT FOUND
 **What exists:** Full CMS capabilities in Payload for posts, rich text content, and draft/publish workflows.
 **What is missing:** `Posts` collection definition in project `payload.config.ts`.
-**Evidence:** Framework packages exist in `payload/packages/payload`. Project custom config missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Full CMS capabilities in Payload for posts, rich text content, and draft/publish workflows.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Define `Posts` collection in project Payload CMS config file.
 **Conclusion:** Native Payload framework capability; project configuration missing.
@@ -693,7 +1301,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload`, `payload/packages/richtext-lexical` | Project integration: NOT FOUND
 **What exists:** Lexical rich text editor, article drafting, media embedding, and scheduled publishing in Payload framework.
 **What is missing:** Custom article schema definition in project configuration.
-**Evidence:** `@payloadcms/richtext-lexical` exists in `payload/packages/richtext-lexical`. Project config missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload`, `payload/packages/richtext-lexical` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Lexical rich text editor, article drafting, media embedding, and scheduled publishing in Payload framework.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Configure Lexical editor on `Posts` collection in Payload CMS.
 **Conclusion:** Native Payload framework capability; project configuration missing.
@@ -704,7 +1323,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload`, `payload/packages/plugin-nested-docs` | Project integration: NOT FOUND
 **What exists:** Payload relationship fields allow linking posts to category collections (with hierarchy via plugin-nested-docs).
 **What is missing:** `BlogCategories` collection definition in project payload config.
-**Evidence:** `@payloadcms/plugin-nested-docs` exists in `payload/packages/plugin-nested-docs`. Project config missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload`, `payload/packages/plugin-nested-docs` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payload relationship fields allow linking posts to category collections (with hierarchy via plugin-nested-docs).)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Define `BlogCategories` collection in Payload config.
 **Conclusion:** Native Payload framework capability; project configuration missing.
@@ -715,7 +1345,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload` | Project integration: NOT FOUND
 **What exists:** Multi-select relationship or array tag field capabilities in Payload CMS.
 **What is missing:** `Tags` collection definition in project payload config.
-**Evidence:** Field types natively supported in Payload framework. Project config missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Multi-select relationship or array tag field capabilities in Payload CMS.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Define `Tags` collection in Payload config.
 **Conclusion:** Native Payload framework capability; project configuration missing.
@@ -726,7 +1367,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No blog comment collection found in repository.
 **What exists:** None.
 **What is missing:** Blog comment database collection, public submission endpoint, moderation system.
-**Evidence:** Search confirms no blog comment code exists in repository.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Create `BlogComments` collection in Payload CMS with moderation hooks.
 **Conclusion:** Capability absent.
@@ -737,12 +1389,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND
 **What exists:** Official Payload SEO Plugin provides meta title, description, social preview image, and evaluation tools.
 **What is missing:** Registration of `seoPlugin` in project payload configuration.
-**Evidence:** Package exists in `payload/packages/plugin-seo`. Project configuration missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload SEO Plugin. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Official Payload SEO Plugin provides meta title, description, social preview image, and evaluation tools.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload SEO Plugin.
 **Required Work:** Register `@payloadcms/plugin-seo` in project Payload configuration.
 **Conclusion:** Native Payload framework capability; project plugin registration missing.
-
-## 6. SEO
 
 ### 62. SEO فنی پایه (Basic Technical SEO)
 **Status:** 🔵 NATIVE_AVAILABLE
@@ -750,7 +1411,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND
 **What exists:** Canonical URL, robots meta tags, title template generation in Payload SEO plugin.
 **What is missing:** Storefront sitemap (`sitemap.xml`) and `robots.txt` generation routes.
-**Evidence:** Package `@payloadcms/plugin-seo` exists in `payload/packages/plugin-seo`. Storefront routes missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload SEO Plugin, Storefront routes. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Canonical URL, robots meta tags, title template generation in Payload SEO plugin.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload SEO Plugin, Storefront routes.
 **Required Work:** Build `sitemap.xml` and `robots.txt` dynamic routes in storefront app.
 **Conclusion:** Native capability available; storefront route missing.
@@ -761,7 +1433,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND
 **What exists:** Medusa Payment Module supports multiple simultaneous payment providers per region.
 **What is missing:** Installation and setup of multiple Iranian payment provider plugins.
-**Evidence:** Payment Collection schema in Medusa supports multiple payment sessions. Project plugins missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Payment Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa Payment Module supports multiple simultaneous payment providers per region.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Payment Module.
 **Required Work:** Configure multiple payment provider plugins in Medusa config.
 **Conclusion:** Native Medusa framework capability; project plugin installation missing.
@@ -772,7 +1455,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND
 **What exists:** Campaign management with spending budgets, identifier codes, start/end dates in Medusa Promotion Module.
 **What is missing:** Storefront promotional campaign landing pages and workspace campaign instances.
-**Evidence:** Campaign entity defined in `medusa/packages/modules/promotion/src/models/campaign.ts`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/promotion` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Promotion Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Campaign management with spending budgets, identifier codes, start/end dates in Medusa Promotion Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Promotion Module.
 **Required Work:** Create campaigns via Medusa Admin and build landing pages on storefront.
 **Conclusion:** Native Medusa framework capability; storefront integration missing.
@@ -783,7 +1477,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/payment`, `medusa/packages/modules/order` | Project integration: NOT FOUND
 **What exists:** Refund creation workflow, payment refund captures, and order edits in Medusa core.
 **What is missing:** Iranian banking API integration for automated manual refund processing.
-**Evidence:** Admin refund endpoints exist in `medusa/packages/medusa/src/api/admin/orders`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/payment`, `medusa/packages/modules/order` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Payment & Order Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Refund creation workflow, payment refund captures, and order edits in Medusa core.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Payment & Order Modules.
 **Required Work:** Process refunds via Medusa Admin panel.
 **Conclusion:** Native Medusa framework capability; project integration missing.
@@ -794,7 +1499,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/fulfillment`, `medusa/packages/modules/order` | Project integration: NOT FOUND
 **What exists:** Return creation, return reason configuration, and return shipping options in Medusa core.
 **What is missing:** Storefront customer return request portal UI component.
-**Evidence:** Return entity and `/store/returns` API exist in Medusa framework source code. Storefront UI missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/fulfillment`, `medusa/packages/modules/order` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Fulfillment & Order Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Return creation, return reason configuration, and return shipping options in Medusa core.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Fulfillment & Order Modules.
 **Required Work:** Build return request form on customer storefront dashboard.
 **Conclusion:** Native Medusa framework capability; storefront UI component missing.
@@ -805,7 +1521,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND
 **What exists:** Admin API to attach tracking numbers to order fulfillments in Medusa Fulfillment Module.
 **What is missing:** Automated SMS dispatch trigger sending tracking code to customer upon update.
-**Evidence:** Model in `medusa/packages/modules/fulfillment/src/models/fulfillment.ts` contains `tracking_numbers`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Fulfillment Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Admin API to attach tracking numbers to order fulfillments in Medusa Fulfillment Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Fulfillment Module.
 **Required Work:** Enter tracking numbers in Medusa Admin and wire SMS notification subscriber.
 **Conclusion:** Native Medusa framework capability; workspace subscriber missing.
@@ -816,7 +1543,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND
 **What exists:** Shipping zones, region assignment, and price rules (min/max cart total, weight) in Medusa Fulfillment Module.
 **What is missing:** Iranian province and city location taxonomy rules configuration.
-**Evidence:** Service zone and shipping option rule models exist in `medusa/packages/modules/fulfillment`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/fulfillment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Fulfillment Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Shipping zones, region assignment, and price rules (min/max cart total, weight) in Medusa Fulfillment Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Fulfillment Module.
 **Required Work:** Configure shipping zones and rules in Medusa Admin.
 **Conclusion:** Native Medusa framework capability; project configuration missing.
@@ -827,7 +1565,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No video field on products in repository.
 **What exists:** Medusa image attachments support images only.
 **What is missing:** Product video URL / embed model, video player UI component on storefront PDP.
-**Evidence:** Product schema lacks dedicated video fields.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module extension or metadata. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module extension or metadata.
 **Required Work:** Add video URL string to product metadata or Payload CMS catalog block.
 **Conclusion:** Capability absent.
@@ -838,7 +1587,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload` | Project integration: NOT FOUND
 **What exists:** Payload CMS supports linking `Posts` to `Users` collection or custom `Authors` collection via relationship fields.
 **What is missing:** `Authors` collection definition in project payload config.
-**Evidence:** Relationship fields natively supported in Payload framework. Project config missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payload CMS supports linking `Posts` to `Users` collection or custom `Authors` collection via relationship fields.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Define `Authors` collection in Payload config.
 **Conclusion:** Native Payload framework capability; project configuration missing.
@@ -849,7 +1609,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload` | Project integration: NOT FOUND
 **What exists:** Self-referential relationship fields in Payload CMS allow selecting related articles.
 **What is missing:** `relatedPosts` field definition in project `Posts` collection schema.
-**Evidence:** Payload relationship field supports `relationTo: 'posts'`. Project schema missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Self-referential relationship fields in Payload CMS allow selecting related articles.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Add `relatedPosts` field to `Posts` collection in project Payload config.
 **Conclusion:** Native Payload framework capability; project configuration missing.
@@ -860,7 +1631,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND
 **What exists:** Payload SEO Plugin provides structured metadata fields, image preview cards, and evaluation tools.
 **What is missing:** Registration of SEO plugin in project payload configuration.
-**Evidence:** Package exists in `payload/packages/plugin-seo`. Project configuration missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload SEO Plugin. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payload SEO Plugin provides structured metadata fields, image preview cards, and evaluation tools.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload SEO Plugin.
 **Required Work:** Enable `@payloadcms/plugin-seo` in project Payload configuration.
 **Conclusion:** Native Payload capability; project configuration missing.
@@ -871,7 +1653,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No JSON-LD schema builder found in repository.
 **What exists:** Product data in Medusa API.
 **What is missing:** JSON-LD structured data generator component for Product, Offer, and AggregateRating.
-**Evidence:** Search confirms no schema generator script exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront PDP component. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront PDP component.
 **Required Work:** Build JSON-LD script tag generator component in Storefront PDP.
 **Conclusion:** Capability absent.
@@ -882,7 +1675,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No Article JSON-LD schema builder found in repository.
 **What exists:** Blog post data in Payload CMS API.
 **What is missing:** JSON-LD structured data generator for Article / BlogPosting.
-**Evidence:** Search confirms no schema generator exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Storefront Blog detail page. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Storefront Blog detail page.
 **Required Work:** Add Article JSON-LD script tag in storefront blog route.
 **Conclusion:** Capability absent.
@@ -893,7 +1697,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND
 **What exists:** Open Graph title, description, and image fields generated automatically by Payload SEO plugin.
 **What is missing:** Storefront `<meta property="og:..." />` HTML head mapping.
-**Evidence:** Package `@payloadcms/plugin-seo` exists. Storefront head manager missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/plugin-seo` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload SEO Plugin, Storefront head manager. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Open Graph title, description, and image fields generated automatically by Payload SEO plugin.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload SEO Plugin, Storefront head manager.
 **Required Work:** Render Open Graph meta tags in Storefront head manager.
 **Conclusion:** Native framework capability; storefront rendering missing.
@@ -904,12 +1719,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** `docker-compose.yml`, `infrastructure/nginx/nginx.conf`
 **What exists:** Redis caching service running in Docker Compose (`redis:7-alpine`), Nginx reverse proxy.
 **What is missing:** External CDN edge integration, image optimization service (Sharp / Cloudflare Images), page caching headers.
-**Evidence:** Redis container configured in `docker-compose.yml`, but storefront edge caching strategy and image CDN are missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (`docker-compose.yml`, `infrastructure/nginx/nginx.conf`)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Redis, External CDN / Image Provider. (installed in monorepo packages, project integration missing).
+- **Backend:** Requires external provider/service integration. (Redis caching service running in Docker Compose (`redis:7-alpine`), Nginx reverse proxy.)
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Redis, External CDN / Image Provider.
 **Required Work:** Configure Nginx caching headers and external image CDN provider.
 **Conclusion:** Infrastructure integration required.
-
-## 7. Notifications
 
 ### 77. پیامک OTP (SMS OTP Notification)
 **Status:** 🟠 INTEGRATION_REQUIRED
@@ -917,7 +1741,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/notification` | Project integration: NOT FOUND
 **What exists:** Medusa Notification Module engine in framework source code.
 **What is missing:** Custom notification provider plugin for Iranian SMS providers (Kavenegar, Ghasedak, FarazSMS).
-**Evidence:** Notification Module exists in `medusa/packages/modules/notification`. No Iranian SMS provider plugin installed.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/notification` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Notification Module, Iranian SMS Gateway REST API. (installed in monorepo packages, project integration missing).
+- **Backend:** Requires external provider/service integration. (Medusa Notification Module engine in framework source code.)
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Notification Module, Iranian SMS Gateway REST API.
 **Required Work:** Develop custom Notification Provider plugin for Iranian SMS gateway.
 **Conclusion:** External SMS gateway integration required.
@@ -928,7 +1763,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/notification` | Project integration: NOT FOUND
 **What exists:** Event-driven notification bus system in Medusa (`order.placed`, `order.fulfilled`).
 **What is missing:** Event subscribers wiring order state changes to Iranian SMS provider.
-**Evidence:** Redis event bus module exists (`event-bus-redis`). Event subscribers for SMS missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/notification` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Event Bus, Notification Module, Iranian SMS Gateway. (installed in monorepo packages, project integration missing).
+- **Backend:** Requires external provider/service integration. (Event-driven notification bus system in Medusa (`order.placed`, `order.fulfilled`).)
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Event Bus, Notification Module, Iranian SMS Gateway.
 **Required Work:** Register subscriber functions for order events triggering SMS API calls.
 **Conclusion:** External SMS gateway integration required.
@@ -939,7 +1785,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No stock alert subscriber or table found in repository.
 **What exists:** None.
 **What is missing:** Back-in-stock subscription database entity, stock level update listener logic.
-**Evidence:** Search for "back_in_stock" or "stock_alert" yields no code in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Inventory & Notification Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Inventory & Notification Modules.
 **Required Work:** Build customer stock alert subscription model and inventory update event listener.
 **Conclusion:** Capability absent.
@@ -950,7 +1807,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No notification center model or UI found in repository.
 **What exists:** None.
 **What is missing:** In-app notification database model, unread badge counter, notification drawer UI component on storefront.
-**Evidence:** Search confirms no in-app notification storage entity exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Custom Notification Entity / Storefront component. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Custom Notification Entity / Storefront component.
 **Required Work:** Build notification storage entity and storefront notification drawer component.
 **Conclusion:** Capability absent.
@@ -961,7 +1829,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/email-nodemailer`, `payload/packages/email-resend` | Project integration: NOT FOUND
 **What exists:** Payload email adapters for Nodemailer and Resend in framework packages.
 **What is missing:** SMTP server credentials and HTML email templates for Persian transactional emails.
-**Evidence:** `@payloadcms/email-nodemailer` exists in `payload/packages/email-nodemailer`. SMTP credentials and templates missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/email-nodemailer`, `payload/packages/email-resend` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** SMTP Server / Resend API. (installed in monorepo packages, project integration missing).
+- **Backend:** Requires external provider/service integration. (Payload email adapters for Nodemailer and Resend in framework packages.)
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** SMTP Server / Resend API.
 **Required Work:** Configure SMTP environment variables and design HTML email templates.
 **Conclusion:** External SMTP service integration required.
@@ -972,7 +1851,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/inventory` | Project integration: NOT FOUND
 **What exists:** Stock level monitoring and inventory level entities in Medusa Inventory Module.
 **What is missing:** Admin email/SMS notification subscriber when inventory drops below threshold.
-**Evidence:** Inventory level schema in `medusa/packages/modules/inventory` tracks stocked and reserved quantities.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/inventory` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Inventory & Notification Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Stock level monitoring and inventory level entities in Medusa Inventory Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Inventory & Notification Modules.
 **Required Work:** Create event listener on inventory update triggering admin alert.
 **Conclusion:** Native Medusa framework capability; subscriber missing.
@@ -983,7 +1873,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No price tracking subscription logic found in repository.
 **What exists:** Medusa Pricing Module (`medusa/packages/modules/pricing`).
 **What is missing:** Price drop watch subscription model and pricing update subscriber function.
-**Evidence:** Search confirms no price watch subscription model exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Pricing & Notification Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Pricing & Notification Modules.
 **Required Work:** Build price watch subscription model and pricing update event listener.
 **Conclusion:** Capability absent.
@@ -994,12 +1895,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/cart` | Project integration: NOT FOUND
 **What exists:** Medusa tracks incomplete carts with customer email and update timestamp.
 **What is missing:** Scheduled cron job / workflow dispatching reminder emails/SMS for abandoned carts.
-**Evidence:** Cart entity keeps `updated_at` and `email`. Workspace cron job missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/cart` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Cart & Workflow Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa tracks incomplete carts with customer email and update timestamp.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Cart & Workflow Modules.
 **Required Work:** Create scheduled workflow querying inactive carts > 24 hours and sending recovery reminders.
 **Conclusion:** Native Medusa framework capability; scheduled workflow missing.
-
-## 8. Reports / Infrastructure / Advanced
 
 ### 85. گزارش مشتریان (Customer Reports / Analytics)
 **Status:** 🔵 NATIVE_AVAILABLE
@@ -1007,7 +1917,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/customer` | Project integration: NOT FOUND
 **What exists:** Customer purchase history, customer group relationships, and order counts in Medusa.
 **What is missing:** Exportable LTV (Lifetime Value) report table script.
-**Evidence:** Customer relations with orders exist in `medusa/packages/modules/customer`. Report script missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/customer` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Customer & Order Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Customer purchase history, customer group relationships, and order counts in Medusa.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Customer & Order Modules.
 **Required Work:** Query customer order metrics via Medusa Admin API.
 **Conclusion:** Native Medusa framework capability; report export script missing.
@@ -1018,7 +1939,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/inventory` | Project integration: NOT FOUND
 **What exists:** Inventory level querying APIs across stock locations in Medusa Inventory Module.
 **What is missing:** Stock valuation CSV export script.
-**Evidence:** Admin inventory API exists in `medusa/packages/medusa/src/api/admin/inventory-items`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/inventory` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Inventory Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Inventory level querying APIs across stock locations in Medusa Inventory Module.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Inventory Module.
 **Required Work:** Export inventory list from Medusa Admin.
 **Conclusion:** Native Medusa framework capability; export script missing.
@@ -1029,7 +1961,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND
 **What exists:** Payment collections, captured amounts, and pending captures listing in Medusa.
 **What is missing:** Reconciliation report exporter formatted for Iranian accounting systems.
-**Evidence:** Payment APIs exist in `medusa/packages/medusa/src/api/admin/payments`.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/payment` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Payment Module. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payment collections, captured amounts, and pending captures listing in Medusa.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Payment Module.
 **Required Work:** Filter and export payment logs from Medusa Admin.
 **Conclusion:** Native Medusa framework capability; export script missing.
@@ -1040,7 +1983,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/cli/oas`, `payload/packages/graphql` | Project integration: NOT FOUND
 **What exists:** Medusa OAS generator package (`@medusajs/medusa-oas`) and Payload GraphQL Playground endpoint in framework packages.
 **What is missing:** Hosted Swagger UI route in custom workspace deployment.
-**Evidence:** OAS scripts exist in `medusa/packages/cli/oas`. Hosted Swagger route missing in workspace.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/cli/oas`, `payload/packages/graphql` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa OAS CLI, Payload GraphQL. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa OAS generator package (`@medusajs/medusa-oas`) and Payload GraphQL Playground endpoint in framework packages.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa OAS CLI, Payload GraphQL.
 **Required Work:** Generate OAS spec file and host Swagger UI endpoint in workspace deployment.
 **Conclusion:** Native framework capability; hosted route missing.
@@ -1051,7 +2005,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/integration-tests`, `payload/test` | Project integration: NOT FOUND
 **What exists:** Extensive test suites, helpers, and fixtures built into Medusa and Payload framework repositories.
 **What is missing:** Custom end-to-end (E2E) test suite for Depix workspace e-commerce user journeys.
-**Evidence:** Test setups exist in `medusa/integration-tests/` and `payload/test/`. Workspace custom E2E tests missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/integration-tests`, `payload/test` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Jest, Vitest, Playwright. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Extensive test suites, helpers, and fixtures built into Medusa and Payload framework repositories.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Jest, Vitest, Playwright.
 **Required Work:** Write custom E2E integration test suite for workspace e-commerce user flows.
 **Conclusion:** Native framework test setup present; workspace test suite missing.
@@ -1062,7 +2027,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload`, `payload/packages/richtext-lexical` | Project integration: NOT FOUND
 **What exists:** Payload Block-based layout builder fields allow assembling modular page layouts visually.
 **What is missing:** Custom block definitions (Hero, Features, Pricing, Testimonials) in project payload config.
-**Evidence:** Framework `blocks` field documentation and packages exist in `payload/packages/payload`. Project config missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload`, `payload/packages/richtext-lexical` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payload Block-based layout builder fields allow assembling modular page layouts visually.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS.
 **Required Work:** Define layout blocks in project Payload CMS config file.
 **Conclusion:** Native Payload framework capability; project block definitions missing.
@@ -1073,7 +2049,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/translation`, `payload/packages/translations` | Project integration: NOT FOUND
 **What exists:** Medusa Translation Module and Payload native localization (i18n) support in framework packages.
 **What is missing:** Persian (`fa`) locale default configuration in project config files.
-**Evidence:** Packages `@payloadcms/translations` and `medusa/packages/modules/translation` exist. Project locale setup missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/translation`, `payload/packages/translations` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Translation Module, Payload i18n. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa Translation Module and Payload native localization (i18n) support in framework packages.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Translation Module, Payload i18n.
 **Required Work:** Set Persian (`fa`) as active default locale in project configuration files.
 **Conclusion:** Native framework capability; project localization configuration missing.
@@ -1084,7 +2071,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `medusa/packages/modules/search`, `payload/packages/plugin-search` | Project integration: NOT FOUND
 **What exists:** Medusa Search Module interface and Payload Search Plugin (`@payloadcms/plugin-search`).
 **What is missing:** Configuration with external search engine instance (Meilisearch / Algolia / Elasticsearch).
-**Evidence:** Search packages exist in `medusa/packages/modules/search` and `payload/packages/plugin-search`. Project configuration missing.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `medusa/packages/modules/search`, `payload/packages/plugin-search` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Search Engine Instance (Meilisearch / Algolia). (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Medusa Search Module interface and Payload Search Plugin (`@payloadcms/plugin-search`).)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Search Engine Instance (Meilisearch / Algolia).
 **Required Work:** Connect Meilisearch or Algolia credentials in project configuration files.
 **Conclusion:** Native framework capability ready for external search engine integration.
@@ -1095,7 +2093,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No recommendation service found in repository.
 **What exists:** None.
 **What is missing:** Recommendation service (collaborative filtering or co-purchased item algorithm).
-**Evidence:** Repository search confirms no product recommendation engine exists.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product & Order Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product & Order Modules.
 **Required Work:** Develop product recommendation workflow based on co-purchased items.
 **Conclusion:** Capability absent.
@@ -1106,7 +2115,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No wallet entity or module found in repository.
 **What exists:** None.
 **What is missing:** Customer Wallet database entity, balance top-up API, payment provider for wallet balance.
-**Evidence:** Search confirms no `Wallet` entity or store credit module exists in workspace.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Payment & Customer Modules. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Payment & Customer Modules.
 **Required Work:** Build custom Medusa module for Wallet and Payment Provider plugin using wallet balance.
 **Conclusion:** Capability absent.
@@ -1117,7 +2137,18 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** No COGS (Cost of Goods Sold) model found in repository.
 **What exists:** Item selling prices in Medusa Pricing Module.
 **What is missing:** Cost price (COGS) field on product variants, margin calculator service, profit report exporter.
-**Evidence:** Product variants do not track cost price natively in default Medusa schema.
+
+### Evidence
+- **Source:** Framework capability: NO | Project implementation: NOT FOUND.
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Medusa Product Module extension or metadata. (installed in monorepo packages, project integration missing).
+- **Backend:** No backend route or service implemented for project.
+- **Database:** N/A or model missing.
+- **Frontend/Admin:** N/A
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Medusa Product Module extension or metadata.
 **Required Work:** Store cost price in variant metadata and build profit calculation workflow script.
 **Conclusion:** Capability absent.
@@ -1128,12 +2159,21 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{N
 **Where:** Framework capability: `payload/packages/payload` | Project integration: NOT FOUND
 **What exists:** Payload CMS document versions, change history, and user attribution on edits.
 **What is missing:** Global admin action audit logging table in Medusa backend.
-**Evidence:** Document versioning and audit capabilities natively present in Payload framework source code.
+
+### Evidence
+- **Source:** Framework capability: YES | Project implementation: NOT VERIFIED / NOT FOUND. (Framework capability: `payload/packages/payload` | Project integration: NOT FOUND)
+- **Configuration:** Project configuration missing (no project medusa-config.ts or payload.config.ts).
+- **Dependencies:** Payload CMS Versioning / Custom Medusa Subscriber. (installed in monorepo packages, project integration missing).
+- **Backend:** Framework API/Service natively available in monorepo packages. (Payload CMS document versions, change history, and user attribution on edits.)
+- **Database:** Framework database models exist in package sources; no active project database migration/instance configured.
+- **Frontend/Admin:** Admin UI available in framework packages; custom project storefront/admin app not deployed.
+- **Authentication/Authorization:** Authentication / Access control not configured for project instance.
+- **Tests:** Framework test suites exist in monorepo; no project-specific integration tests.
+- **Runtime Verification:** Docker infrastructure present (`docker-compose.yml`, Nginx), but application project configurations are absent.
+
 **Dependencies:** Payload CMS Versioning / Custom Medusa Subscriber.
 **Required Work:** Enable versions and audit logging on Payload collections and Medusa admin events.
 **Conclusion:** Native Payload framework capability; project configuration missing.
-
----
 
 ## Audit Summary
 
