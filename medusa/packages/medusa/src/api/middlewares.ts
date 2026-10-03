@@ -30,6 +30,7 @@ import { adminProductRoutesMiddlewares } from "./admin/products/middlewares"
 import { adminPromotionRoutesMiddlewares } from "./admin/promotions/middlewares"
 import { adminPropertyLabelsMiddlewares } from "./admin/property-labels/middlewares"
 import { adminRbacRoutesMiddlewares } from "./admin/rbac/middlewares"
+import { adminReviewRoutesMiddlewares } from "./admin/reviews/middlewares"
 import { adminRefundReasonsRoutesMiddlewares } from "./admin/refund-reasons/middlewares"
 import { adminRegionRoutesMiddlewares } from "./admin/regions/middlewares"
 import { adminReservationRoutesMiddlewares } from "./admin/reservations/middlewares"
@@ -68,6 +69,7 @@ import { storeProductTagRoutesMiddlewares } from "./store/product-tags/middlewar
 import { storeProductTypeRoutesMiddlewares } from "./store/product-types/middlewares"
 import { storeProductVariantRoutesMiddlewares } from "./store/product-variants/middlewares"
 import { storeProductRoutesMiddlewares } from "./store/products/middlewares"
+import { storeProductReviewRoutesMiddlewares } from "./store/products/[id]/reviews/middlewares"
 import { storeRegionRoutesMiddlewares } from "./store/regions/middlewares"
 import { storeReturnReasonRoutesMiddlewares } from "./store/return-reasons/middlewares"
 import { storeShippingOptionRoutesMiddlewares } from "./store/shipping-options/middlewares"
@@ -107,6 +109,7 @@ export default defineMiddlewares([
   ...storeRegionRoutesMiddlewares,
   ...adminRegionRoutesMiddlewares,
   ...adminRbacRoutesMiddlewares,
+  ...adminReviewRoutesMiddlewares,
   ...adminUserRoutesMiddlewares,
   ...adminInviteRoutesMiddlewares,
   ...adminTaxRateRoutesMiddlewares,
@@ -142,6 +145,7 @@ export default defineMiddlewares([
   ...adminFulfillmentsRoutesMiddlewares,
   ...adminFulfillmentProvidersRoutesMiddlewares,
   ...storeProductRoutesMiddlewares,
+  ...storeProductReviewRoutesMiddlewares,
   ...storeProductVariantRoutesMiddlewares,
   ...storeReturnReasonRoutesMiddlewares,
   ...adminReturnReasonRoutesMiddlewares,

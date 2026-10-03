@@ -21,6 +21,17 @@ export const ModulesDefinition: {
       scope: MODULE_SCOPE.INTERNAL,
     },
   },
+  [Modules.REVIEW]: {
+    key: Modules.REVIEW,
+    defaultPackage: false,
+    label: upperCaseFirst(Modules.REVIEW),
+    isRequired: false,
+    isQueryable: true,
+    dependencies: [ContainerRegistrationKeys.LOGGER],
+    defaultModuleDeclaration: {
+      scope: MODULE_SCOPE.INTERNAL,
+    },
+  },
   [Modules.STOCK_LOCATION]: {
     key: Modules.STOCK_LOCATION,
     defaultPackage: false,
