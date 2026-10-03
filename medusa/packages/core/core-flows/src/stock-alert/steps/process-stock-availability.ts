@@ -1,6 +1,31 @@
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * Helper to normalize phone numbers (Iranian & E.164 formats)
+ */
+function normalizePhoneNumber(phone: string): string {
+  if (!phone) return ""
+  const PERSIAN_ARABIC_DIGITS: Record<string, string> = {
+    "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
+    "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
+  }
+  let cleaned = phone.trim().replace(/[۰-۹]/g, (char) => PERSIAN_ARABIC_DIGITS[char] ?? char)
+  const hasPlus = cleaned.startsWith("+")
+  cleaned = cleaned.replace(/\D/g, "")
+  if (!cleaned) return ""
+  if (cleaned.length === 11 && cleaned.startsWith("09")) {
+    return `+98${cleaned.slice(1)}`
+  }
+  if (cleaned.length === 12 && cleaned.startsWith("989")) {
+    return `+98${cleaned.slice(2)}`
+  }
+  if (cleaned.length === 10 && cleaned.startsWith("9")) {
+    return `+98${cleaned}`
+  }
+  return hasPlus ? `+${cleaned}` : `+${cleaned}`
+}
+
 export type ProcessStockAvailabilityStepInput = {
   variant_id: string
   inventory_item_id?: string
@@ -101,29 +126,43 @@ export const processStockAvailabilityStep = createStep(
       }
 
       let toDestination = alert.customer_id
+      let customerPhone = ""
       try {
         const customer = await customerService.retrieveCustomer(alert.customer_id)
         if (customer) {
+          customerPhone = customer.phone || ""
           toDestination = customer.phone || customer.email || alert.customer_id
         }
       } catch {
         // Fallback destination to customer_id if customer lookup fails
       }
 
+      const channel = alert.channel || "sms"
+      if (channel === "sms" && toDestination) {
+        toDestination = normalizePhoneNumber(toDestination) || toDestination
+      }
+
+      const productTitle = variant.product?.title || alert.product_id || ""
+      const variantTitle = variant.title || alert.variant_id || ""
+
       const notificationPayload = {
         to: toDestination,
-        channel: alert.channel || "sms",
+        channel: channel,
         template: "back-in-stock",
         trigger_type: "stock_alert.triggered",
         resource_id: alert.id,
         resource_type: "stock_alert",
         receiver_id: alert.customer_id,
+        idempotency_key: `stock_alert_${alert.id}`,
         data: {
           customer_id: alert.customer_id,
+          customer_phone: customerPhone,
           product_id: alert.product_id,
           variant_id: alert.variant_id,
+          product_title: productTitle,
+          variant_title: variantTitle,
           stock_alert_id: alert.id,
-          channel: alert.channel,
+          channel: channel,
         },
       }
 
