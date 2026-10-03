@@ -3915,6 +3915,7 @@ __metadata:
     "@medusajs/search": 2.21.2
     "@medusajs/search-postgres": 2.21.2
     "@medusajs/settings": 2.21.2
+    "@medusajs/stock-alert": 2.21.2
     "@medusajs/stock-location": 2.21.2
     "@medusajs/store": 2.21.2
     "@medusajs/tax": 2.21.2
@@ -4166,6 +4167,16 @@ __metadata:
   dependencies:
     "@medusajs/framework": 2.21.2
     "@medusajs/test-utils": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/stock-alert@2.21.2, @medusajs/stock-alert@workspace:packages/modules/stock-alert":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/stock-alert@workspace:packages/modules/stock-alert"
+  dependencies:
+    "@medusajs/framework": 2.21.2
   peerDependencies:
     "@medusajs/framework": 2.21.2
   languageName: unknown
