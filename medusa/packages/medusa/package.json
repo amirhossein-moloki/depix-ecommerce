@@ -107,6 +107,7 @@
     "@medusajs/search": "2.21.2",
     "@medusajs/search-postgres": "2.21.2",
     "@medusajs/settings": "2.21.2",
+    "@medusajs/stock-alert": "2.21.2",
     "@medusajs/stock-location": "2.21.2",
     "@medusajs/store": "2.21.2",
     "@medusajs/tax": "2.21.2",
