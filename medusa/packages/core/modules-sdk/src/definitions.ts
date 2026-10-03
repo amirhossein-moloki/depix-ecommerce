@@ -21,6 +21,28 @@ export const ModulesDefinition: {
       scope: MODULE_SCOPE.INTERNAL,
     },
   },
+  [Modules.WISHLIST]: {
+    key: Modules.WISHLIST,
+    defaultPackage: false,
+    label: upperCaseFirst(Modules.WISHLIST),
+    isRequired: false,
+    isQueryable: true,
+    dependencies: [ContainerRegistrationKeys.LOGGER],
+    defaultModuleDeclaration: {
+      scope: MODULE_SCOPE.INTERNAL,
+    },
+  },
+  [Modules.COMPARISON]: {
+    key: Modules.COMPARISON,
+    defaultPackage: false,
+    label: upperCaseFirst(Modules.COMPARISON),
+    isRequired: false,
+    isQueryable: true,
+    dependencies: [ContainerRegistrationKeys.LOGGER],
+    defaultModuleDeclaration: {
+      scope: MODULE_SCOPE.INTERNAL,
+    },
+  },
   [Modules.REVIEW]: {
     key: Modules.REVIEW,
     defaultPackage: false,
