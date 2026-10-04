@@ -5,10 +5,10 @@
 This report presents an evidence-based **Implementation Priority Plan and Execution Roadmap** for the remaining **13 in-scope features** of the **Depix E-commerce** workspace (`depix-ecommerce`).
 
 The technical audit (`FEATURE_AUDIT.md`) evaluated 96 total features across the workspace. With the frontend/storefront completely removed from project scope, 15 features are classified as **OUT_OF_SCOPE**. Of the **81 total in-scope backend/platform features**:
-- 🟢 **68 features (84.0%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
+- 🟢 **69 features (85.2%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
 - 🟡 **1 feature (1.2%) is PARTIAL** (#76 Performance Optimization).
 - 🟠 **8 features (9.9%) are INTEGRATION_REQUIRED** (#24, #26, #27, #42, #63, #77, #78, #81).
-- 🔴 **4 features (4.9%) are NOT_IMPLEMENTED** (#80 Notification Center, #83 Price Change Alert, #94 Wallet, #95 Profit & Margin Reporting).
+- 🔴 **3 features (3.7%) are NOT_IMPLEMENTED** (#83 Price Change Alert, #94 Wallet, #95 Profit & Margin Reporting).
 
 ### Summary of Remaining Work
 - **Total Remaining Backlog Features:** 13 features
@@ -60,8 +60,8 @@ Every remaining feature has been audited against Medusa v2 modules, Payload CMS 
    - *Work Required:* Register event subscribers listening to `order.placed`, `order.fulfilled`, `order.canceled` calling SMS provider API.
 
 ### C. Custom Backend Logic
-10. **#80 مرکز اعلان‌ها (In-App Notification Center)** — `🔴 NOT_IMPLEMENTED`
-    - *Work Required:* Build persistent customer in-app notification database model and Store API endpoints (`GET /store/notifications`, `POST /store/notifications/:id/read`).
+10. **#80 مرکز اعلان‌ها (In-App Notification Center)** — `🟢 IMPLEMENTED`
+    - *Implementation:* Persistent customer in-app notification store, read/unread state tracking (`read_at`), pagination, filters, bulk read-all DB operations, and domain event subscriber (`configurable-notifications.ts`) fully implemented in Medusa Notification Module and Store APIs.
 11. **#83 هشدار تغییر قیمت (Price Change Alert)** — `🔴 NOT_IMPLEMENTED`
     - *Work Required:* Build price watch subscription model and pricing update event listener subscriber.
 12. **#94 کیف پول (Customer Wallet System)** — `🔴 NOT_IMPLEMENTED` (Deferred)

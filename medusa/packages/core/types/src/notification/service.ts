@@ -214,4 +214,19 @@ export interface INotificationModuleService extends IModuleService {
     config?: FindConfig<NotificationDTO>,
     sharedContext?: Context
   ): Promise<[NotificationDTO[], number]>
+
+  markAsRead(
+    ids: string | string[],
+    sharedContext?: Context
+  ): Promise<NotificationDTO[]>
+
+  markAllAsRead(
+    receiverId: string,
+    sharedContext?: Context
+  ): Promise<{ count: number }>
+
+  getUnreadCount(
+    receiverId: string,
+    sharedContext?: Context
+  ): Promise<number>
 }

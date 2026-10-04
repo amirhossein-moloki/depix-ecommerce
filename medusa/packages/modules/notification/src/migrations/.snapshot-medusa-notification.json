@@ -256,6 +256,16 @@
           ],
           "mappedType": "enum"
         },
+        "read_at": {
+          "name": "read_at",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "length": 6,
+          "mappedType": "datetime"
+        },
         "provider_id": {
           "name": "provider_id",
           "type": "text",
@@ -309,6 +319,15 @@
           "primary": false,
           "unique": false,
           "expression": "CREATE INDEX IF NOT EXISTS \"IDX_notification_receiver_id\" ON \"notification\" (\"receiver_id\") WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_notification_receiver_id_read_at",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_notification_receiver_id_read_at\" ON \"notification\" (\"receiver_id\", \"read_at\") WHERE deleted_at IS NULL"
         },
         {
           "keyName": "IDX_notification_idempotency_key_unique",
