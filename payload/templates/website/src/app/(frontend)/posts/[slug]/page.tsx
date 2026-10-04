@@ -15,6 +15,8 @@ import { generateMeta } from '@/utilities/generateMeta'
 import { generateArticleJsonLd, serializeJsonLd } from '@/utilities/generateArticleJsonLd'
 import PageClient from './page.client'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
+import { CommentList } from '@/components/Comments/CommentList'
+import { createCommentAction } from './actions'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -53,6 +55,7 @@ export default async function Post({ params: paramsPromise }: Args) {
   if (!post) return <PayloadRedirects url={url} />
 
   const articleJsonLd = generateArticleJsonLd(post)
+  const comments = await queryCommentsByPostId(post.id)
 
   return (
     <article className="pt-16 pb-16">
@@ -83,6 +86,12 @@ export default async function Post({ params: paramsPromise }: Args) {
               docs={post.relatedPosts.filter((post) => typeof post === 'object')}
             />
           )}
+
+          <CommentList
+            comments={comments}
+            postId={String(post.id)}
+            onSubmitAction={createCommentAction}
+          />
         </div>
       </div>
     </article>
@@ -118,4 +127,39 @@ const queryPostBySlug = cache(async ({ slug }: { slug: string }) => {
   })
 
   return result.docs?.[0] || null
+})
+
+const queryCommentsByPostId = cache(async (postId: string | number) => {
+  const payload = await getPayload({ config: configPromise })
+
+  const result = await payload.find({
+    collection: 'comments',
+    where: {
+      and: [
+        {
+          doc: {
+            equals: postId,
+          },
+        },
+        {
+          status: {
+            equals: 'approved',
+          },
+        },
+      ],
+    },
+    sort: 'createdAt',
+    limit: 100,
+    overrideAccess: true,
+  })
+
+  return (result.docs || []).map((doc: any) => ({
+    id: String(doc.id),
+    doc: typeof doc.doc === 'object' ? String(doc.doc.id) : String(doc.doc),
+    parent: doc.parent ? (typeof doc.parent === 'object' ? String(doc.parent.id) : String(doc.parent)) : null,
+    authorName: doc.authorName || 'Anonymous',
+    content: doc.content || '',
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  }))
 })
