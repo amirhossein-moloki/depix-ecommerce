@@ -29,5 +29,6 @@ module.exports = defineJestConfig({
     "^@medusajs/framework": path.resolve(__dirname, "../core/framework/src"),
     "^@medusajs/core-flows": path.resolve(__dirname, "../core/core-flows/src"),
     "^@medusajs/recommendation": path.resolve(__dirname, "../modules/recommendation/src"),
+    "^@medusajs/invoice": path.resolve(__dirname, "../modules/invoice/src"),
   },
 })

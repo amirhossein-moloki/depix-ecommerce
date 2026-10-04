@@ -27,6 +27,24 @@ export const storeOrderRoutesMiddlewares: MiddlewareRoute[] = [
   },
   {
     method: ["GET"],
+    matcher: "/store/orders/:id/invoice",
+    middlewares: [
+      authenticate("customer", ["session", "bearer"], {
+        allowUnauthenticated: true,
+      }),
+    ],
+  },
+  {
+    method: ["GET"],
+    matcher: "/store/orders/:id/invoice/pdf",
+    middlewares: [
+      authenticate("customer", ["session", "bearer"], {
+        allowUnauthenticated: true,
+      }),
+    ],
+  },
+  {
+    method: ["GET"],
     matcher: "/store/orders/:id",
     middlewares: [
       validateAndTransformQuery(
