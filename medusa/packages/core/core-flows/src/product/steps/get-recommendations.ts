@@ -1,5 +1,10 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
-import { RuleBasedRecommendationProvider } from "@medusajs/recommendation"
+import {
+  HybridRecommendationProvider,
+  MLRecommendationProvider,
+  RecommendationProvider,
+  RuleBasedRecommendationProvider,
+} from "@medusajs/recommendation"
 
 export type GetRecommendationsStepInput = {
   product_id?: string
@@ -11,6 +16,7 @@ export type GetRecommendationsStepInput = {
   offset?: number
   period?: string
   exclude_product_ids?: string[]
+  provider_override?: "RULE_BASED" | "ML" | "HYBRID"
 }
 
 export const getRecommendationsStepId = "get-recommendations"
@@ -18,7 +24,20 @@ export const getRecommendationsStepId = "get-recommendations"
 export const getRecommendationsStep = createStep(
   getRecommendationsStepId,
   async (input: GetRecommendationsStepInput, { container }) => {
-    const provider = new RuleBasedRecommendationProvider()
+    const isMlEnabled = process.env.ML_RECOMMENDATIONS_ENABLED !== "false"
+    const configuredProvider =
+      input.provider_override || process.env.ML_PROVIDER || "HYBRID"
+
+    let provider: RecommendationProvider
+
+    if (!isMlEnabled || configuredProvider === "RULE_BASED") {
+      provider = new RuleBasedRecommendationProvider()
+    } else if (configuredProvider === "ML") {
+      provider = new MLRecommendationProvider()
+    } else {
+      provider = new HybridRecommendationProvider()
+    }
+
     const result = await provider.getRecommendations(
       {
         productId: input.product_id,
