@@ -1,4 +1,4 @@
-import { RuleBasedRecommendationProvider } from "@medusajs/recommendation"
+import { RuleBasedRecommendationProvider, MLRecommendationProvider, HybridRecommendationProvider, OfflineTrainingPipeline } from "@medusajs/recommendation"
 import { GET as getSimilarProducts } from "../[id]/similar/route"
 import { GET as getFrequentlyBoughtTogether } from "../[id]/frequently-bought-together/route"
 import { GET as getPopularProducts } from "../popular/route"
@@ -7,6 +7,11 @@ import { GET as getRecommendations } from "../../recommendations/route"
 import { GET as getAdminRelationships, POST as postAdminRelationship } from "../../../admin/product-relationships/route"
 import { GET as getAdminRelById, DELETE as deleteAdminRelById } from "../../../admin/product-relationships/[id]/route"
 import { GET as getAdminConfig } from "../../../admin/recommendations/config/route"
+import { GET as getAdminModels } from "../../../admin/recommendations/models/route"
+import { POST as postAdminTrainModel } from "../../../admin/recommendations/models/train/route"
+import { POST as postAdminActivateModel } from "../../../admin/recommendations/models/[id]/activate/route"
+import { POST as postAdminRollbackModel } from "../../../admin/recommendations/models/[id]/rollback/route"
+import { GET as getAdminMetrics } from "../../../admin/recommendations/metrics/route"
 import { createMedusaContainer, Modules } from "@medusajs/framework/utils"
 import { asValue } from "awilix"
 
@@ -169,6 +174,185 @@ describe("Recommendation & Product Intelligence Suite", () => {
 
       expect(result.products[0].id).toBe("prod_a")
       expect(result.products[1].id).toBe("prod_b")
+    })
+  })
+
+  describe("MLRecommendationProvider & HybridRecommendationProvider Unit Tests", () => {
+    it("MLProvider should generate candidates from active model similarity matrix and attach explanations", async () => {
+      process.env.ML_RECOMMENDATIONS_ENABLED = "true"
+      const mlProvider = new MLRecommendationProvider()
+
+      const mockContainer = {
+        hasRegistration: (key: string) => true,
+        resolve: (key: string) => {
+          if (key === Modules.RECOMMENDATION) {
+            return {
+              getActiveModel: async () => ({
+                id: "recmod_01",
+                version: "v20260330_1000",
+                status: "ACTIVE",
+                is_active: true,
+                artifact_data: {
+                  similarity_matrix: {
+                    prod_1: { prod_2: 95, prod_3: 80 },
+                  },
+                },
+              }),
+            }
+          }
+          if (key === Modules.PRODUCT) {
+            return {
+              listAndCountProducts: async (filters: any) => {
+                const products = [
+                  { id: "prod_2", title: "Product Two", status: "published", created_at: "2026-03-01T00:00:00Z" },
+                  { id: "prod_3", title: "Product Three", status: "published", created_at: "2026-03-02T00:00:00Z" },
+                ]
+                return [products, products.length]
+              },
+            }
+          }
+          return null
+        },
+      }
+
+      const result = await mlProvider.getRecommendations(
+        { productId: "prod_1", limit: 10, offset: 0 },
+        mockContainer
+      )
+
+      expect(result.fallback_applied).toBe(false)
+      expect(result.strategy_used).toContain("ML_MODEL_v20260330_1000")
+      expect(result.products.length).toBe(2)
+      expect(result.products[0].id).toBe("prod_2")
+      expect(result.products[0].recommendation_explanation).toBe("Similar to products you viewed")
+    })
+
+    it("HybridProvider should combine normalized ML & Rule scores according to configured weights", async () => {
+      process.env.ML_RECOMMENDATIONS_ENABLED = "true"
+      process.env.ML_HYBRID_ML_WEIGHT = "0.6"
+      process.env.ML_HYBRID_RULE_WEIGHT = "0.4"
+      const hybridProvider = new HybridRecommendationProvider()
+
+      const mockContainer = {
+        hasRegistration: (key: string) => true,
+        resolve: (key: string) => {
+          if (key === Modules.RECOMMENDATION) {
+            return {
+              getActiveModel: async () => ({
+                id: "recmod_01",
+                version: "v1.0.0",
+                status: "ACTIVE",
+                artifact_data: {
+                  similarity_matrix: {
+                    prod_1: { prod_2: 100, prod_3: 50 },
+                  },
+                },
+              }),
+              listAndCountProductRelationships: async () => [[], 0],
+            }
+          }
+          if (key === Modules.PRODUCT) {
+            return {
+              retrieveProduct: async (id: string) => ({
+                id,
+                categories: [{ id: "cat_1" }],
+                collection_id: "col_1",
+                variants: [{ calculated_price: { calculated_amount: 100 } }],
+              }),
+              listAndCountProducts: async () => {
+                const products = [
+                  {
+                    id: "prod_2",
+                    title: "Product 2",
+                    status: "published",
+                    categories: [{ id: "cat_1" }],
+                    collection_id: "col_1",
+                    created_at: "2026-03-01T00:00:00Z",
+                    variants: [{ calculated_price: { calculated_amount: 100 } }],
+                  },
+                  {
+                    id: "prod_3",
+                    title: "Product 3",
+                    status: "published",
+                    categories: [{ id: "cat_1" }],
+                    created_at: "2026-03-02T00:00:00Z",
+                    variants: [{ calculated_price: { calculated_amount: 100 } }],
+                  },
+                ]
+                return [products, products.length]
+              },
+            }
+          }
+          return null
+        },
+      }
+
+      const result = await hybridProvider.getRecommendations(
+        { productId: "prod_1", limit: 10, offset: 0 },
+        mockContainer
+      )
+
+      expect(result.fallback_applied).toBe(false)
+      expect(result.strategy_used).toBe("HYBRID_RECOMMENDATION")
+      expect(result.products.length).toBeGreaterThan(0)
+      expect(result.products[0].recommendation_explanation).toBe("Hybrid AI & Rule-based recommendation")
+    })
+
+    it("OfflineTrainingPipeline should train model, perform temporal split, compute metrics and persist artifact", async () => {
+      let createdModel: any = null
+      const pipeline = new OfflineTrainingPipeline({ lookbackDays: 30, validationSplitRatio: 0.2 })
+
+      const mockContainer = {
+        resolve: (key: string) => {
+          if (key === Modules.RECOMMENDATION) {
+            return {
+              createRecommendationModels: async (records: any[]) => {
+                createdModel = { id: "recmod_train_1", ...records[0] }
+                return [createdModel]
+              },
+              updateRecommendationModels: async (data: any) => {
+                createdModel = { ...createdModel, ...data }
+                return [createdModel]
+              },
+            }
+          }
+          if (key === Modules.ORDER) {
+            return {
+              listAndCountOrders: async () => {
+                const now = Date.now()
+                const orders = [
+                  {
+                    id: "ord_1",
+                    customer_id: "cust_1",
+                    created_at: new Date(now - 20 * 24 * 60 * 60 * 1000).toISOString(),
+                    items: [{ product_id: "prod_a" }, { product_id: "prod_b" }],
+                  },
+                  {
+                    id: "ord_2",
+                    customer_id: "cust_2",
+                    created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    items: [{ product_id: "prod_a" }, { product_id: "prod_b" }],
+                  },
+                ]
+                return [orders, orders.length]
+              },
+            }
+          }
+          if (key === Modules.PRODUCT) {
+            return {
+              listAndCountProducts: async () => [[], 10],
+            }
+          }
+          return null
+        },
+      }
+
+      const trainedModel = await pipeline.runTrainingPipeline(mockContainer)
+
+      expect(trainedModel.status).toBe("READY")
+      expect(trainedModel.metrics).toBeDefined()
+      expect(trainedModel.metrics.catalog_coverage).toBeGreaterThanOrEqual(0)
+      expect(trainedModel.artifact_data.similarity_matrix.prod_a.prod_b).toBeGreaterThan(0)
     })
   })
 
@@ -394,6 +578,151 @@ describe("Recommendation & Product Intelligence Suite", () => {
           recommendations: expect.arrayContaining([
             expect.objectContaining({ id: "prod_rec" }),
           ]),
+        })
+      )
+    })
+  })
+
+  describe("Admin Recommendation ML Management API Routes", () => {
+    it("GET /admin/recommendations/models should list models and active model", async () => {
+      const mockRecService = {
+        listAndCountRecommendationModels: jest.fn().mockResolvedValue([
+          [{ id: "recmod_1", version: "v1.0.0", status: "ACTIVE" }],
+          1,
+        ]),
+        getActiveModel: jest.fn().mockResolvedValue({
+          id: "recmod_1",
+          version: "v1.0.0",
+        }),
+      }
+
+      const req: any = {
+        query: {},
+        scope: {
+          resolve: jest.fn().mockReturnValue(mockRecService),
+        },
+      }
+
+      const jsonMock = jest.fn()
+      const res: any = { json: jsonMock }
+
+      await getAdminModels(req, res)
+
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          count: 1,
+          active_model: expect.objectContaining({ id: "recmod_1" }),
+        })
+      )
+    })
+
+    it("POST /admin/recommendations/models/train should trigger model training", async () => {
+      const mockRecService = {
+        createRecommendationModels: jest.fn().mockResolvedValue([
+          { id: "recmod_new", version: "v20260330", status: "TRAINING" },
+        ]),
+        updateRecommendationModels: jest.fn().mockResolvedValue([
+          { id: "recmod_new", version: "v20260330", status: "READY" },
+        ]),
+      }
+
+      const req: any = {
+        body: { lookback_days: 30 },
+        scope: {
+          resolve: jest.fn().mockReturnValue(mockRecService),
+        },
+      }
+
+      const jsonMock = jest.fn()
+      const res: any = { json: jsonMock }
+
+      await postAdminTrainModel(req, res)
+
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "ML recommendation model trained successfully",
+        })
+      )
+    })
+
+    it("POST /admin/recommendations/models/:id/activate should activate model", async () => {
+      const mockRecService = {
+        activateModel: jest.fn().mockResolvedValue({
+          id: "recmod_1",
+          is_active: true,
+          status: "ACTIVE",
+        }),
+      }
+
+      const req: any = {
+        params: { id: "recmod_1" },
+        scope: {
+          resolve: jest.fn().mockReturnValue(mockRecService),
+        },
+      }
+
+      const jsonMock = jest.fn()
+      const res: any = { json: jsonMock }
+
+      await postAdminActivateModel(req, res)
+
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: expect.objectContaining({ is_active: true }),
+        })
+      )
+    })
+
+    it("POST /admin/recommendations/models/:id/rollback should rollback active model", async () => {
+      const mockRecService = {
+        rollbackModel: jest.fn().mockResolvedValue({
+          id: "recmod_prev",
+          is_active: true,
+          status: "ACTIVE",
+        }),
+      }
+
+      const req: any = {
+        params: { id: "recmod_1" },
+        scope: {
+          resolve: jest.fn().mockReturnValue(mockRecService),
+        },
+      }
+
+      const jsonMock = jest.fn()
+      const res: any = { json: jsonMock }
+
+      await postAdminRollbackModel(req, res)
+
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Rolled back to previous model version successfully",
+        })
+      )
+    })
+
+    it("GET /admin/recommendations/metrics should return active model evaluation metrics", async () => {
+      const mockRecService = {
+        getActiveModel: jest.fn().mockResolvedValue({
+          id: "recmod_1",
+          metrics: { hit_rate_at_k: 0.85, catalog_coverage: 0.92 },
+        }),
+      }
+
+      const req: any = {
+        scope: {
+          resolve: jest.fn().mockReturnValue(mockRecService),
+        },
+      }
+
+      const jsonMock = jest.fn()
+      const res: any = { json: jsonMock }
+
+      await getAdminMetrics(req, res)
+
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metrics: expect.objectContaining({ hit_rate_at_k: 0.85 }),
         })
       )
     })
