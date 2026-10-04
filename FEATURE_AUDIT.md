@@ -52,8 +52,8 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{I
 | **Admin / Product Management** | 8 | 6 | 0 | 0 | 0 | 2 |
 | **Commerce** | 30 | 25 | 0 | 4 | 1 | 0 |
 | **Admin / Reporting** | 5 | 4 | 0 | 0 | 1 | 0 |
-| **Blog / CMS** | 6 | 5 | 0 | 0 | 1 | 0 |
-| **SEO & Logistics & Marketing** | 14 | 12 | 0 | 1 | 1 | 0 |
+| **Blog / CMS** | 6 | 6 | 0 | 0 | 0 | 0 |
+| **SEO & Logistics & Marketing** | 14 | 11 | 0 | 1 | 2 | 0 |
 | **Notifications** | 8 | 3 | 0 | 3 | 2 | 0 |
 | **Reports / Infrastructure / Advanced** | 13 | 10 | 1 | 0 | 2 | 0 |
 | **TOTAL** | **96** | **65** | **1** | **8** | **8** | **14** |
@@ -1770,54 +1770,31 @@ None required for core feature availability.
 
 ### 60. نظرات مقالات (Blog Comments)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `Comments` Payload CMS collection)
+- **Framework Module:** `payload` (`payload/templates/website/src/collections/Comments/index.ts`)
+- **API Surface:** CMS REST / Local API & Server Actions
+- **API Endpoints:** `GET/POST /payload/api/comments`, Server Action `createCommentAction`
+- **Framework Source:** `payload/templates/website/src/collections/Comments/index.ts`, `payload/templates/website/src/app/(frontend)/posts/[slug]/actions.ts`
+- **Project Application:** Comments collection registered in Payload CMS config, post page integration in `payload/templates/website/src/app/(frontend)/posts/[slug]/page.tsx`.
+- **Runtime:** Verified via `payload/templates/website/src/payload.config.ts`.
+- **Configuration:** Active collection in Payload CMS template.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom `Comments` collection, beforeChange moderation hooks, threaded reply logic, and frontend components (`CommentList`, `CommentItem`, `CommentForm`).
+- **Tests:** `payload/templates/website/src/collections/Comments/__tests__/comments.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-blog comments, article comments, post feedback
-
-Implementation Patterns Checked:
-BlogComments collection definition, public comment submission route, moderation
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Blog comments, moderation workflow (`pending`, `approved`, `rejected`, `spam`), guest and authenticated commenter support, privacy protections (email hidden from public queries), HTML/XSS sanitization, article publication validation, parent-child threaded replies, server action handler, and post page presentation components are fully implemented and verified with automated test suite.
 
 ### Missing / Remaining Work
 
-Create `BlogComments` collection in Payload CMS with moderation hooks.
+None required for core feature availability.
 
 ### 61. SEO مقالات (Blog Article SEO)
 
