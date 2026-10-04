@@ -3908,6 +3908,7 @@ __metadata:
     "@medusajs/payment-stripe": 2.21.2
     "@medusajs/pricing": 2.21.2
     "@medusajs/product": 2.21.2
+    "@medusajs/product-video": 2.21.2
     "@medusajs/promotion": 2.21.2
     "@medusajs/rbac": 2.21.2
     "@medusajs/recommendation": 2.21.2
@@ -4071,6 +4072,16 @@ __metadata:
   dependencies:
     "@medusajs/framework": 2.21.2
     "@medusajs/test-utils": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/product-video@2.21.2, @medusajs/product-video@workspace:packages/modules/product-video":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/product-video@workspace:packages/modules/product-video"
+  dependencies:
+    "@medusajs/framework": 2.21.2
   peerDependencies:
     "@medusajs/framework": 2.21.2
   languageName: unknown

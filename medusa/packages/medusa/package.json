@@ -99,6 +99,7 @@
     "@medusajs/payment-stripe": "2.21.2",
     "@medusajs/pricing": "2.21.2",
     "@medusajs/product": "2.21.2",
+    "@medusajs/product-video": "2.21.2",
     "@medusajs/promotion": "2.21.2",
     "@medusajs/rbac": "2.21.2",
     "@medusajs/recommendation": "2.21.2",
