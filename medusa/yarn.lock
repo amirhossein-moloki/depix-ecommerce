@@ -3910,6 +3910,7 @@ __metadata:
     "@medusajs/product": 2.21.2
     "@medusajs/promotion": 2.21.2
     "@medusajs/rbac": 2.21.2
+    "@medusajs/recommendation": 2.21.2
     "@medusajs/region": 2.21.2
     "@medusajs/review": 2.21.2
     "@medusajs/sales-channel": 2.21.2
@@ -4113,6 +4114,16 @@ __metadata:
   dependencies:
     "@medusajs/framework": 2.21.2
     "@medusajs/test-utils": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/recommendation@2.21.2, @medusajs/recommendation@workspace:packages/modules/recommendation":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/recommendation@workspace:packages/modules/recommendation"
+  dependencies:
+    "@medusajs/framework": 2.21.2
   peerDependencies:
     "@medusajs/framework": 2.21.2
   languageName: unknown

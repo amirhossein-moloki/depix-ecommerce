@@ -21,6 +21,17 @@ export const ModulesDefinition: {
       scope: MODULE_SCOPE.INTERNAL,
     },
   },
+  [Modules.RECOMMENDATION]: {
+    key: Modules.RECOMMENDATION,
+    defaultPackage: false,
+    label: upperCaseFirst(Modules.RECOMMENDATION),
+    isRequired: false,
+    isQueryable: true,
+    dependencies: [ContainerRegistrationKeys.LOGGER],
+    defaultModuleDeclaration: {
+      scope: MODULE_SCOPE.INTERNAL,
+    },
+  },
   [Modules.STOCK_ALERT]: {
     key: Modules.STOCK_ALERT,
     defaultPackage: false,

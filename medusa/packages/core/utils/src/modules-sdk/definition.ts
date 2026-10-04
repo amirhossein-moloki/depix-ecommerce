@@ -35,6 +35,7 @@ export const Modules = {
   WISHLIST: "wishlist",
   COMPARISON: "comparison",
   STOCK_ALERT: "stock_alert",
+  RECOMMENDATION: "recommendation",
 } as const
 
 export const MODULE_PACKAGE_NAMES = {
@@ -74,6 +75,7 @@ export const MODULE_PACKAGE_NAMES = {
   [Modules.WISHLIST]: "@medusajs/wishlist",
   [Modules.COMPARISON]: "@medusajs/comparison",
   [Modules.STOCK_ALERT]: "@medusajs/stock-alert",
+  [Modules.RECOMMENDATION]: "@medusajs/recommendation",
 }
 
 export const REVERSED_MODULE_PACKAGE_NAMES = Object.entries(
