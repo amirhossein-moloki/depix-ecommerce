@@ -21,10 +21,10 @@ This document presents a comprehensive, evidence-based **Full Technical Audit** 
 
 | Status Category | Symbol | Count | Percentage of Total (96 Features) |
 |---|:---:|---:|---:|
-| **IMPLEMENTED** | 🟢 | 63 | 65.6% |
+| **IMPLEMENTED** | 🟢 | 64 | 66.7% |
 | **PARTIAL** | 🟡 | 1 | 1.0% |
 | **INTEGRATION_REQUIRED** | 🟠 | 8 | 8.3% |
-| **NOT_IMPLEMENTED** | 🔴 | 10 | 10.4% |
+| **NOT_IMPLEMENTED** | 🔴 | 9 | 9.4% |
 | **FRONTEND_ONLY / STOREFRONT** | ⚪ | 14 | 14.6% |
 | **TOTAL** | | **96** | **100.0%** |
 
@@ -33,12 +33,12 @@ This document presents a comprehensive, evidence-based **Full Technical Audit** 
 ## Scores
 
 ### A. Actual Project Implementation Score
-$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total Features}} = \frac{63 + (0.5 \times 1)}{96} = 66.15\%$$
+$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total Features}} = \frac{64 + (0.5 \times 1)}{96} = 67.19\%$$
 
 *Represents features made available through the workspace runtime, natively provided platform modules, and configured infrastructure.*
 
 ### B. Platform Capability Coverage Score
-$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total Features}} = \frac{63 + 1 + 8}{96} = 75.00\%$$
+$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total Features}} = \frac{64 + 1 + 8}{96} = 76.04\%$$
 
 *Measures features supported natively by Medusa v2 and Payload CMS v4 platforms in this application runtime.*
 
@@ -52,11 +52,11 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{I
 | **Admin / Product Management** | 8 | 6 | 0 | 0 | 0 | 2 |
 | **Commerce** | 30 | 25 | 0 | 4 | 1 | 0 |
 | **Admin / Reporting** | 5 | 4 | 0 | 0 | 1 | 0 |
-| **Blog / CMS** | 6 | 5 | 0 | 0 | 1 | 0 |
-| **SEO & Logistics & Marketing** | 14 | 10 | 0 | 1 | 3 | 0 |
+| **Blog / CMS** | 6 | 6 | 0 | 0 | 0 | 0 |
+| **SEO & Logistics & Marketing** | 14 | 11 | 0 | 1 | 2 | 0 |
 | **Notifications** | 8 | 3 | 0 | 3 | 2 | 0 |
 | **Reports / Infrastructure / Advanced** | 13 | 10 | 1 | 0 | 2 | 0 |
-| **TOTAL** | **96** | **63** | **1** | **8** | **10** | **14** |
+| **TOTAL** | **96** | **64** | **1** | **8** | **9** | **14** |
 
 ---
 
@@ -1770,54 +1770,31 @@ None required for core feature availability.
 
 ### 60. نظرات مقالات (Blog Comments)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `Comments` Payload CMS collection)
+- **Framework Module:** `payload` (`payload/templates/website/src/collections/Comments/index.ts`)
+- **API Surface:** CMS REST / Local API & Server Actions
+- **API Endpoints:** `GET/POST /payload/api/comments`, Server Action `createCommentAction`
+- **Framework Source:** `payload/templates/website/src/collections/Comments/index.ts`, `payload/templates/website/src/app/(frontend)/posts/[slug]/actions.ts`
+- **Project Application:** Comments collection registered in Payload CMS config, post page integration in `payload/templates/website/src/app/(frontend)/posts/[slug]/page.tsx`.
+- **Runtime:** Verified via `payload/templates/website/src/payload.config.ts`.
+- **Configuration:** Active collection in Payload CMS template.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom `Comments` collection, beforeChange moderation hooks, threaded reply logic, and frontend components (`CommentList`, `CommentItem`, `CommentForm`).
+- **Tests:** `payload/templates/website/src/collections/Comments/__tests__/comments.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-blog comments, article comments, post feedback
-
-Implementation Patterns Checked:
-BlogComments collection definition, public comment submission route, moderation
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Blog comments, moderation workflow (`pending`, `approved`, `rejected`, `spam`), guest and authenticated commenter support, privacy protections (email hidden from public queries), HTML/XSS sanitization, article publication validation, parent-child threaded replies, server action handler, and post page presentation components are fully implemented and verified with automated test suite.
 
 ### Missing / Remaining Work
 
-Create `BlogComments` collection in Payload CMS with moderation hooks.
+None required for core feature availability.
 
 ### 61. SEO مقالات (Blog Article SEO)
 
@@ -2180,54 +2157,31 @@ None required for core feature availability.
 
 ### 73. Schema محصولات (Product JSON-LD Schema)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom Product JSON-LD serialization utility & Store API route)
+- **Framework Module:** `@medusajs/product` & `@medusajs/review`
+- **API Surface:** Store API
+- **API Endpoints:** `GET /store/products/:id/json-ld`
+- **Framework Source:** `medusa/packages/medusa/src/utils/json-ld/product-json-ld.ts`, `medusa/packages/medusa/src/api/store/products/[id]/json-ld/route.ts`
+- **Project Application:** Product JSON-LD serializer and Store API route active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/products/:id/json-ld` endpoint.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom Schema.org Product JSON-LD serialization engine and Store API route.
+- **Tests:** `medusa/packages/medusa/src/api/store/products/__tests__/json-ld.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-product json-ld, product schema, schema.org product
-
-Implementation Patterns Checked:
-Product JSON-LD script tag component on PDP
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Schema.org Product JSON-LD serialization engine (`generateProductJsonLd` / `serializeJsonLd`) and Store API endpoint (`GET /store/products/:id/json-ld`) are fully implemented. The system generates compliant Schema.org Product structured data including name, description, canonical product URL, image gallery, primary variant SKU, GTIN, MPN, brand, categories, single and multi-variant offer pricing and availability (`InStock`/`OutOfStock`), approved aggregate ratings, and approved customer reviews (without exposing private customer emails/IDs). Safe JSON serialization prevents XSS script injection.
 
 ### Missing / Remaining Work
 
-Build Product schema.org JSON-LD script tag generator on Storefront PDP.
+None required for core feature availability.
 
 ### 74. Schema مقالات (Article JSON-LD Schema)
 
@@ -3000,9 +2954,9 @@ None required for core feature availability.
 
 | Status | Count | Percentage |
 |---|---:|---:|
-| 🟢 IMPLEMENTED | 63 | 65.6% |
+| 🟢 IMPLEMENTED | 64 | 66.7% |
 | 🟡 PARTIAL | 1 | 1.0% |
 | 🟠 INTEGRATION_REQUIRED | 8 | 8.3% |
-| 🔴 NOT_IMPLEMENTED | 10 | 10.4% |
+| 🔴 NOT_IMPLEMENTED | 9 | 9.4% |
 | ⚪ FRONTEND_ONLY / STOREFRONT | 14 | 14.6% |
 | **TOTAL** | **96** | **100.0%** |
