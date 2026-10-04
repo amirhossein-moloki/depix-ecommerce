@@ -300,6 +300,7 @@ function resolveModules(
     { resolve: MODULE_PACKAGE_NAMES[Modules.WISHLIST] },
     { resolve: MODULE_PACKAGE_NAMES[Modules.COMPARISON] },
     { resolve: MODULE_PACKAGE_NAMES[Modules.STOCK_ALERT] },
+    { resolve: MODULE_PACKAGE_NAMES[Modules.RECOMMENDATION] },
 
     {
       resolve: MODULE_PACKAGE_NAMES[Modules.TRANSLATION],
