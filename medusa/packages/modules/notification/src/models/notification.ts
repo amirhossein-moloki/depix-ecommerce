@@ -30,6 +30,8 @@ export const Notification = model.define("notification", {
   external_id: model.text().nullable(),
   // The status of the notification
   status: model.enum(NotificationStatus).default(NotificationStatus.PENDING),
+  // Timestamp when the notification was marked as read by the receiver
+  read_at: model.dateTime().nullable(),
 
   provider: model
     .belongsTo(() => NotificationProvider, { mappedBy: "notifications" })

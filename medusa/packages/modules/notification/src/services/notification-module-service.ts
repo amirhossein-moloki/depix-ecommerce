@@ -233,4 +233,85 @@ export default class NotificationModuleService
 
     return createdNotifications
   }
+
+  @InjectManager()
+  async markAsRead(
+    ids: string | string[],
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<NotificationTypes.NotificationDTO[]> {
+    const idArray = Array.isArray(ids) ? ids : [ids]
+    if (!idArray.length) {
+      return []
+    }
+
+    const now = new Date()
+    const notifications = await this.notificationService_.list(
+      { id: idArray },
+      {},
+      sharedContext
+    )
+
+    const toUpdate = notifications.map((n) => ({
+      id: n.id,
+      read_at: n.read_at || now,
+    }))
+
+    if (!toUpdate.length) {
+      return []
+    }
+
+    const updated = await this.notificationService_.update(
+      toUpdate,
+      sharedContext
+    )
+
+    return await this.baseRepository_.serialize<
+      NotificationTypes.NotificationDTO[]
+    >(updated)
+  }
+
+  @InjectManager()
+  async markAllAsRead(
+    receiverId: string,
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<{ count: number }> {
+    if (!receiverId) {
+      return { count: 0 }
+    }
+
+    const unread = await this.notificationService_.list(
+      { receiver_id: receiverId, read_at: null },
+      { select: ["id"] },
+      sharedContext
+    )
+
+    if (!unread.length) {
+      return { count: 0 }
+    }
+
+    const now = new Date()
+    const toUpdate = unread.map((n) => ({ id: n.id, read_at: now }))
+
+    await this.notificationService_.update(toUpdate, sharedContext)
+
+    return { count: unread.length }
+  }
+
+  @InjectManager()
+  async getUnreadCount(
+    receiverId: string,
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<number> {
+    if (!receiverId) {
+      return 0
+    }
+
+    const [, count] = await this.notificationService_.listAndCount(
+      { receiver_id: receiverId, read_at: null },
+      { select: ["id"] },
+      sharedContext
+    )
+
+    return count
+  }
 }

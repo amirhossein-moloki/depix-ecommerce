@@ -347,7 +347,7 @@ function resolveModules(
             id: "local",
             options: {
               name: "Local Notification Provider",
-              channels: ["feed"],
+              channels: ["feed", "in-app", "email", "sms"],
             },
           },
         ],

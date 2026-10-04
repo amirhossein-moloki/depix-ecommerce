@@ -107,6 +107,10 @@ export interface NotificationDTO {
    * The status of the notification
    */
   status: "pending" | "success" | "failure"
+  /**
+   * The date and time the notification was read.
+   */
+  read_at?: Date | string | null
 }
 
 /**
@@ -183,6 +187,10 @@ export interface FilterableNotificationProps
    * Filters a notification based on when it was sent and created in the database
    */
   created_at?: OperatorMap<string>
+  /**
+   * Filters a notification based on when it was read
+   */
+  read_at?: OperatorMap<string> | Date | string | null
 }
 
 /**

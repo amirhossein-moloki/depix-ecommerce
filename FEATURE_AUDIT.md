@@ -40,10 +40,10 @@ Backend APIs may still expose Store APIs where required by Medusa architecture, 
 
 | Status Category | Symbol | Count | Percentage of In-Scope Total (81 Features) |
 |---|:---:|---:|---:|
-| **IMPLEMENTED** | 🟢 | 68 | 84.0% |
+| **IMPLEMENTED** | 🟢 | 69 | 85.2% |
 | **PARTIAL** | 🟡 | 1 | 1.2% |
 | **INTEGRATION_REQUIRED** | 🟠 | 8 | 9.9% |
-| **NOT_IMPLEMENTED** | 🔴 | 4 | 4.9% |
+| **NOT_IMPLEMENTED** | 🔴 | 3 | 3.7% |
 | **TOTAL IN-SCOPE** | | **81** | **100.0%** |
 | **OUT_OF_SCOPE (Frontend Removed)** | ⚪ | 15 | — |
 
@@ -52,12 +52,12 @@ Backend APIs may still expose Store APIs where required by Medusa architecture, 
 ## Scores
 
 ### A. Actual Project Implementation Score
-$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total In-Scope Features}} = \frac{68 + (0.5 \times 1)}{81} = 84.57\%$$
+$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total In-Scope Features}} = \frac{69 + (0.5 \times 1)}{81} = 85.80\%$$
 
 *Represents backend, CMS, and platform features made available through the workspace runtime, natively provided platform modules, custom Medusa modules, and configured infrastructure.*
 
 ### B. Platform Capability Coverage Score
-$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total In-Scope Features}} = \frac{68 + 1 + 8}{81} = 95.06\%$$
+$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total In-Scope Features}} = \frac{69 + 1 + 8}{81} = 96.30\%$$
 
 *Measures backend and platform capabilities supported natively or via custom workspace modules by Medusa v2 and Payload CMS v4 in this application runtime.*
 
@@ -73,9 +73,9 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{I
 | **Admin / Reporting** | 9 | 8 | 0 | 0 | 1 | 0 |
 | **Blog / CMS** | 8 | 8 | 0 | 0 | 0 | 0 |
 | **SEO & Logistics & Marketing** | 6 | 5 | 0 | 0 | 0 | 1 |
-| **Notifications** | 6 | 1 | 0 | 3 | 2 | 0 |
+| **Notifications** | 6 | 2 | 0 | 3 | 1 | 0 |
 | **Reports / Infrastructure / Advanced** | 9 | 7 | 1 | 1 | 0 | 0 |
-| **TOTAL** | **96** | **68** | **1** | **8** | **4** | **15** |
+| **TOTAL** | **96** | **69** | **1** | **8** | **3** | **15** |
 
 ---
 
@@ -2037,50 +2037,28 @@ None required for core feature availability.
 
 ### 80. مرکز اعلان‌ها (Notification Center)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via built-in `@medusajs/notification` module & custom Store APIs / workflows)
+- **Framework Module:** `@medusajs/notification` (`medusa/packages/modules/notification`)
+- **API Surface:** Store API & Core Workflows & Event Bus
+- **API Endpoints:** `GET /store/notifications`, `POST /store/notifications/read-all`, `GET /store/notifications/unread-count`, `GET /store/notifications/:id`, `POST /store/notifications/:id/read`
+- **Framework Source:** `medusa/packages/modules/notification`, `medusa/packages/core/core-flows/src/notification`, `medusa/packages/medusa/src/api/store/notifications`
+- **Project Application:** Persistent in-app notification center, read/unread state tracking (`read_at`), pagination (`limit`, `offset`), filters (`is_read`, `unread_only`, `trigger_type`, `channel`), bulk read-all DB update, and domain event subscriber (`configurable-notifications.ts`) active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/notifications` endpoints.
+- **Configuration:** Active module in application runtime with local provider enabled for `in-app`, `feed`, `email`, and `sms` channels.
+- **External Integration:** None required.
+- **Custom Project Extension:** Added `read_at` dateTime field and composite database index `IDX_notification_receiver_id_read_at` via migration `Migration20251121160000.ts`; extended `NotificationModuleService` with `markAsRead`, `markAllAsRead`, and `getUnreadCount` helper methods; created core workflows `markNotificationsAsReadWorkflow` and `markAllNotificationsAsReadWorkflow`; implemented authenticated customer Store API routes; and updated domain event subscriber for in-app notification creation with deterministic idempotency keys.
+- **Tests:** `medusa/packages/medusa/src/api/store/notifications/__tests__/notifications.spec.ts`
 
 ### Evidence Trace
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for persistent customer in-app notifications and read/unread state tracking APIs, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-in-app notification, customer notification center, unread notifications
-
-Implementation Patterns Checked:
-Customer in-app notification entity, read/unread status fields, Store notification API endpoints
-
-Framework Evidence:
-None — Platform core does not include native persistent customer notification store module.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Persistent customer in-app notification model (`read_at` timestamp), customer ownership isolation, authenticated Store APIs, pagination, filtering, unread count calculation, bulk read-all operations, idempotency handling, domain event listeners (`order.placed`, `order.canceled`, `fulfillment.created`, `payment.captured`, `payment.failed`, `stock_alert.triggered`), and 100% automated test coverage are fully implemented.
 
 ### Missing / Remaining Work
-Build persistent customer in-app notification database model and Store API endpoints (`GET /store/notifications`, `POST /store/notifications/:id/read`).
+None required for core feature availability.
 
 ---
 

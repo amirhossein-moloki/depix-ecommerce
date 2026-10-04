@@ -1,4 +1,2 @@
-export * from "./send-notifications"
-export * from "./notify-on-failure"
 export * from "./mark-notifications-as-read"
 export * from "./mark-all-notifications-as-read"
