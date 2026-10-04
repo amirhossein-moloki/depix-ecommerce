@@ -342,6 +342,8 @@ describe("Stock Alert API, Workflows & Inventory Integration", () => {
       const mockProductService = {
         retrieveProductVariant: jest.fn().mockResolvedValue({
           id: "var_1",
+          title: "var_1",
+          product: { id: "prod_1", title: "prod_1" },
           manage_inventory: true,
         }),
       }
@@ -397,17 +399,21 @@ describe("Stock Alert API, Workflows & Inventory Integration", () => {
       expect(result.notifiedCount).toBe(1)
       expect(result.alerts[0].status).toBe("notified")
       expect(mockNotificationService.createNotifications).toHaveBeenCalledWith({
-        to: "09123456789",
+        to: "+989123456789",
         channel: "sms",
         template: "back-in-stock",
         trigger_type: "stock_alert.triggered",
         resource_id: "sta_1",
         resource_type: "stock_alert",
         receiver_id: "cus_1",
+        idempotency_key: "stock_alert_sta_1",
         data: {
           customer_id: "cus_1",
+          customer_phone: "09123456789",
           product_id: "prod_1",
           variant_id: "var_1",
+          product_title: "prod_1",
+          variant_title: "var_1",
           stock_alert_id: "sta_1",
           channel: "sms",
         },
@@ -418,6 +424,8 @@ describe("Stock Alert API, Workflows & Inventory Integration", () => {
       const mockProductService = {
         retrieveProductVariant: jest.fn().mockResolvedValue({
           id: "var_1",
+          title: "var_1",
+          product: { id: "prod_1", title: "prod_1" },
           manage_inventory: true,
         }),
       }

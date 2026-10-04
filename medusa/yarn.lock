@@ -3373,6 +3373,7 @@ __metadata:
   resolution: "@medusajs/core-flows@workspace:packages/core/core-flows"
   dependencies:
     "@medusajs/framework": 2.21.2
+    "@medusajs/notification-sms": "workspace:*"
     csv-parse: ^7.0.2
     deeks: ^3.2.1
     json-2-csv: ^5.5.11
@@ -3983,6 +3984,16 @@ __metadata:
   dependencies:
     "@medusajs/framework": 2.21.2
     "@sendgrid/mail": ^8.1.6
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/notification-sms@workspace:*, @medusajs/notification-sms@workspace:packages/modules/providers/notification-sms":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/notification-sms@workspace:packages/modules/providers/notification-sms"
+  dependencies:
+    "@medusajs/framework": 2.21.2
   peerDependencies:
     "@medusajs/framework": 2.21.2
   languageName: unknown
