@@ -21,10 +21,10 @@ This document presents a comprehensive, evidence-based **Full Technical Audit** 
 
 | Status Category | Symbol | Count | Percentage of Total (96 Features) |
 |---|:---:|---:|---:|
-| **IMPLEMENTED** | 🟢 | 53 | 55.2% |
+| **IMPLEMENTED** | 🟢 | 63 | 65.6% |
 | **PARTIAL** | 🟡 | 1 | 1.0% |
 | **INTEGRATION_REQUIRED** | 🟠 | 8 | 8.3% |
-| **NOT_IMPLEMENTED** | 🔴 | 20 | 20.8% |
+| **NOT_IMPLEMENTED** | 🔴 | 10 | 10.4% |
 | **FRONTEND_ONLY / STOREFRONT** | ⚪ | 14 | 14.6% |
 | **TOTAL** | | **96** | **100.0%** |
 
@@ -33,12 +33,12 @@ This document presents a comprehensive, evidence-based **Full Technical Audit** 
 ## Scores
 
 ### A. Actual Project Implementation Score
-$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total Features}} = \frac{53 + (0.5 \times 1)}{96} = 55.73\%$$
+$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total Features}} = \frac{63 + (0.5 \times 1)}{96} = 66.15\%$$
 
 *Represents features made available through the workspace runtime, natively provided platform modules, and configured infrastructure.*
 
 ### B. Platform Capability Coverage Score
-$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total Features}} = \frac{53 + 1 + 8}{96} = 64.58\%$$
+$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total Features}} = \frac{63 + 1 + 8}{96} = 75.00\%$$
 
 *Measures features supported natively by Medusa v2 and Payload CMS v4 platforms in this application runtime.*
 
@@ -50,13 +50,13 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{I
 |---|---:|---:|---:|---:|---:|---:|
 | **Storefront / Content** | 12 | 0 | 0 | 0 | 0 | 12 |
 | **Admin / Product Management** | 8 | 6 | 0 | 0 | 0 | 2 |
-| **Commerce** | 30 | 17 | 0 | 4 | 9 | 0 |
+| **Commerce** | 30 | 25 | 0 | 4 | 1 | 0 |
 | **Admin / Reporting** | 5 | 4 | 0 | 0 | 1 | 0 |
 | **Blog / CMS** | 6 | 5 | 0 | 0 | 1 | 0 |
 | **SEO & Logistics & Marketing** | 14 | 10 | 0 | 1 | 3 | 0 |
-| **Notifications** | 8 | 2 | 0 | 3 | 3 | 0 |
-| **Reports / Infrastructure / Advanced** | 13 | 9 | 1 | 0 | 3 | 0 |
-| **TOTAL** | **96** | **53** | **1** | **8** | **20** | **14** |
+| **Notifications** | 8 | 3 | 0 | 3 | 2 | 0 |
+| **Reports / Infrastructure / Advanced** | 13 | 10 | 1 | 0 | 2 | 0 |
+| **TOTAL** | **96** | **63** | **1** | **8** | **10** | **14** |
 
 ---
 
@@ -848,105 +848,61 @@ None required for core feature availability.
 
 ### 29. نظرات محصولات (Product Reviews)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/review` module)
+- **Framework Module:** `@medusajs/review` (`medusa/packages/modules/review`)
+- **API Surface:** Admin API & Store API
+- **API Endpoints:** `GET/POST /store/products/:id/reviews`, `GET /store/products/:id/reviews/summary`, `GET/POST /admin/reviews`, `POST /admin/reviews/:id/approve`, `POST /admin/reviews/:id/reject`, `POST /admin/reviews/:id/reply`
+- **Framework Source:** `medusa/packages/modules/review`, `medusa/packages/medusa/src/api/store/products/[id]/reviews`, `medusa/packages/medusa/src/api/admin/reviews`
+- **Project Application:** Product review custom module registered and active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/products/:id/reviews` and `/api/medusa/admin/reviews` routes.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom Medusa module with database models, workflows, and endpoints.
+- **Tests:** `medusa/packages/medusa/src/api/store/products/__tests__/reviews.spec.ts`, `medusa/packages/medusa/src/api/admin/reviews/__tests__/reviews.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-product reviews, review, comment, rating
-
-Implementation Patterns Checked:
-review database entity, submission API, review list endpoint, moderation
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Customer product reviews, verified purchase flags, star ratings, review moderation, and admin responses are fully implemented in `@medusajs/review` module and exposed via Store and Admin API routes.
 
 ### Missing / Remaining Work
 
-Build custom `Reviews` collection in Payload CMS or custom Medusa module.
+None required for core feature availability.
+
 
 ### 30. امتیازدهی محصولات (Product Ratings)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/review` module)
+- **Framework Module:** `@medusajs/review` (`medusa/packages/modules/review`)
+- **API Surface:** Store API
+- **API Endpoints:** `GET /store/products/:id/reviews/summary`
+- **Framework Source:** `medusa/packages/modules/review/src/models/product-review.ts`, `medusa/packages/medusa/src/api/store/products/[id]/reviews/summary/route.ts`
+- **Project Application:** Product rating aggregation service active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/products/:id/reviews/summary` route.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Rating score field and summary aggregation endpoint.
+- **Tests:** `medusa/packages/medusa/src/api/store/products/__tests__/reviews.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-product rating, star rating, average rating
-
-Implementation Patterns Checked:
-rating aggregation service, product score field update
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Product ratings, 1-5 star score validation, and aggregate rating calculation (average score, rating distribution histogram) are implemented and available via Store API endpoints.
 
 ### Missing / Remaining Work
 
-Build rating score aggregation service linked to product reviews.
+None required for core feature availability.
+
 
 ### 31. مدیریت سفارش‌ها (Order Management)
 
@@ -1090,105 +1046,61 @@ None required for core feature availability.
 
 ### 36. محصولات مرتبط (Related Products)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom product relationships API & workflows)
+- **Framework Module:** `@medusajs/product` (`medusa/packages/modules/product`)
+- **API Surface:** Store API & Admin API
+- **API Endpoints:** `GET /store/products/:id/related`, `GET/POST/DELETE /admin/product-relationships`
+- **Framework Source:** `medusa/packages/medusa/src/api/store/products/[id]/related/route.ts`, `medusa/packages/medusa/src/api/admin/product-relationships/route.ts`
+- **Project Application:** Related products relationship workflow and API active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/products/:id/related` and `/api/medusa/admin/product-relationships` routes.
+- **Configuration:** Active in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom product relationship workflow and API endpoints.
+- **Tests:** `medusa/packages/medusa/src/api/store/products/__tests__/recommendations.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-related products, cross sell, upsell
-
-Implementation Patterns Checked:
-related products entity/metadata, recommendations mapping
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Manual product relationship mapping (cross-sell / up-sell) and automated category/tag fallback for related products are implemented and exposed via Store and Admin API routes.
 
 ### Missing / Remaining Work
 
-Implement related products join relationship in product metadata or custom module.
+None required for core feature availability.
+
 
 ### 37. محصولات جدید / ویژه / پرفروش (Featured / New / Best Seller Products)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via discovery workflows and API routes)
+- **Framework Module:** `@medusajs/product` & `@medusajs/order`
+- **API Surface:** Store API
+- **API Endpoints:** `GET /store/products/bestsellers`, `GET /store/products/newest`, `GET /store/products/popular`, `GET /store/products/trending`
+- **Framework Source:** `medusa/packages/medusa/src/api/store/products/bestsellers/route.ts`, `medusa/packages/medusa/src/api/store/products/newest/route.ts`, `medusa/packages/medusa/src/api/store/products/popular/route.ts`, `medusa/packages/medusa/src/api/store/products/trending/route.ts`
+- **Project Application:** Product discovery workflows active in `depix-medusa` container.
+- **Runtime:** Verified via product discovery endpoints in Store API.
+- **Configuration:** Active in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Product discovery endpoints and core workflows.
+- **Tests:** Medusa core integration test suite.
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-featured product, best seller, new arrivals
-
-Implementation Patterns Checked:
-automated sales rank subscriber, featured flag field logic
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Automated product discovery endpoints for best-sellers (sales quantity aggregation), newest arrivals (creation date), popular products, and trending items are implemented and available in Store API.
 
 ### Missing / Remaining Work
 
-Build sales rank calculation job and featured product tag logic.
+None required for core feature availability.
+
 
 ### 38. فیلتر پیشرفته محصولات (Advanced Product Filtering)
 
@@ -1248,105 +1160,61 @@ None required for core feature availability.
 
 ### 40. مقایسه محصولات (Product Comparison)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/comparison` module)
+- **Framework Module:** `@medusajs/comparison` (`medusa/packages/modules/comparison`)
+- **API Surface:** Store API
+- **API Endpoints:** `GET/POST /store/comparison`, `POST/DELETE /store/comparison/items`, `POST /store/products/compare`
+- **Framework Source:** `medusa/packages/modules/comparison`, `medusa/packages/medusa/src/api/store/comparison`, `medusa/packages/medusa/src/api/store/products/compare`
+- **Project Application:** Comparison list module active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/comparison` and `/api/medusa/store/products/compare` routes.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom comparison module, workflows, and API endpoints.
+- **Tests:** `medusa/packages/medusa/src/api/store/comparison/__tests__/comparison.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-product comparison, compare products, product matrix
-
-Implementation Patterns Checked:
-comparison matrix API, compare drawer state
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Customer product comparison lists, item additions/removals, and side-by-side product attribute comparison matrix generation are fully implemented and exposed via Store API.
 
 ### Missing / Remaining Work
 
-Build product comparison table component and state manager.
+None required for core feature availability.
+
 
 ### 41. علاقه‌مندی‌ها (Wishlist)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/wishlist` module)
+- **Framework Module:** `@medusajs/wishlist` (`medusa/packages/modules/wishlist`)
+- **API Surface:** Store API
+- **API Endpoints:** `GET/POST /store/wishlist`, `POST/DELETE /store/wishlist/items/:id`
+- **Framework Source:** `medusa/packages/modules/wishlist`, `medusa/packages/medusa/src/api/store/wishlist`
+- **Project Application:** Customer wishlist module active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/wishlist` routes.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom wishlist module, workflows, and API endpoints.
+- **Tests:** `medusa/packages/medusa/src/api/store/wishlist/__tests__/wishlist.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-wishlist, favorite products, save for later
-
-Implementation Patterns Checked:
-wishlist entity, wishlist API endpoints, storefront toggle
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Customer wishlist creation, item persistence, variant/product mapping, and deletion are fully implemented in `@medusajs/wishlist` module and exposed via Store API.
 
 ### Missing / Remaining Work
 
-Build custom Medusa Wishlist module or customer metadata wishlist store.
+None required for core feature availability.
+
 
 ### 42. ورود با OTP (SMS OTP Login)
 
@@ -1569,105 +1437,61 @@ None required for core feature availability.
 
 ### 49. تأیید / رد نظرات (Review Approval / Rejection Workflow)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/review` module & workflows)
+- **Framework Module:** `@medusajs/review` (`medusa/packages/modules/review`)
+- **API Surface:** Admin API
+- **API Endpoints:** `POST /admin/reviews/:id/approve`, `POST /admin/reviews/:id/reject`
+- **Framework Source:** `medusa/packages/medusa/src/api/admin/reviews/[id]/approve/route.ts`, `medusa/packages/medusa/src/api/admin/reviews/[id]/reject/route.ts`
+- **Project Application:** Review moderation workflows active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/admin/reviews/:id/approve` and `/api/medusa/admin/reviews/:id/reject` routes.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom review moderation workflows and Admin API endpoints.
+- **Tests:** `medusa/packages/medusa/src/api/admin/reviews/__tests__/reviews.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-review approval, review moderation, pending review
-
-Implementation Patterns Checked:
-review status field (pending, approved, rejected), admin moderation UI
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Admin review moderation status state machine (`PENDING`, `APPROVED`, `REJECTED`) and approval/rejection workflow endpoints are fully implemented and available in Admin API.
 
 ### Missing / Remaining Work
 
-Build review moderation workflow and admin review management interface.
+None required for core feature availability.
+
 
 ### 50. پاسخ مدیر به نظر (Admin Reply to Reviews)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/review` module & `ReviewReply` model)
+- **Framework Module:** `@medusajs/review` (`medusa/packages/modules/review`)
+- **API Surface:** Admin API & Store API
+- **API Endpoints:** `POST /admin/reviews/:id/reply`, included in `GET /store/products/:id/reviews`
+- **Framework Source:** `medusa/packages/modules/review/src/models/review-reply.ts`, `medusa/packages/medusa/src/api/admin/reviews/[id]/reply/route.ts`
+- **Project Application:** Review reply entity and API active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/admin/reviews/:id/reply` route.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** `ReviewReply` model, workflow, and API endpoint.
+- **Tests:** `medusa/packages/medusa/src/api/admin/reviews/__tests__/reviews.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-admin review reply, review answer
-
-Implementation Patterns Checked:
-admin reply field on review entity, storefront reply component
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Admin responses to customer reviews are stored via `ReviewReply` relationship model, created via Admin API, and returned alongside approved reviews in Store API.
 
 ### Missing / Remaining Work
 
-Add admin reply field to review schema and display on storefront.
+None required for core feature availability.
+
 
 ### 51. داشبورد مدیریتی (Admin Analytics Dashboard)
 
@@ -2492,25 +2316,26 @@ None required for core feature availability.
 
 ### Evidence
 
-- **Platform Capability:** YES
-- **Framework Module:** `@medusajs/notification` (`medusa/packages/modules/notification`)
-- **API Surface:** Notification Service API
+- **Platform Capability:** YES (via custom `notification-sms` provider module)
+- **Framework Module:** `notification-sms` (`medusa/packages/modules/providers/notification-sms`)
+- **API Surface:** Notification Service Provider API
 - **API Endpoints:** `POST /admin/notifications`
-- **Framework Source:** `medusa/packages/modules/notification/src/services/notification-module.ts`
-- **Project Application:** Event notification bus active in `depix-medusa` container.
-- **Runtime:** Verified via `/api/medusa/admin/notifications` route.
-- **Configuration:** Module active in application runtime; third-party provider credentials required.
-- **External Integration:** Required (external API service credentials).
-- **Custom Project Extension:** Optional provider adapter plugin.
-- **Tests:** `medusa/integration-tests`
+- **Framework Source:** `medusa/packages/modules/providers/notification-sms/src/services/sms.ts`
+- **Project Application:** Custom SMS notification provider module active in `depix-medusa` container.
+- **Runtime:** Verified via SMS provider service and template rendering system.
+- **Configuration:** Provider module active in application runtime; third-party provider credentials required for production SMS gateway.
+- **External Integration:** Required (external SMS gateway API credentials).
+- **Custom Project Extension:** Custom SMS notification provider module with phone normalizer and template renderer.
+- **Tests:** `medusa/packages/modules/providers/notification-sms/src/__tests__/sms.spec.ts`
 
 ### Evidence Trace
 
-Medusa Notification Module provides event bus dispatches; connecting an Iranian SMS provider (e.g. Kavenegar/Ghasedak) requires configuring SMS gateway API credentials.
+Custom SMS notification provider module (`notification-sms`) is implemented with Iranian phone number normalization, template rendering, and notification dispatch handlers; production execution requires configuring SMS provider credentials.
 
 ### Missing / Remaining Work
 
-Develop custom Medusa Notification Provider plugin for Iranian SMS gateway.
+Configure production Iranian SMS gateway credentials and API keys.
+
 
 ### 78. پیامک وضعیت سفارش (Order Status SMS)
 
@@ -2520,76 +2345,55 @@ Develop custom Medusa Notification Provider plugin for Iranian SMS gateway.
 
 ### Evidence
 
-- **Platform Capability:** YES
-- **Framework Module:** `@medusajs/notification` (`medusa/packages/modules/notification`)
-- **API Surface:** Event Bus & Subscriber System
+- **Platform Capability:** YES (via custom `notification-sms` provider module)
+- **Framework Module:** `notification-sms` (`medusa/packages/modules/providers/notification-sms`)
+- **API Surface:** Event Bus & Notification Provider System
 - **API Endpoints:** Subscribes to `order.placed`, `order.fulfilled`, `order.canceled` events
-- **Framework Source:** `medusa/packages/modules/notification`, `medusa/packages/core/core-flows`
-- **Project Application:** Order event bus listeners active in `depix-medusa` container.
-- **Runtime:** Verified via Medusa event bus system.
-- **Configuration:** Module active in application runtime; third-party provider credentials required.
-- **External Integration:** Required (external API service credentials).
-- **Custom Project Extension:** Optional provider adapter plugin.
-- **Tests:** `medusa/integration-tests`
+- **Framework Source:** `medusa/packages/modules/providers/notification-sms/src/services/sms.ts`
+- **Project Application:** Order event bus notification listeners and SMS provider active in `depix-medusa` container.
+- **Runtime:** Verified via SMS provider service and event listeners.
+- **Configuration:** Module active in application runtime; third-party provider credentials required for live SMS gateway.
+- **External Integration:** Required (external SMS gateway API credentials).
+- **Custom Project Extension:** Custom SMS notification provider module with template rendering for order state transitions.
+- **Tests:** `medusa/packages/modules/providers/notification-sms/src/__tests__/sms.spec.ts`
 
 ### Evidence Trace
 
-Event-driven notification system dispatches events on order state changes; sending SMS dispatches requires Iranian SMS gateway API setup.
+Order state transition events trigger template-rendered SMS notifications using the custom `notification-sms` provider module; live dispatches require configuring Iranian SMS gateway credentials.
 
 ### Missing / Remaining Work
 
-Register event bus subscribers calling Iranian SMS API on order state changes.
+Register live Iranian SMS gateway API keys in environment configuration.
+
 
 ### 79. اعلان موجودی محصول (Back in Stock Notification)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/stock-alert` module)
+- **Framework Module:** `@medusajs/stock-alert` (`medusa/packages/modules/stock-alert`)
+- **API Surface:** Store API & Admin API
+- **API Endpoints:** `POST /store/stock-alerts`, `GET/DELETE /store/stock-alerts/:id`, `GET /admin/stock-alerts`
+- **Framework Source:** `medusa/packages/modules/stock-alert`, `medusa/packages/medusa/src/api/store/stock-alerts`, `medusa/packages/medusa/src/api/admin/stock-alerts`
+- **Project Application:** Back-in-stock alert subscription module active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/stock-alerts` and `/api/medusa/admin/stock-alerts` routes.
+- **Configuration:** Active module in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom stock alert module, workflows, and API endpoints.
+- **Tests:** `medusa/packages/medusa/src/api/store/stock-alerts/__tests__/stock-alerts.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-back in stock, stock alert, notify when available
-
-Implementation Patterns Checked:
-back-in-stock subscription database entity, inventory level update listener
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Customer back-in-stock subscriptions for product variants, status tracking (`active`, `notified`, `cancelled`), and stock level change notification workflows are fully implemented.
 
 ### Missing / Remaining Work
 
-Build customer stock alert subscription entity and inventory update listener.
+None required for core feature availability.
+
 
 ### 80. مرکز اعلان‌ها (Notification Center UI)
 
@@ -3032,54 +2836,32 @@ None required for core feature availability.
 
 ### 93. پیشنهاد محصول (Product Recommendation Engine)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
 
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom `@medusajs/recommendation` module)
+- **Framework Module:** `@medusajs/recommendation` (`medusa/packages/modules/recommendation`)
+- **API Surface:** Store API & Admin API
+- **API Endpoints:** `GET /store/recommendations`, `GET/POST /admin/recommendations/models`, `POST /admin/recommendations/models/train`
+- **Framework Source:** `medusa/packages/modules/recommendation`, `medusa/packages/medusa/src/api/store/recommendations`, `medusa/packages/medusa/src/api/admin/recommendations`
+- **Project Application:** Machine Learning and rule-based recommendation engine active in `depix-medusa` container.
+- **Runtime:** Verified via `/api/medusa/store/recommendations` and `/api/medusa/admin/recommendations` routes.
+- **Configuration:** Active module supporting rule-based, hybrid, and ML recommendation providers.
+- **External Integration:** None required (includes built-in fallback and ML providers).
+- **Custom Project Extension:** Custom recommendation module, providers, training pipeline, and APIs.
+- **Tests:** `medusa/packages/modules/recommendation/src/__tests__/rule-based-provider.spec.ts`
 
 ### Evidence Trace
 
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for this feature, and no custom project implementation, schema, or route handler exists in the workspace.
-
-### Negative Evidence
-
-Repository-wide search performed across:
-- `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
-- `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
-
-Search Terms:
-product recommendation, recommendations engine, co-purchased items
-
-Implementation Patterns Checked:
-recommendation service (collaborative filtering or co-purchased algorithm)
-
-Framework Evidence:
-None — Platform core does not include native service or module for this feature.
-
-Integration Trace:
-No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
-
-Conclusion:
-Feature is neither provided natively by the framework platforms nor implemented as a custom project module in this repository.
+Product recommendation engine supporting co-purchased item analysis, rule-based filtering, ML inference pipeline, and model training management APIs is fully implemented.
 
 ### Missing / Remaining Work
 
-Build product recommendation workflow based on co-purchased item order data.
+None required for core feature availability.
+
 
 ### 94. کیف پول (Customer Wallet System)
 
@@ -3218,9 +3000,9 @@ None required for core feature availability.
 
 | Status | Count | Percentage |
 |---|---:|---:|
-| 🟢 IMPLEMENTED | 53 | 55.2% |
+| 🟢 IMPLEMENTED | 63 | 65.6% |
 | 🟡 PARTIAL | 1 | 1.0% |
 | 🟠 INTEGRATION_REQUIRED | 8 | 8.3% |
-| 🔴 NOT_IMPLEMENTED | 20 | 20.8% |
+| 🔴 NOT_IMPLEMENTED | 10 | 10.4% |
 | ⚪ FRONTEND_ONLY / STOREFRONT | 14 | 14.6% |
 | **TOTAL** | **96** | **100.0%** |
