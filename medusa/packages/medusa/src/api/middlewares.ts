@@ -75,6 +75,9 @@ import { storeComparisonRoutesMiddlewares } from "./store/comparison/middlewares
 import { storeStockAlertRoutesMiddlewares } from "./store/stock-alerts/middlewares"
 import { storeProductStockAlertRoutesMiddlewares } from "./store/products/[id]/stock-alerts/middlewares"
 import { adminStockAlertRoutesMiddlewares } from "./admin/stock-alerts/middlewares"
+import { storePriceAlertRoutesMiddlewares } from "./store/price-alerts/middlewares"
+import { storeProductPriceAlertRoutesMiddlewares } from "./store/products/[id]/price-alerts/middlewares"
+import { adminPriceAlertRoutesMiddlewares } from "./admin/price-alerts/middlewares"
 import { adminProductVideoRoutesMiddlewares } from "./admin/product-videos/middlewares"
 import { storeRegionRoutesMiddlewares } from "./store/regions/middlewares"
 import { storeReturnReasonRoutesMiddlewares } from "./store/return-reasons/middlewares"
@@ -159,6 +162,9 @@ export default defineMiddlewares([
   ...storeStockAlertRoutesMiddlewares,
   ...storeProductStockAlertRoutesMiddlewares,
   ...adminStockAlertRoutesMiddlewares,
+  ...storePriceAlertRoutesMiddlewares,
+  ...storeProductPriceAlertRoutesMiddlewares,
+  ...adminPriceAlertRoutesMiddlewares,
   ...adminProductVideoRoutesMiddlewares,
   ...storeProductVariantRoutesMiddlewares,
   ...storeReturnReasonRoutesMiddlewares,

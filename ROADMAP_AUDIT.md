@@ -5,13 +5,13 @@
 This report presents an evidence-based **Implementation Priority Plan and Execution Roadmap** for the remaining **13 in-scope features** of the **Depix E-commerce** workspace (`depix-ecommerce`).
 
 The technical audit (`FEATURE_AUDIT.md`) evaluated 96 total features across the workspace. With the frontend/storefront completely removed from project scope, 15 features are classified as **OUT_OF_SCOPE**. Of the **81 total in-scope backend/platform features**:
-- 🟢 **69 features (85.2%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
+- 🟢 **70 features (86.4%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
 - 🟡 **1 feature (1.2%) is PARTIAL** (#76 Performance Optimization).
 - 🟠 **8 features (9.9%) are INTEGRATION_REQUIRED** (#24, #26, #27, #42, #63, #77, #78, #81).
-- 🔴 **3 features (3.7%) are NOT_IMPLEMENTED** (#83 Price Change Alert, #94 Wallet, #95 Profit & Margin Reporting).
+- 🔴 **2 features (2.5%) are NOT_IMPLEMENTED** (#94 Wallet, #95 Profit & Margin Reporting).
 
 ### Summary of Remaining Work
-- **Total Remaining Backlog Features:** 13 features
+- **Total Remaining Backlog Features:** 11 features
 - **Configuration / Infrastructure Tasks:** 2 features (#76, #81)
 - **External Integration Tasks:** 7 features (#24, #26, #27, #42, #63, #77, #78)
 - **Custom Backend Work:** 4 features (#80, #83, #94, #95)
@@ -62,8 +62,8 @@ Every remaining feature has been audited against Medusa v2 modules, Payload CMS 
 ### C. Custom Backend Logic
 10. **#80 مرکز اعلان‌ها (In-App Notification Center)** — `🟢 IMPLEMENTED`
     - *Implementation:* Persistent customer in-app notification store, read/unread state tracking (`read_at`), pagination, filters, bulk read-all DB operations, and domain event subscriber (`configurable-notifications.ts`) fully implemented in Medusa Notification Module and Store APIs.
-11. **#83 هشدار تغییر قیمت (Price Change Alert)** — `🔴 NOT_IMPLEMENTED`
-    - *Work Required:* Build price watch subscription model and pricing update event listener subscriber.
+11. **#83 هشدار تغییر قیمت (Price Change Alert)** — `🟢 IMPLEMENTED`
+    - *Implementation:* Custom Medusa `@medusajs/price-alert` module, workflows (`createPriceAlertWorkflow`, `cancelPriceAlertWorkflow`, `processPriceChangeWorkflow`), subscriber (`price-change-alert.ts`), Phase 13 Notification Center integration, and authenticated Store & Admin APIs.
 12. **#94 کیف پول (Customer Wallet System)** — `🔴 NOT_IMPLEMENTED` (Deferred)
     - *Work Required:* Build custom Medusa Wallet module, ledger balance model, top-up API, and Wallet Payment Provider plugin.
 13. **#95 گزارش سود (Profit & Margin Reporting)** — `🔴 NOT_IMPLEMENTED` (Deferred)

@@ -114,6 +114,24 @@ const handlerConfig: HandlerConfig[] = [
       variant_id: "variant_id",
     },
   },
+  {
+    event: "price_alert.triggered",
+    template: "price-alert-triggered",
+    channel: "in-app",
+    to: "customer_email",
+    resource_id: "alert_id",
+    resource_type: "price_alert",
+    receiver_id: "customer_id",
+    data: {
+      title: "Price Alert Triggered",
+      message: "The price for an item on your watchlist has changed!",
+      product_id: "product_id",
+      variant_id: "variant_id",
+      old_price: "old_price",
+      new_price: "new_price",
+      currency_code: "currency_code",
+    },
+  },
 ]
 
 const configAsMap = handlerConfig.reduce(
