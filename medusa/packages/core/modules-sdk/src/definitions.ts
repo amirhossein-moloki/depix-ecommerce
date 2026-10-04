@@ -21,6 +21,17 @@ export const ModulesDefinition: {
       scope: MODULE_SCOPE.INTERNAL,
     },
   },
+  [Modules.PRODUCT_VIDEO]: {
+    key: Modules.PRODUCT_VIDEO,
+    defaultPackage: false,
+    label: upperCaseFirst(Modules.PRODUCT_VIDEO),
+    isRequired: false,
+    isQueryable: true,
+    dependencies: [ContainerRegistrationKeys.LOGGER],
+    defaultModuleDeclaration: {
+      scope: MODULE_SCOPE.INTERNAL,
+    },
+  },
   [Modules.RECOMMENDATION]: {
     key: Modules.RECOMMENDATION,
     defaultPackage: false,

@@ -29,6 +29,19 @@ export interface ProductJsonLdOptions {
     average_rating: number
     review_count: number
   } | null
+  /**
+   * Active product videos
+   */
+  videos?: Array<{
+    id: string
+    title?: string | null
+    description?: string | null
+    thumbnail_url?: string | null
+    video_url: string
+    embed_url?: string | null
+    provider?: string | null
+    created_at?: string | Date
+  }>
 }
 
 /**
@@ -294,6 +307,38 @@ export function generateProductJsonLd(
   }
   if (reviewsList) {
     schema.review = reviewsList
+  }
+
+  // Videos (VideoObject)
+  if (Array.isArray(options.videos) && options.videos.length > 0) {
+    const videoObjects = options.videos.map((v) => {
+      const videoObj: any = {
+        "@type": "VideoObject",
+        name: v.title || `${name} Video`,
+        description: v.description || description || v.title || `${name} Video`,
+        contentUrl: v.video_url,
+      }
+
+      if (v.thumbnail_url) {
+        videoObj.thumbnailUrl = toAbsoluteUrl(v.thumbnail_url, baseUrl)
+      } else if (imageArray.length > 0) {
+        videoObj.thumbnailUrl = imageArray[0]
+      }
+
+      if (v.embed_url) {
+        videoObj.embedUrl = v.embed_url
+      }
+
+      if (v.created_at) {
+        videoObj.uploadDate = new Date(v.created_at).toISOString()
+      }
+
+      return videoObj
+    })
+
+    if (videoObjects.length > 0) {
+      schema.video = videoObjects.length === 1 ? videoObjects[0] : videoObjects
+    }
   }
 
   return schema

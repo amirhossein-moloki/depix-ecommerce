@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
+import { generateEmbedUrl } from "@medusajs/product-video"
 import { generateProductJsonLd, serializeJsonLd } from "../../../../../utils/json-ld/product-json-ld"
 
 export const GET = async (
@@ -39,6 +40,31 @@ export const GET = async (
 
   let reviews: any[] = []
   let ratingSummary: any = null
+  let videos: any[] = []
+
+  try {
+    const productVideoService = req.scope.resolve<any>(Modules.PRODUCT_VIDEO)
+    if (productVideoService) {
+      const [activeVideos] = await productVideoService.listAndCountProductVideos(
+        {
+          product_id: productId,
+          status: "active",
+        },
+        {
+          order: { sort_order: "ASC", created_at: "ASC" },
+        }
+      )
+
+      if (Array.isArray(activeVideos)) {
+        videos = activeVideos.map((v: any) => ({
+          ...v,
+          embed_url: generateEmbedUrl(v.provider, v.video_id, v.video_url),
+        }))
+      }
+    }
+  } catch (e) {
+    // If product video module is not resolved or throws, continue without videos
+  }
 
   try {
     const reviewService = req.scope.resolve<any>(Modules.REVIEW)
@@ -73,6 +99,7 @@ export const GET = async (
     currency,
     reviews,
     ratingSummary,
+    videos,
   })
 
   if (req.query.format === "raw") {
