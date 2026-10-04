@@ -12,6 +12,7 @@ import type { Post } from '@/payload-types'
 
 import { PostHero } from '@/heros/PostHero'
 import { generateMeta } from '@/utilities/generateMeta'
+import { generateArticleJsonLd, serializeJsonLd } from '@/utilities/generateArticleJsonLd'
 import PageClient from './page.client'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
 
@@ -51,6 +52,8 @@ export default async function Post({ params: paramsPromise }: Args) {
 
   if (!post) return <PayloadRedirects url={url} />
 
+  const articleJsonLd = generateArticleJsonLd(post)
+
   return (
     <article className="pt-16 pb-16">
       <PageClient />
@@ -59,6 +62,15 @@ export default async function Post({ params: paramsPromise }: Args) {
       <PayloadRedirects disableNotFound url={url} />
 
       {draft && <LivePreviewListener />}
+
+      {articleJsonLd && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd(articleJsonLd),
+          }}
+          type="application/ld+json"
+        />
+      )}
 
       <PostHero post={post} />
 
