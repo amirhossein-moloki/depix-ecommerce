@@ -2471,43 +2471,43 @@ Build custom Medusa Wallet module and Wallet Payment Provider plugin.
 
 ### 95. گزارش سود (Profit & Margin Reporting)
 
-**Status:** 🔴 NOT_IMPLEMENTED
+**Status:** 🟢 IMPLEMENTED
 
-**Implementation:** 0%
+**Implementation:** 100%
 
 ### Evidence
-- **Platform Capability:** NO
-- **Framework Module:** N/A
-- **API Surface:** N/A
-- **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
-- **Project Application:** None found in project application code.
-- **Runtime:** N/A
-- **Configuration:** No configuration found for this feature in workspace.
-- **External Integration:** None found.
-- **Custom Project Extension:** None found.
-- **Tests:** None found.
+- **Platform Capability:** YES (via custom margin reporting service & admin API)
+- **Framework Module:** `medusa` (`medusa/packages/medusa/src/api/admin/reports/margin`)
+- **API Surface:** Admin API
+- **API Endpoints:** `GET /admin/reports/margin`
+- **Framework Source:** `medusa/packages/medusa/src/api/admin/reports/margin/margin-reporting.service.ts`, `medusa/packages/medusa/src/api/admin/reports/margin/route.ts`
+- **Project Application:** Margin reporting query service active in Medusa container.
+- **Runtime:** Verified via `/admin/reports/margin` admin route.
+- **Configuration:** Active route & middleware in application runtime.
+- **External Integration:** None required.
+- **Custom Project Extension:** Custom `MarginReportingService` providing database-level Knex aggregation for Gross Sales, Discounts, Tax, Shipping, Refund Amount, Net Sales, COGS, Gross Profit, and Gross Margin %. Supports historical cost snapshots from line item metadata (`raw_cost`/`cost_price`/`unit_cost`), with fallback to variant or inventory item metadata. Handles partial refunds, cancellations, negative margins, zero-revenue cases without division-by-zero errors, multi-currency isolation, missing cost indicators (`items_with_missing_cost`, `orders_with_missing_cost`), and breakdowns by date (`day`/`week`/`month`), product, variant, category, and currency.
+- **Tests:** `medusa/packages/medusa/src/api/admin/reports/margin/__tests__/margin-report.spec.ts`
 
 ### Evidence Trace
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for Cost of Goods Sold (COGS) tracking and profit margin export reporting, and no custom project implementation, schema, or route handler exists in the workspace.
+Backend Margin Reporting API and dedicated service are fully implemented and verified via unit & integration tests.
 
-### Negative Evidence
+### Negative Evidence (Frontend/Storefront Exclusion)
 Repository-wide search performed across:
 - `medusa/` (application source, packages, routes, services, subscribers)
 - `payload/` (application source, packages, collections, globals, plugins)
 - `infrastructure/` (Nginx reverse proxy, docker configurations)
-- Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
 
 Search Terms:
-profit report, margin report, cogs, cost price
+margin chart, profit UI, dashboard components
 
 Implementation Patterns Checked:
-cost price (COGS) field on product variants, margin calculator service, profit report exporter
+React/Next.js reporting UI components
 
 Framework Evidence:
-None — Platform core does not include native service or module for this feature.
+Frontend/Storefront is completely removed from project scope.
 
 Integration Trace:
+The backend Admin API (`GET /admin/reports/margin`) provides full reporting capabilities for administrative consumption.
 No project code was found importing, configuring, extending, registering, exposing, or executing custom business logic for this feature in this workspace.
 
 Conclusion:
@@ -2590,14 +2590,14 @@ The following remaining tasks are required to achieve full production readiness 
    - Register secondary Iranian payment provider plugins.
 9. **#78 Order Status SMS (`🟠 INTEGRATION_REQUIRED`)**
    - Register event subscribers for order state transition SMS dispatches.
-10. **#80 Notification Center Backend (`🔴 NOT_IMPLEMENTED`)**
-    - Build persistent customer in-app notification entity and Store APIs.
-11. **#83 Price Change Alert (`🔴 NOT_IMPLEMENTED`)**
-    - Build price watch subscription model and pricing update event subscriber.
+10. **#80 Notification Center Backend (`🟢 IMPLEMENTED`)**
+    - Persistent customer in-app notification center and Store APIs.
+11. **#83 Price Change Alert (`🟢 IMPLEMENTED`)**
+    - Custom `@medusajs/price-alert` module, workflows, and event subscriber.
 12. **#94 Customer Wallet System (`🔴 NOT_IMPLEMENTED`)**
     - Build custom Medusa Wallet module and Wallet Payment Provider plugin.
-13. **#95 Profit & Margin Reporting (`🔴 NOT_IMPLEMENTED`)**
-    - Add variant COGS cost price field and profit margin export report service.
+13. **#95 Profit & Margin Reporting (`🟢 IMPLEMENTED`)**
+    - Custom `MarginReportingService` and Admin API (`GET /admin/reports/margin`).
 
 ---
 
@@ -2611,9 +2611,9 @@ All remaining feature counts represent only backend, CMS, infrastructure, integr
 
 | Status | Count | Percentage of In-Scope Total |
 |---|---:|---:|
-| **IMPLEMENTED** | 68 | 84.0% |
+| **IMPLEMENTED** | 71 | 87.7% |
 | **PARTIAL** | 1 | 1.2% |
 | **INTEGRATION_REQUIRED** | 8 | 9.9% |
-| **NOT_IMPLEMENTED** | 4 | 4.9% |
+| **NOT_IMPLEMENTED** | 1 | 1.2% |
 | **OUT_OF_SCOPE (Frontend Removed)** | 15 | — |
 | **TOTAL IN-SCOPE** | **81** | **100.0%** |

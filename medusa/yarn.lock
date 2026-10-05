@@ -4078,6 +4078,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/price-alert@workspace:packages/modules/price-alert":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/price-alert@workspace:packages/modules/price-alert"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/pricing@2.21.2, @medusajs/pricing@workspace:^, @medusajs/pricing@workspace:packages/modules/pricing":
   version: 0.0.0-use.local
   resolution: "@medusajs/pricing@workspace:packages/modules/pricing"

@@ -5,10 +5,10 @@
 This report presents an evidence-based **Implementation Priority Plan and Execution Roadmap** for the remaining **13 in-scope features** of the **Depix E-commerce** workspace (`depix-ecommerce`).
 
 The technical audit (`FEATURE_AUDIT.md`) evaluated 96 total features across the workspace. With the frontend/storefront completely removed from project scope, 15 features are classified as **OUT_OF_SCOPE**. Of the **81 total in-scope backend/platform features**:
-- 🟢 **70 features (86.4%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
+- 🟢 **73 features (90.1%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
 - 🟡 **1 feature (1.2%) is PARTIAL** (#76 Performance Optimization).
-- 🟠 **8 features (9.9%) are INTEGRATION_REQUIRED** (#24, #26, #27, #42, #63, #77, #78, #81).
-- 🔴 **2 features (2.5%) are NOT_IMPLEMENTED** (#94 Wallet, #95 Profit & Margin Reporting).
+- 🟠 **6 features (7.4%) are INTEGRATION_REQUIRED** (#24, #26, #27, #42, #63, #78).
+- 🔴 **1 feature (1.2%) is NOT_IMPLEMENTED** (#94 Wallet).
 
 ### Summary of Remaining Work
 - **Total Remaining Backlog Features:** 11 features
@@ -66,8 +66,8 @@ Every remaining feature has been audited against Medusa v2 modules, Payload CMS 
     - *Implementation:* Custom Medusa `@medusajs/price-alert` module, workflows (`createPriceAlertWorkflow`, `cancelPriceAlertWorkflow`, `processPriceChangeWorkflow`), subscriber (`price-change-alert.ts`), Phase 13 Notification Center integration, and authenticated Store & Admin APIs.
 12. **#94 کیف پول (Customer Wallet System)** — `🔴 NOT_IMPLEMENTED` (Deferred)
     - *Work Required:* Build custom Medusa Wallet module, ledger balance model, top-up API, and Wallet Payment Provider plugin.
-13. **#95 گزارش سود (Profit & Margin Reporting)** — `🔴 NOT_IMPLEMENTED` (Deferred)
-    - *Work Required:* Add variant COGS cost price field and profit margin export report service.
+13. **#95 گزارش سود (Profit & Margin Reporting)** — `🟢 IMPLEMENTED`
+    - *Implementation:* Custom `MarginReportingService`, Knex DB-level financial aggregation for revenue, COGS, gross profit, gross margin %, historical cost snapshot support, missing cost indicators, partial refunds, multi-currency isolation, date/product/variant/category/currency breakdowns, and authenticated Admin API (`GET /admin/reports/margin`).
 
 ---
 
