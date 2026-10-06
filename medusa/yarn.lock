@@ -3613,7 +3613,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@medusajs/framework@2.21.2, @medusajs/framework@workspace:*, @medusajs/framework@workspace:packages/core/framework":
+"@medusajs/framework@2.21.2, @medusajs/framework@workspace:*, @medusajs/framework@workspace:^, @medusajs/framework@workspace:packages/core/framework":
   version: 0.0.0-use.local
   resolution: "@medusajs/framework@workspace:packages/core/framework"
   dependencies:
@@ -3917,6 +3917,7 @@ __metadata:
     "@medusajs/notification-sendgrid": 2.21.2
     "@medusajs/order": 2.21.2
     "@medusajs/payment": 2.21.2
+    "@medusajs/payment-gateway": "workspace:^"
     "@medusajs/payment-stripe": 2.21.2
     "@medusajs/pricing": 2.21.2
     "@medusajs/product": 2.21.2
@@ -4052,6 +4053,15 @@ __metadata:
     "@medusajs/test-utils": 2.21.2
   peerDependencies:
     "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/payment-gateway@workspace:^, @medusajs/payment-gateway@workspace:packages/modules/providers/payment-gateway":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/payment-gateway@workspace:packages/modules/providers/payment-gateway"
+  dependencies:
+    "@medusajs/framework": "workspace:^"
+    typescript: ^5.6.2
   languageName: unknown
   linkType: soft
 
