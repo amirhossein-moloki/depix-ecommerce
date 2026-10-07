@@ -1,5 +1,5 @@
 import { z } from "@medusajs/framework/zod"
-import { AddressPayload } from "../../utils/common-validators"
+import { AddressPayload, AddressPayloadInner, refineIranianAddress } from "../../utils/common-validators"
 import { createSelectParams, WithAdditionalData } from "../../utils/validators"
 
 export type StoreGetPromotionType = z.infer<typeof StoreGetCartsCart>
@@ -44,10 +44,12 @@ export const StoreRemoveCartPromotions = z
   })
   .strict()
 
-const StoreCartUpsertAddress = AddressPayload.merge(
-  z.object({
-    id: z.string().optional(),
-  })
+const StoreCartUpsertAddress = refineIranianAddress(
+  AddressPayloadInner.merge(
+    z.object({
+      id: z.string().optional(),
+    })
+  )
 )
 
 export type StoreUpdateCartType = z.infer<typeof UpdateCart>

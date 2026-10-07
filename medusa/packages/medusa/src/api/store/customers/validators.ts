@@ -1,5 +1,5 @@
 import { z } from "@medusajs/framework/zod"
-import { AddressPayload } from "../../utils/common-validators"
+import { AddressPayloadInner, refineIranianAddress } from "../../utils/common-validators"
 import { createFindParams, createSelectParams } from "../../utils/validators"
 
 export const StoreGetCustomerParams = createSelectParams()
@@ -23,12 +23,14 @@ export const StoreUpdateCustomer = z.object({
 
 export const StoreGetCustomerAddressParams = createSelectParams()
 
-export const StoreCreateCustomerAddress = AddressPayload.merge(
-  z.object({
-    address_name: z.string().nullish(),
-    is_default_shipping: z.boolean().optional(),
-    is_default_billing: z.boolean().optional(),
-  })
+export const StoreCreateCustomerAddress = refineIranianAddress(
+  AddressPayloadInner.merge(
+    z.object({
+      address_name: z.string().nullish(),
+      is_default_shipping: z.boolean().optional(),
+      is_default_billing: z.boolean().optional(),
+    })
+  )
 )
 
 export const StoreUpdateCustomerAddress = StoreCreateCustomerAddress
