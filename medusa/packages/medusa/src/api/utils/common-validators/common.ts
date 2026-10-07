@@ -1,6 +1,69 @@
 import { z } from "@medusajs/framework/zod"
 
-export const AddressPayload = z
+/**
+ * Validates a 10-digit Iranian national code (کد ملی) using standard checksum.
+ */
+export function isValidIranianNationalCode(code: string): boolean {
+  if (typeof code !== "string" || !/^\d{10}$/.test(code)) {
+    return false
+  }
+  if (/^(\d)\1{9}$/.test(code)) {
+    return false
+  }
+  const check = parseInt(code[9], 10)
+  let sum = 0
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(code[i], 10) * (10 - i)
+  }
+  const remainder = sum % 11
+  return remainder < 2 ? check === remainder : check === 11 - remainder
+}
+
+/**
+ * Refines an address schema to enforce Iranian address validation rules when country_code is "ir".
+ */
+export function refineIranianAddress<T extends z.ZodTypeAny>(schema: T) {
+  return schema.superRefine((data: any, ctx: z.RefinementCtx) => {
+    if (
+      data &&
+      typeof data === "object" &&
+      data.country_code?.toLowerCase() === "ir"
+    ) {
+      if (!data.postal_code || !/^\d{10}$/.test(String(data.postal_code))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Iranian postal_code must be exactly 10 digits",
+          path: ["postal_code"],
+        })
+      }
+      if (
+        !data.phone ||
+        !/^(\+98|0)?9\d{9}$/.test(String(data.phone).replace(/\s+/g, ""))
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Iranian phone number must be a valid 11-digit mobile number (e.g. 09123456789)",
+          path: ["phone"],
+        })
+      }
+      const nationalCode = data.metadata?.national_code
+      if (
+        !nationalCode ||
+        !isValidIranianNationalCode(String(nationalCode))
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "A valid Iranian national_code is required in metadata for Iranian addresses",
+          path: ["metadata", "national_code"],
+        })
+      }
+    }
+  })
+}
+
+export const AddressPayloadInner = z
   .object({
     first_name: z.string().nullish(),
     last_name: z.string().nullish(),
@@ -15,6 +78,8 @@ export const AddressPayload = z
     metadata: z.record(z.string(), z.unknown()).nullish(),
   })
   .strict()
+
+export const AddressPayload = refineIranianAddress(AddressPayloadInner)
 
 /**
  * Validates that a string is either empty, the placeholder "#", or a URL using
