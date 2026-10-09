@@ -82,8 +82,13 @@ export class SmsNotificationService extends AbstractNotificationProviderService 
     // Provider routing
     const providerType = (this.options_.provider || "fake").toLowerCase()
 
+    // Redact sensitive details for logging
+    const maskedRecipient = recipient.length > 7
+      ? `${recipient.slice(0, 4)}****${recipient.slice(-3)}`
+      : "****"
+
     this.logger_?.info?.(
-      `Sending SMS via provider '${providerType}' to '${recipient}'`
+      `Sending SMS via provider '${providerType}' to '${maskedRecipient}'`
     )
 
     if (providerType === "fake" || process.env.NODE_ENV === "test") {

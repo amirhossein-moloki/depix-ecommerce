@@ -5,6 +5,16 @@
 const DEFAULT_TEMPLATES: Record<string, string> = {
   "back-in-stock": "محصول {{product_title}} ({{variant_title}}) دوباره موجود شد.",
   stock_available: "محصول {{product_title}} دوباره موجود شد.",
+  "order-created-template": "سفارش شما با شناسه {{order_id}} با موفقیت ثبت شد.",
+  "order-placed": "سفارش شما با شماره {{order_id}} ثبت گردید.",
+  "order-canceled": "سفارش شما با شماره {{order_id}} لغو شد.",
+  "payment-captured": "پرداخت سفارش {{order_id}} با موفقیت تایید شد.",
+  "payment-failed": "پرداخت سفارش {{order_id}} ناموفق بود.",
+  "shipment-created": "مرسوله مربوط به سفارش {{order_id}} ارسال شد.",
+  "stock-alert-triggered": "محصول مورد نظر شما دوباره موجود شد.",
+  "price-alert-triggered": "قیمت محصول مورد نظر شما به {{new_price}} تغییر یافت.",
+  "verification-requested": "کد تایید شما: {{code}}",
+  "verification-code": "کد تایید شما: {{code}}",
   default: "اطلاعیه جدید: {{message}}",
 }
 

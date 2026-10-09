@@ -56,8 +56,9 @@ describe("SmsNotificationService Provider", () => {
 
   it("successfully sends fake SMS in test environment", async () => {
     const res = await service.send({
-      to: "09123456789",
+      channel: "sms",
       template: "back-in-stock",
+      to: "09123456789",
       data: { product_title: "لپ تاپ" },
     })
 
@@ -70,8 +71,9 @@ describe("SmsNotificationService Provider", () => {
   it("throws INVALID_DATA error if 'to' is missing", async () => {
     await expect(
       service.send({
-        to: "",
+        channel: "sms",
         template: "back-in-stock",
+        to: "",
       })
     ).rejects.toThrow("Recipient ('to') is required for SMS notification")
   })
@@ -98,6 +100,8 @@ describe("SmsNotificationService Provider", () => {
 
     try {
       const res = await externalService.send({
+        channel: "sms",
+        template: "order-placed",
         to: "09123456789",
         content: { text: "تست پیامک" },
       })
