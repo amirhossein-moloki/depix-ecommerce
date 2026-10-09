@@ -2,32 +2,32 @@
 
 ## Executive Summary & Architecture Overview
 
-This report presents an evidence-based **Implementation Priority Plan and Execution Roadmap** for the remaining **13 in-scope features** of the **Depix E-commerce** workspace (`depix-ecommerce`).
+This report presents an evidence-based **Implementation Priority Plan and Execution Roadmap** for the remaining **10 in-scope features** of the **Depix E-commerce** workspace (`depix-ecommerce`).
 
 The technical audit (`FEATURE_AUDIT.md`) evaluated 96 total features across the workspace. With the frontend/storefront completely removed from project scope, 15 features are classified as **OUT_OF_SCOPE**. Of the **81 total in-scope backend/platform features**:
-- 🟢 **73 features (90.1%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
+- 🟢 **71 features (87.7%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
 - 🟡 **1 feature (1.2%) is PARTIAL** (#76 Performance Optimization).
 - 🟠 **6 features (7.4%) are INTEGRATION_REQUIRED** (#24, #26, #27, #42, #63, #78).
 - 🔴 **1 feature (1.2%) is NOT_IMPLEMENTED** (#94 Wallet).
 
 ### Summary of Remaining Work
-- **Total Remaining Backlog Features:** 11 features
+- **Total Remaining Backlog Features:** 10 features
 - **Configuration / Infrastructure Tasks:** 2 features (#76, #81)
 - **External Integration Tasks:** 7 features (#24, #26, #27, #42, #63, #77, #78)
-- **Custom Backend Work:** 4 features (#80, #83, #94, #95)
+- **Custom Backend Work:** 1 feature (#94)
 - **Storefront / Frontend Work:** 0 features (Storefront presentation layer removed from project scope)
-- **Parallelizable Workstreams:** 13 features across 3 parallel execution tracks
+- **Parallelizable Workstreams:** 10 features across 3 parallel execution tracks
 
 ---
 
 # 1. Executive Summary
 
-| Category | Count | Percentage of Backlog (13 Features) | Primary Technical Focus |
+| Category | Count | Percentage of Backlog (10 Features) | Primary Technical Focus |
 |---|---:|---:|---|
 | **Configuration / Infrastructure** | 2 | 15.4% | Application-level Redis cache adapter in `medusa-config.ts`, Nginx edge cache, SMTP settings |
 | **External Service Integrations** | 7 | 53.8% | Iranian SMS Gateway (Kavenegar), Payment Gateways (ZarinPal, Mellat/Saman), Courier Rate APIs |
-| **Custom Backend Modules/Services** | 4 | 30.8% | Customer In-App Notification Center, Price Change Alerts, Customer Wallet, Profit & Margin Reporting |
-| **TOTAL REMAINING BACKLOG** | **13** | **100.0%** | **Targeted execution from Phase 0 to Phase 4** |
+| **Custom Backend Modules/Services** | 1 | 10.0% | Customer Wallet System (#94) |
+| **TOTAL REMAINING BACKLOG** | **10** | **100.0%** | **Targeted execution from Phase 0 to Phase 4** |
 
 ---
 
@@ -60,14 +60,8 @@ Every remaining feature has been audited against Medusa v2 modules, Payload CMS 
    - *Work Required:* Register event subscribers listening to `order.placed`, `order.fulfilled`, `order.canceled` calling SMS provider API.
 
 ### C. Custom Backend Logic
-10. **#80 مرکز اعلان‌ها (In-App Notification Center)** — `🟢 IMPLEMENTED`
-    - *Implementation:* Persistent customer in-app notification store, read/unread state tracking (`read_at`), pagination, filters, bulk read-all DB operations, and domain event subscriber (`configurable-notifications.ts`) fully implemented in Medusa Notification Module and Store APIs.
-11. **#83 هشدار تغییر قیمت (Price Change Alert)** — `🟢 IMPLEMENTED`
-    - *Implementation:* Custom Medusa `@medusajs/price-alert` module, workflows (`createPriceAlertWorkflow`, `cancelPriceAlertWorkflow`, `processPriceChangeWorkflow`), subscriber (`price-change-alert.ts`), Phase 13 Notification Center integration, and authenticated Store & Admin APIs.
-12. **#94 کیف پول (Customer Wallet System)** — `🔴 NOT_IMPLEMENTED` (Deferred)
+10. **#94 کیف پول (Customer Wallet System)** — `🔴 NOT_IMPLEMENTED` (Deferred)
     - *Work Required:* Build custom Medusa Wallet module, ledger balance model, top-up API, and Wallet Payment Provider plugin.
-13. **#95 گزارش سود (Profit & Margin Reporting)** — `🟢 IMPLEMENTED`
-    - *Implementation:* Custom `MarginReportingService`, Knex DB-level financial aggregation for revenue, COGS, gross profit, gross margin %, historical cost snapshot support, missing cost indicators, partial refunds, multi-currency isolation, date/product/variant/category/currency breakdowns, and authenticated Admin API (`GET /admin/reports/margin`).
 
 ---
 
@@ -84,10 +78,7 @@ Every remaining feature has been audited against Medusa v2 modules, Payload CMS 
 | **27** | محاسبه هزینه ارسال | 🟠 INTEGRATION | EXTERNAL INTEGRATION | **P2** | 3 | 3 | 3 | 2.0 | Courier Rate API | Yes (Track A) | Phase 3 |
 | **63** | چند درگاه پرداخت | 🟠 INTEGRATION | EXTERNAL INTEGRATION | **P2** | 3 | 3 | 2 | 1.5 | Mellat / Saman Gateways | Yes (Track C) | Phase 3 |
 | **78** | پیامک وضعیت سفارش | 🟠 INTEGRATION | EXTERNAL INTEGRATION | **P2** | 4 | 3 | 2 | 2.0 | Kavenegar SMS API | Yes (Track B) | Phase 3 |
-| **80** | مرکز اعلان‌ها (In-App) | 🔴 NOT_IMPL | CUSTOM BACKEND | **P3** | 2 | 2 | 2 | 3.5 | None | Yes (Track A) | Phase 4 |
-| **83** | هشدار تغییر قیمت | 🔴 NOT_IMPL | CUSTOM BACKEND | **P3** | 2 | 3 | 2 | 2.5 | SMS / Email API | Yes (Track B) | Phase 4 |
 | **94** | کیف پول (Wallet) | 🔴 NOT_IMPL | CUSTOM BACKEND | **P4** | 3 | 4 | 4 | 5.0 | Payment Gateway | Deferred | Phase 4 |
-| **95** | گزارش سود (Margin) | 🔴 NOT_IMPL | CUSTOM BACKEND | **P4** | 3 | 2 | 2 | 2.0 | None | Deferred | Phase 4 |
 
 ---
 
@@ -112,10 +103,7 @@ Every remaining feature has been audited against Medusa v2 modules, Payload CMS 
                                                     │
                                  ┌──────────────────┴──────────────────┐
                                  ▼                                     ▼
-                [ In-App Notification Center (#80) ]         [ Price Change Alert (#83) ]
-                                 │                                     │
-                                 ▼                                     ▼
-                  [ Customer Wallet System (#94) ]             [ Profit Margin Report (#95) ]
+                  [ Customer Wallet System (#94) (Deferred) ]
 ```
 
 ---
@@ -154,19 +142,19 @@ To optimize development throughput, engineering work can be divided into three c
                           │    ├── #76 Performance Optimization
                           │    ├── #26 Shipping Methods
                           │    ├── #27 Dynamic Courier Rates
-                          │    └── #80 Customer In-App Notification Center
+
                           │
 Phase 0 (Performance) ────┼── Track B (Auth, SMS & Notifications)
 Phase 1 (SMS & Auth)      │    ├── #81 Transactional Email Config
                           │    ├── #77 SMS OTP Provider
                           │    ├── #42 Customer SMS OTP Auth
                           │    ├── #78 Order Status SMS
-                          │    └── #83 Price Change Alert
+
                           │
                           └── Track C (Payment & Advanced Financials)
                                ├── #24 Primary Payment Gateway
                                ├── #63 Multiple Payment Gateways
-                               ├── #95 Profit & Margin Reporting (Deferred)
+
                                └── #94 Customer Wallet System (Deferred)
 ```
 
@@ -224,15 +212,13 @@ Phase 1 (SMS & Auth)      │    ├── #81 Transactional Email Config
 ---
 
 ## Phase 4 — Custom Backend Work & Advanced Modules
-- **Features:** #80 (Notification Center), #83 (Price Change Alert), #94 (Customer Wallet System), #95 (Profit & Margin Reporting)
-- **Objective:** Build persistent customer in-app notification center, price drop alerts, and optional financial modules.
+- **Features:** #94 (Customer Wallet System)
+- **Objective:** Build customer wallet balance ledger, top-up workflows, and Wallet Payment Provider plugin.
 - **Dependencies:** Phase 3 complete.
-- **Estimated Effort:** 13.0 Engineering Days
-- **Risk:** Medium (Custom business logic).
+- **Estimated Effort:** 5.0 Engineering Days
+- **Risk:** Medium (Custom wallet financial ledger).
 - **Exit Criteria:**
-  - Persistent customer in-app notification store and Store APIs operational.
-  - Price watch subscriptions trigger notification event subscriber.
-  - Customer Wallet module and Profit Margin reports ready for deployment when enabled.
+  - Customer Wallet module and Wallet Payment Provider plugin ready for deployment when enabled.
 
 ---
 
@@ -257,9 +243,9 @@ Phase 1 (SMS & Auth)      │    ├── #81 Transactional Email Config
 |---|---:|---:|---:|
 | **Infrastructure & Configuration (#76, #81)** | 1.5 | 2.0 | 2.5 |
 | **Integrations (#42, #77, #24, #26, #27, #63, #78)** | 10.0 | 13.0 | 17.0 |
-| **Custom Backend Modules (#80, #83, #94, #95)** | 10.0 | 13.0 | 17.0 |
-| **Testing, QA & Verification** | 3.5 | 5.0 | 7.0 |
-| **TOTAL ESTIMATED WORK** | **25.0** | **33.0** | **43.5** |
+| **Custom Backend Modules (#94)** | 4.0 | 5.0 | 7.0 |
+| **Testing, QA & Verification** | 2.5 | 4.0 | 5.5 |
+| **TOTAL ESTIMATED WORK** | **18.0** | **24.0** | **32.0** |
 
 ---
 
@@ -288,22 +274,17 @@ Phase 1 (SMS & Auth)      │    ├── #81 Transactional Email Config
 
 ### Phase 4: Custom Backend Work
 - **Tests Required:**
-  - Customer notification entity CRUD and read-status flag unit/integration tests.
-  - Price watch subscriber event trigger tests.
+  - Customer wallet ledger transaction unit/integration tests.
 
 ---
 
 # 11. Explicitly Deferred
 
-The following 2 features are **explicitly deferred** in Phase 4 until verified business demand:
+The following feature is **explicitly deferred** in Phase 4 until verified business demand:
 
 1. **#94 کیف پول (Customer Wallet System)**
    - *Why it can wait:* Store credit wallets add substantial ledger complexity and security risk. Core payment gateway transactions (#24) fulfill initial purchasing requirements.
    - *Trigger for Implementation:* Business requirement for prepaid customer store balances or loyalty rewards.
-
-2. **#95 گزارش سود (Profit & Margin Reporting)**
-   - *Why it can wait:* Core sales reporting (#55) is already fully implemented. Variant COGS tracking and margin exports can be introduced when inventory accounting requirements scale.
-   - *Trigger for Implementation:* Financial accounting request for automated COGS margin exports.
 
 ---
 
@@ -319,10 +300,7 @@ The following 2 features are **explicitly deferred** in Phase 4 until verified b
  7. #78  پیامک وضعیت سفارش (Order SMS)     │ Priority: P2 │ Effort: 2.0d │ Why Now: Essential customer order update alerts        │ Unblocks: Order tracking SMS
  8. #27  محاسبه هزینه ارسال (Courier Rate) │ Priority: P2 │ Effort: 2.0d │ Why Now: Dynamic shipping pricing based on destination  │ Unblocks: Live shipping quotes
  9. #63  چند درگاه پرداخت (Multi-Gateway)  │ Priority: P2 │ Effort: 1.5d │ Why Now: Payment gateway redundancy and fallback       │ Unblocks: Redundant payment
-10. #80  مرکز اعلان‌ها (Notification Center) │ Priority: P3 │ Effort: 3.5d │ Why Now: Persistent customer in-app notification store  │ Unblocks: In-app alerts
-11. #83  هشدار تغییر قیمت (Price Watch)    │ Priority: P3 │ Effort: 2.5d │ Why Now: Price drop watch subscriptions and alerts    │ Unblocks: Price alerts
-12. #95  گزارش سود (Profit Margin Report) │ Priority: P4 │ Effort: 2.0d │ Why Now: Merchant financial reporting (COGS vs Revenue)│ Deferred
-13. #94  کیف پول (Customer Wallet System)  │ Priority: P4 │ Effort: 5.0d │ Why Now: Customer wallet ledger and balance top-ups    │ Deferred
+10. #94  کیف پول (Customer Wallet System)  │ Priority: P4 │ Effort: 5.0d │ Why Now: Customer wallet ledger and balance top-ups    │ Deferred
 ```
 
 ---
