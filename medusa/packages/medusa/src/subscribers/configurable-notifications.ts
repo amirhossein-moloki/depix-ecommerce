@@ -11,7 +11,7 @@ type HandlerConfig = {
   event: string
   template: string
   channel: string
-  to: string
+  to: string | string[]
   resource_id: string
   resource_type?: string
   receiver_id?: string
@@ -19,6 +19,7 @@ type HandlerConfig = {
 }
 
 const handlerConfig: HandlerConfig[] = [
+  // Email Order Created
   {
     event: "order.created",
     template: "order-created-template",
@@ -29,6 +30,20 @@ const handlerConfig: HandlerConfig[] = [
       order_id: "order.id",
     },
   },
+  // SMS Order Created
+  {
+    event: "order.created",
+    template: "order-created-template",
+    channel: "sms",
+    to: ["order.shipping_address.phone", "order.billing_address.phone", "order.phone", "phone", "customer_phone"],
+    resource_id: "order.id",
+    resource_type: "order",
+    receiver_id: "order.customer_id",
+    data: {
+      order_id: "order.id",
+    },
+  },
+  // In-App Order Placed
   {
     event: "order.placed",
     template: "order-placed",
@@ -43,6 +58,20 @@ const handlerConfig: HandlerConfig[] = [
       order_id: "order.id",
     },
   },
+  // SMS Order Placed
+  {
+    event: "order.placed",
+    template: "order-placed",
+    channel: "sms",
+    to: ["order.shipping_address.phone", "order.billing_address.phone", "order.phone", "phone", "customer_phone"],
+    resource_id: "order.id",
+    resource_type: "order",
+    receiver_id: "order.customer_id",
+    data: {
+      order_id: "order.id",
+    },
+  },
+  // In-App Order Canceled
   {
     event: "order.canceled",
     template: "order-canceled",
@@ -57,6 +86,20 @@ const handlerConfig: HandlerConfig[] = [
       order_id: "order.id",
     },
   },
+  // SMS Order Canceled
+  {
+    event: "order.canceled",
+    template: "order-canceled",
+    channel: "sms",
+    to: ["order.shipping_address.phone", "order.billing_address.phone", "order.phone", "phone", "customer_phone"],
+    resource_id: "order.id",
+    resource_type: "order",
+    receiver_id: "order.customer_id",
+    data: {
+      order_id: "order.id",
+    },
+  },
+  // In-App Payment Captured
   {
     event: "payment.captured",
     template: "payment-captured",
@@ -71,6 +114,21 @@ const handlerConfig: HandlerConfig[] = [
       payment_id: "payment.id",
     },
   },
+  // SMS Payment Captured
+  {
+    event: "payment.captured",
+    template: "payment-captured",
+    channel: "sms",
+    to: ["phone", "customer_phone", "payment.phone"],
+    resource_id: "payment.id",
+    resource_type: "payment",
+    receiver_id: "customer_id",
+    data: {
+      payment_id: "payment.id",
+      order_id: "order_id",
+    },
+  },
+  // In-App Payment Failed
   {
     event: "payment.failed",
     template: "payment-failed",
@@ -85,6 +143,20 @@ const handlerConfig: HandlerConfig[] = [
       payment_id: "payment.id",
     },
   },
+  // SMS Payment Failed
+  {
+    event: "payment.failed",
+    template: "payment-failed",
+    channel: "sms",
+    to: ["phone", "customer_phone", "payment.phone"],
+    resource_id: "payment.id",
+    resource_type: "payment",
+    receiver_id: "customer_id",
+    data: {
+      payment_id: "payment.id",
+    },
+  },
+  // In-App Fulfillment Created
   {
     event: "fulfillment.created",
     template: "shipment-created",
@@ -99,6 +171,21 @@ const handlerConfig: HandlerConfig[] = [
       fulfillment_id: "fulfillment.id",
     },
   },
+  // SMS Fulfillment Created
+  {
+    event: "fulfillment.created",
+    template: "shipment-created",
+    channel: "sms",
+    to: ["fulfillment.phone", "phone", "customer_phone"],
+    resource_id: "fulfillment.id",
+    resource_type: "fulfillment",
+    receiver_id: "customer_id",
+    data: {
+      fulfillment_id: "fulfillment.id",
+      order_id: "order_id",
+    },
+  },
+  // Stock Alert In-App & SMS
   {
     event: "stock_alert.triggered",
     template: "stock-alert-triggered",
@@ -115,6 +202,20 @@ const handlerConfig: HandlerConfig[] = [
     },
   },
   {
+    event: "stock_alert.triggered",
+    template: "stock-alert-triggered",
+    channel: "sms",
+    to: ["phone", "customer_phone", "mobile"],
+    resource_id: "stock_alert_id",
+    resource_type: "stock_alert",
+    receiver_id: "customer_id",
+    data: {
+      product_id: "product_id",
+      variant_id: "variant_id",
+    },
+  },
+  // Price Alert In-App & SMS
+  {
     event: "price_alert.triggered",
     template: "price-alert-triggered",
     channel: "in-app",
@@ -130,6 +231,34 @@ const handlerConfig: HandlerConfig[] = [
       old_price: "old_price",
       new_price: "new_price",
       currency_code: "currency_code",
+    },
+  },
+  {
+    event: "price_alert.triggered",
+    template: "price-alert-triggered",
+    channel: "sms",
+    to: ["phone", "customer_phone", "mobile"],
+    resource_id: "alert_id",
+    resource_type: "price_alert",
+    receiver_id: "customer_id",
+    data: {
+      product_id: "product_id",
+      variant_id: "variant_id",
+      old_price: "old_price",
+      new_price: "new_price",
+      currency_code: "currency_code",
+    },
+  },
+  // Auth Verification Requested SMS
+  {
+    event: "verification.requested",
+    template: "verification-requested",
+    channel: "sms",
+    to: ["phone", "mobile", "entity_id", "to"],
+    resource_id: "auth_identity_id",
+    resource_type: "verification",
+    data: {
+      code: "code",
     },
   },
 ]
@@ -160,7 +289,36 @@ export default async function configurableNotifications({
 
   await promiseAll(
     handlers.map(async (handler) => {
-      const recipient = pickValueFromObject(handler.to, payload) || "customer"
+      let recipient: string | null = null
+
+      if (Array.isArray(handler.to)) {
+        for (const path of handler.to) {
+          const val = pickValueFromObject(path, payload)
+          if (val && typeof val === "string" && val.trim().length > 0) {
+            recipient = val.trim()
+            break
+          }
+        }
+      } else {
+        const val = pickValueFromObject(handler.to, payload)
+        if (val && typeof val === "string" && val.trim().length > 0) {
+          recipient = val.trim()
+        }
+      }
+
+      // Fallback for non-SMS or missing recipient if default exists
+      if (!recipient && handler.channel !== "sms") {
+        recipient = "customer"
+      }
+
+      // If SMS channel has no recipient phone number, skip safely without erroring
+      if (handler.channel === "sms" && (!recipient || recipient === "customer")) {
+        logger.debug?.(
+          `Skipping SMS notification for ${event.name}: No valid phone number provided.`
+        )
+        return
+      }
+
       const resourceId = pickValueFromObject(handler.resource_id, payload) || ""
       const receiverId = handler.receiver_id
         ? pickValueFromObject(handler.receiver_id, payload)
@@ -171,7 +329,7 @@ export default async function configurableNotifications({
       const notificationData = {
         template: handler.template,
         channel: handler.channel,
-        to: recipient,
+        to: recipient!,
         trigger_type: handler.event,
         resource_id: resourceId,
         resource_type: handler.resource_type,
@@ -188,7 +346,7 @@ export default async function configurableNotifications({
 
       try {
         await notificationService.createNotifications(notificationData)
-      } catch (err) {
+      } catch (err: any) {
         logger.error(
           `Failed to send notification for ${event.name}`,
           err.message

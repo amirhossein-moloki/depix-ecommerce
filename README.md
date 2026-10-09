@@ -91,3 +91,25 @@ When running through Docker Compose, Nginx proxies requests on port `80`:
 - **Nginx Reverse Proxy**: `http://localhost:80`
 - **Payload CMS**: `http://localhost:80/payload/`
 - **Medusa Backend API**: `http://localhost:80/api/medusa/`
+
+## SMS Integration & Unified Notification Delivery
+
+The backend features a provider-agnostic SMS integration (`@medusajs/notification-sms`) connected to Medusa's Notification Module and event subscribers.
+
+### Supported Delivery Channels
+- **Email**: Transactional emails (e.g., `order.created`).
+- **SMS**: Transactional text messages (OTP verification, order state notifications, payment alerts, shipment creation, stock/price alerts).
+- **In-App**: Internal customer notification feed (`/store/notifications`).
+
+### SMS Configuration
+Configure the following environment variables in `.env`:
+- `SMS_PROVIDER`: Set to `kavenegar`, `smsir`, `melipayamak`, or `fake` (defaults to `fake` for tests/local dev).
+- `SMS_API_KEY`: API Key for the SMS provider.
+- `SMS_SENDER`: Configured sender number or line ID.
+- `SMS_API_URL`: Gateway API endpoint URL (optional override for custom SMS endpoints).
+- `SMS_TIMEOUT`: Request timeout in milliseconds (default: `5000`).
+- `NOTIFICATION_RETRY_LIMIT`: Maximum retry attempts for dispatches (default: `3`).
+
+### Phone Normalization & Privacy
+- **Iranian Formats**: Automatically converts Persian/Arabic numerals (e.g., `۰۹۱۲...`) and local formats (`0912...`, `98912...`) to standardized E.164 numbers (`+98912...`).
+- **Log Sanitization**: Recipient phone numbers and sensitive codes are automatically redacted/masked in operational logs (`+989****789`).
