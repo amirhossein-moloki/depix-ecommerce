@@ -40,10 +40,10 @@ Backend APIs may still expose Store APIs where required by Medusa architecture, 
 
 | Status Category | Symbol | Count | Percentage of In-Scope Total (81 Features) |
 |---|:---:|---:|---:|
-| **IMPLEMENTED** | 🟢 | 69 | 85.2% |
+| **IMPLEMENTED** | 🟢 | 71 | 87.7% |
 | **PARTIAL** | 🟡 | 1 | 1.2% |
 | **INTEGRATION_REQUIRED** | 🟠 | 8 | 9.9% |
-| **NOT_IMPLEMENTED** | 🔴 | 3 | 3.7% |
+| **NOT_IMPLEMENTED** | 🔴 | 1 | 1.2% |
 | **TOTAL IN-SCOPE** | | **81** | **100.0%** |
 | **OUT_OF_SCOPE (Frontend Removed)** | ⚪ | 15 | — |
 
@@ -52,12 +52,12 @@ Backend APIs may still expose Store APIs where required by Medusa architecture, 
 ## Scores
 
 ### A. Actual Project Implementation Score
-$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total In-Scope Features}} = \frac{69 + (0.5 \times 1)}{81} = 85.80\%$$
+$$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIAL})}{\text{Total In-Scope Features}} = \frac{71 + (0.5 \times 1)}{81} = 88.27\%$$
 
 *Represents backend, CMS, and platform features made available through the workspace runtime, natively provided platform modules, custom Medusa modules, and configured infrastructure.*
 
 ### B. Platform Capability Coverage Score
-$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total In-Scope Features}} = \frac{69 + 1 + 8}{81} = 96.30\%$$
+$$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total In-Scope Features}} = \frac{71 + 1 + 8}{81} = 98.77\%$$
 
 *Measures backend and platform capabilities supported natively or via custom workspace modules by Medusa v2 and Payload CMS v4 in this application runtime.*
 
@@ -69,13 +69,13 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{I
 |---|---:|---:|---:|---:|---:|---:|
 | **Storefront / Content** | 12 | 0 | 0 | 0 | 0 | 12 |
 | **Admin / Product Management** | 9 | 7 | 0 | 0 | 0 | 2 |
-| **Commerce** | 37 | 32 | 0 | 4 | 1 | 0 |
-| **Admin / Reporting** | 9 | 8 | 0 | 0 | 1 | 0 |
+| **Commerce** | 42 | 36 | 0 | 5 | 1 | 0 |
+| **Admin / Reporting** | 9 | 9 | 0 | 0 | 0 | 0 |
 | **Blog / CMS** | 8 | 8 | 0 | 0 | 0 | 0 |
 | **SEO & Logistics & Marketing** | 6 | 5 | 0 | 0 | 0 | 1 |
-| **Notifications** | 6 | 2 | 0 | 3 | 1 | 0 |
-| **Reports / Infrastructure / Advanced** | 9 | 7 | 1 | 1 | 0 | 0 |
-| **TOTAL** | **96** | **69** | **1** | **8** | **3** | **15** |
+| **Notifications** | 7 | 4 | 0 | 3 | 0 | 0 |
+| **Reports / Infrastructure / Advanced** | 3 | 2 | 1 | 0 | 0 | 0 |
+| **TOTAL** | **96** | **71** | **1** | **8** | **1** | **15** |
 
 ---
 
@@ -2547,7 +2547,7 @@ None required for core feature availability.
 
 ## Priority Matrix (Backend / Platform Scope Only)
 
-The priority matrix evaluates the remaining 13 in-scope incomplete features (1 PARTIAL, 8 INTEGRATION_REQUIRED, 4 NOT_IMPLEMENTED):
+The priority matrix evaluates the remaining 10 in-scope incomplete features (1 PARTIAL, 8 INTEGRATION_REQUIRED, 1 NOT_IMPLEMENTED):
 
 | ID | Feature Name | Current Status | Real Work Type | Priority | Business Impact | Dependency | Risk | Effort | External Service | Can Parallelize | Phase |
 |---|---|---|---|---|---:|---:|---:|---:|---|---|---|
@@ -2560,10 +2560,7 @@ The priority matrix evaluates the remaining 13 in-scope incomplete features (1 P
 | **27** | محاسبه هزینه ارسال | 🟠 INTEGRATION | EXTERNAL INTEGRATION | **P2** | 3 | 3 | 3 | 2.0d | Courier Rate API | Yes | Phase 3 |
 | **63** | چند درگاه پرداخت | 🟠 INTEGRATION | EXTERNAL INTEGRATION | **P2** | 3 | 3 | 2 | 1.5d | Mellat / Saman Gateways | Yes | Phase 3 |
 | **78** | پیامک وضعیت سفارش | 🟠 INTEGRATION | EXTERNAL INTEGRATION | **P2** | 4 | 3 | 2 | 2.0d | Kavenegar SMS API | Yes | Phase 3 |
-| **80** | مرکز اعلان‌ها (In-App) | 🔴 NOT_IMPL | CUSTOM BACKEND | **P3** | 2 | 2 | 2 | 3.5d | None | Yes | Phase 4 |
-| **83** | هشدار تغییر قیمت | 🔴 NOT_IMPL | CUSTOM BACKEND | **P3** | 2 | 3 | 2 | 2.5d | SMS / Email API | Yes | Phase 4 |
 | **94** | کیف پول (Wallet) | 🔴 NOT_IMPL | CUSTOM BACKEND | **P4** | 3 | 4 | 4 | 5.0d | Payment Gateway | Deferred | Phase 4 |
-| **95** | گزارش سود (Margin) | 🔴 NOT_IMPL | CUSTOM BACKEND | **P4** | 3 | 2 | 2 | 2.0d | None | Deferred | Phase 4 |
 
 ---
 
@@ -2590,14 +2587,8 @@ The following remaining tasks are required to achieve full production readiness 
    - Register secondary Iranian payment provider plugins.
 9. **#78 Order Status SMS (`🟠 INTEGRATION_REQUIRED`)**
    - Register event subscribers for order state transition SMS dispatches.
-10. **#80 Notification Center Backend (`🟢 IMPLEMENTED`)**
-    - Persistent customer in-app notification center and Store APIs.
-11. **#83 Price Change Alert (`🟢 IMPLEMENTED`)**
-    - Custom `@medusajs/price-alert` module, workflows, and event subscriber.
-12. **#94 Customer Wallet System (`🔴 NOT_IMPLEMENTED`)**
+10. **#94 Customer Wallet System (`🔴 NOT_IMPLEMENTED`)**
     - Build custom Medusa Wallet module and Wallet Payment Provider plugin.
-13. **#95 Profit & Margin Reporting (`🟢 IMPLEMENTED`)**
-    - Custom `MarginReportingService` and Admin API (`GET /admin/reports/margin`).
 
 ---
 
