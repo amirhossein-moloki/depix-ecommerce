@@ -256,6 +256,15 @@ When running through Docker Compose, Nginx routes incoming requests on port `80`
 | `/payload/` | Payload CMS (`http://payload:3000/`) | Payload CMS admin & API endpoints |
 | `/` | Payload CMS (`http://payload:3000`) | Default storefront fallback route |
 
+### API Specification & Documentation UIs (Swagger UI & ReDoc)
+
+The platform provides standard OpenAPI v3 spec generation alongside two complementary API documentation interfaces:
+
+- **OpenAPI v3 Specification**: Available via `GET /api/medusa/openapi.json` for API schema consumers, Postman imports, and SDK generation.
+- **Swagger UI**: Interactive API exploration and testing interface enabling direct request execution (`Try it out`), request header configuration, and live response inspection.
+- **ReDoc UI**: Clean, three-panel responsive documentation interface providing structured schema rendering, search capabilities, and code samples for developer onboarding.
+- **GraphQL Playground**: Interactive GraphQL query editor and schema explorer hosted at `/payload/api/graphql-playground` for Payload CMS content models.
+
 ### Key Medusa Store API Endpoints
 
 - **Products & Catalog**:

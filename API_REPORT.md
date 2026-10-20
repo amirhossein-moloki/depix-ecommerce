@@ -12,7 +12,7 @@
    - **Store API (فروشگاهی):** مخصوص خریداران و storefront (سبد خرید، محصولات، سفارشات، آدرس‌ها، پرداخت).
    - **Admin API (مدیریت):** مخصوص مدیران سیستم (مدیریت محصولات، موجودی، سفارشات، تخفیف‌ها، کاربران، تنظیمات).
    - **Auth API (احراز هویت):** مدیریت نشست‌ها، ثبت‌نام و ورود کاربران و مدیران.
-   - **OpenAPI / Swagger Spec API:** مستندات استاندارد OpenAPI برای کل APIهای Medusa.
+   - **OpenAPI / Swagger UI / ReDoc API:** مستندات استاندارد OpenAPI و رابط‌های کاربری تعاملی Swagger UI و ReDoc برای کلیه APIهای Medusa.
 
 2. **سرویس Payload CMS v4 (مدیریت محتوا و پنل ادمین Central):**
    - **REST API:** دسترسی CRUD به تمام مجموعه داده‌ها (Collections) و تنظیمات کلی (Globals).
@@ -28,7 +28,7 @@
 | **Medusa v2** | **Store API** | ~۴۵ | تعامل خریداران (محصولات، کاتالوگ، سبد خرید، تسویه، سفارشات) | `/api/medusa/store/*` |
 | **Medusa v2** | **Admin API** | ~۸۵ | مدیریت e-commerce (محصولات، سفارشات، موجودی، مشتریان، تخفیف‌ها) | `/api/medusa/admin/*` |
 | **Medusa v2** | **Auth API** | ~۱۰ | ورود، ثبت‌نام، احراز هویت خریداران و مدیران | `/api/medusa/auth/*` یا `/api/medusa/store/auth/*` |
-| **Medusa v2** | **OpenAPI Spec** | ~۲ | مستندات و مشخصات فنی JSON/YAML APIها | `/api/medusa/openapi.json` |
+| **Medusa v2** | **OpenAPI / Swagger / ReDoc** | ~۴ | مشخصات OpenAPI v3 و رابط‌های کاربری تعاملی Swagger UI و ReDoc UI | `/api/medusa/openapi.json`, Swagger & ReDoc UIs |
 | **Payload CMS v4** | **REST API** | ~۳۵ | مدیریت و دریافت داده‌های محتوایی، صفحات، مقالات، بنرها و کاربران | `/payload/api/*` |
 | **Payload CMS v4** | **GraphQL API** | ۱ اصلی + Playground | کوئری گراف‌کیوال برای دریافت بهینه محتوا و بلاگ | `/payload/api/graphql` & `/payload/api/graphql-playground` |
 | **Payload CMS v4** | **Admin & Upload API** | ~۱۵ | مدیریت فایل‌ها/رسانه‌ها، نسخه سندها (Versions) و لاگ‌های سیستم | `/payload/admin/*` & `/payload/api/media/*` |
@@ -239,11 +239,17 @@
 
 ---
 
-## ۴. API مستندات سیستم (OpenAPI Spec)
+## ۴. API و رابط‌های مستندات سیستم (OpenAPI Spec / Swagger UI / ReDoc)
+
+سیستم مستندسازی API بر پایه استاندارد OpenAPI v3 پیاده‌سازی شده و ۲ رابط کاربری تعاملی مکمل (Swagger UI و ReDoc UI) را برای تسهیل تست، بررسی و یکپارچه‌سازی ارائه می‌دهد:
 
 - **`GET /api/medusa/openapi.json`**
   - **روش:** `GET`
-  - **کاربرد:** دریافت استاندارد JSON OpenAPI v3 کلیه اندپوئینت‌های Medusa جهت ایمپورت در Postman یا تولید اتوماتیک SDK.
+  - **کاربرد:** دریافت مشخصات استاندارد JSON OpenAPI v3 کلیه اندپوئینت‌های Medusa جهت ایمپورت در Postman، Swagger UI، ReDoc یا تولید اتوماتیک SDK.
+- **Swagger UI (رابط تست و فراخوانی تعاملی API):**
+  - **کاربرد:** ارائه کنسول تعاملی جهت تست درخواست‌ها (Try it out)، ارسال هدرها و توکن‌های احراز هویت، و مشاهده پاسخ زنده APIها.
+- **ReDoc UI (رابط تعاملی و پیشرفته مستندات API):**
+  - **کاربرد:** نمایش ساختاریافته، زیبا و سه‌ستونه مستندات API بر پایه OpenAPI v3 با قابلیت جستجوی سریع، رندرینگ اسکیماها (Schemas)، نمونه کدها (Code Samples) و ناوبری روان میان اندپوئینت‌های e-commerce.
 
 ---
 

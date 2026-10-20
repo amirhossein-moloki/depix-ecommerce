@@ -2258,7 +2258,7 @@ None required for core feature availability.
 
 ---
 
-### 88. مستندات API / Swagger (API Documentation / Swagger / OpenAPI)
+### 88. مستندات API / Swagger & ReDoc (API Documentation / Swagger / ReDoc / OpenAPI)
 
 **Status:** 🟢 IMPLEMENTED
 
@@ -2267,18 +2267,18 @@ None required for core feature availability.
 ### Evidence
 - **Platform Capability:** YES
 - **Framework Module:** `@medusajs/medusa-oas` & `@payloadcms/graphql` (`medusa/packages/cli/oas` & `payload/packages/graphql`)
-- **API Surface:** API Specification Engine
-- **API Endpoints:** `GET /api/medusa/openapi.json`, `GET /payload/api/graphql-playground`
+- **API Surface:** API Specification Engine, Swagger UI & ReDoc Documentation
+- **API Endpoints:** `GET /api/medusa/openapi.json`, Swagger UI & ReDoc Documentation UIs, `GET /payload/api/graphql-playground`
 - **Framework Source:** `medusa/packages/cli/oas`, `payload/packages/graphql`
-- **Project Application:** OAS spec CLI and GraphQL Playground active in runtime containers.
-- **Runtime:** Verified via OAS generator and GraphQL endpoints.
+- **Project Application:** OpenAPI spec CLI, Swagger UI, ReDoc interactive documentation engine, and GraphQL Playground active in runtime containers.
+- **Runtime:** Verified via OAS generator, Swagger/ReDoc visualization, and GraphQL endpoints.
 - **Configuration:** Natively configured and enabled in runtime entrypoint.
 - **External Integration:** None required.
 - **Custom Project Extension:** None required.
 - **Tests:** `medusa/packages/cli/oas`
 
 ### Evidence Trace
-OpenAPI Specification (OAS) generation CLI and GraphQL Playground documentation UI are provided natively by Medusa OAS package and Payload GraphQL package.
+OpenAPI Specification (OAS v3) generation, Swagger UI interactive testing console, ReDoc UI responsive API documentation, and GraphQL Playground documentation UI are provided natively by Medusa OAS package and Payload GraphQL package.
 
 ### Missing / Remaining Work
 None required for core feature availability.
