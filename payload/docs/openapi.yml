@@ -1,0 +1,557 @@
+openapi: 3.0.0
+info:
+  title: Payload CMS v4 API Specification
+  description: >
+    Comprehensive OpenAPI 3.0 specification for the Depix Payload CMS v4 backend service.
+    Covers REST Collections (Posts, Pages, Categories, Tags, Comments, Media, Users, Versions),
+    REST Globals (Banners, Header, Footer), Authentication, File Uploads, and GraphQL endpoints.
+  version: 4.0.0
+servers:
+  - url: http://localhost:3000/payload/api
+    description: Nginx Reverse Proxy Endpoint
+  - url: http://localhost:3000/api
+    description: Direct Payload CMS Application Container Endpoint
+
+paths:
+  # ---------------------------------------------------------------------------
+  # Auth APIs
+  # ---------------------------------------------------------------------------
+  /users/login:
+    post:
+      summary: User Login (JWT Authentication)
+      tags: [Authentication & Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: "admin@example.com"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+
+  /users/logout:
+    post:
+      summary: User Logout
+      tags: [Authentication & Users]
+      responses:
+        '200':
+          description: Logout successful
+
+  /users/me:
+    get:
+      summary: Get Current Authenticated User Profile
+      tags: [Authentication & Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+
+  /users/refresh-token:
+    post:
+      summary: Refresh JWT Token
+      tags: [Authentication & Users]
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refreshedToken:
+                    type: string
+
+  /users:
+    get:
+      summary: List Users / Authors / Admin Accounts
+      tags: [Authentication & Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  docs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  totalDocs:
+                    type: integer
+
+  # ---------------------------------------------------------------------------
+  # Posts / Articles
+  # ---------------------------------------------------------------------------
+  /posts:
+    get:
+      summary: List Blog Posts / Articles
+      tags: [Posts & Articles]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: sort
+          in: query
+          schema:
+            type: string
+            example: "-publishedAt"
+        - name: where
+          in: query
+          schema:
+            type: string
+            description: JSON filter object
+      responses:
+        '200':
+          description: List of posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  docs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+                  totalDocs:
+                    type: integer
+                  totalPages:
+                    type: integer
+
+    post:
+      summary: Create New Article / Blog Post
+      tags: [Posts & Articles]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, slug, content]
+              properties:
+                title:
+                  type: string
+                slug:
+                  type: string
+                content:
+                  type: object
+                _status:
+                  type: string
+                  enum: [draft, published]
+      responses:
+        '201':
+          description: Article created
+
+  /posts/{id}:
+    get:
+      summary: Get Single Post Details
+      tags: [Posts & Articles]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  doc:
+                    $ref: '#/components/schemas/Post'
+    patch:
+      summary: Update Post
+      tags: [Posts & Articles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post updated
+    delete:
+      summary: Delete Post
+      tags: [Posts & Articles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post deleted
+
+  # ---------------------------------------------------------------------------
+  # Pages (Dynamic Page Builder)
+  # ---------------------------------------------------------------------------
+  /pages:
+    get:
+      summary: List CMS Dynamic Pages
+      tags: [Pages & Layout Builder]
+      responses:
+        '200':
+          description: List of pages
+    post:
+      summary: Create New Dynamic Page
+      tags: [Pages & Layout Builder]
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Page created
+
+  /pages/{id}:
+    get:
+      summary: Get Dynamic Page Details & Layout Blocks
+      tags: [Pages & Layout Builder]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page details with layout blocks
+
+  # ---------------------------------------------------------------------------
+  # Categories & Tags
+  # ---------------------------------------------------------------------------
+  /categories:
+    get:
+      summary: List Article Categories
+      tags: [Categories & Tags]
+      responses:
+        '200':
+          description: List of categories
+    post:
+      summary: Create Article Category
+      tags: [Categories & Tags]
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Category created
+
+  /tags:
+    get:
+      summary: List Article Tags
+      tags: [Categories & Tags]
+      responses:
+        '200':
+          description: List of tags
+
+  # ---------------------------------------------------------------------------
+  # Comments
+  # ---------------------------------------------------------------------------
+  /comments:
+    get:
+      summary: List Article Comments (Public reads approved comments)
+      tags: [Comments & Moderation]
+      parameters:
+        - name: where
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  docs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+    post:
+      summary: Submit Blog Article Comment
+      tags: [Comments & Moderation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [doc, authorName, authorEmail, content]
+              properties:
+                doc:
+                  type: string
+                  description: Post ID
+                parent:
+                  type: string
+                  description: Parent comment ID for threaded replies
+                authorName:
+                  type: string
+                authorEmail:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Comment submitted (pending moderation)
+
+  /comments/{id}:
+    patch:
+      summary: Update / Moderate Comment Status (Admin)
+      tags: [Comments & Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, approved, rejected, spam]
+      responses:
+        '200':
+          description: Comment status updated
+
+  # ---------------------------------------------------------------------------
+  # Media Uploads
+  # ---------------------------------------------------------------------------
+  /media:
+    get:
+      summary: List Media Assets
+      tags: [Media & Uploads]
+      responses:
+        '200':
+          description: List of media items
+    post:
+      summary: Upload Media Asset (Image, Video, Document)
+      tags: [Media & Uploads]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                alt:
+                  type: string
+      responses:
+        '201':
+          description: Media file uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  doc:
+                    $ref: '#/components/schemas/Media'
+
+  # ---------------------------------------------------------------------------
+  # Globals (Banners, Header, Footer)
+  # ---------------------------------------------------------------------------
+  /globals/banners:
+    get:
+      summary: Get Promotional Banners & Announcement Tickers
+      tags: [Globals]
+      responses:
+        '200':
+          description: Banner global settings
+    post:
+      summary: Update Banners (Admin)
+      tags: [Globals]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Banners updated
+
+  /globals/header:
+    get:
+      summary: Get Main Header Navigation Menu
+      tags: [Globals]
+      responses:
+        '200':
+          description: Header navigation menu
+
+  /globals/footer:
+    get:
+      summary: Get Footer Links & Information
+      tags: [Globals]
+      responses:
+        '200':
+          description: Footer settings
+
+  # ---------------------------------------------------------------------------
+  # GraphQL & Playground
+  # ---------------------------------------------------------------------------
+  /graphql:
+    post:
+      summary: Execute GraphQL Query or Mutation
+      tags: [GraphQL API]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                variables:
+                  type: object
+      responses:
+        '200':
+          description: GraphQL JSON result
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [admin, editor, author]
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        _status:
+          type: string
+          enum: [draft, published]
+        author:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        meta:
+          type: object
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+            image:
+              type: string
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        doc:
+          type: string
+        parent:
+          type: string
+        authorName:
+          type: string
+        content:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, spam]
+        isAdminReply:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        filesize:
+          type: integer
+        url:
+          type: string
+        alt:
+          type: string
