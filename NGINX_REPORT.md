@@ -159,7 +159,7 @@ http {
 ```
 - **مسیر:** تمامی درخواست‌هایی که با `/api/medusa/` شروع می‌شوند.
 - **`proxy_pass http://medusa_backend/;`**: هدایت درخواست به کانتینر Medusa Backend (پورت ۹۰۰۰). پیشوند `/api/medusa/` حذف شده و روت اصلی Medusa فراخوانی می‌شود.
-- **کاربرد:** دسترسی به کلیه APIهای Storefront (`/api/medusa/store/*`) و APIهای Admin Medusa (`/api/medusa/admin/*`).
+- **کاربرد:** دسترسی به کلیه APIهای Storefront (`/api/medusa/store/*`)، APIهای Admin Medusa (`/api/medusa/admin/*`)، مشخصات OpenAPI (`/api/medusa/openapi.json`) و رابط‌های مستندات تعاملی Swagger UI و ReDoc UI.
 
 ---
 
@@ -189,7 +189,7 @@ http {
 |---|---|---|---|
 | `GET http://localhost/health` | پاسخ مستقیم (Direct 200 OK) | Nginx | بررسی سلامت پروکسی معکوس |
 | `http://localhost/payload/*` | `http://payload_backend/*` | `depix-payload:3000` | پنل ادمین Payload CMS و REST/GraphQL API محتوا |
-| `http://localhost/api/medusa/*` | `http://medusa_backend/*` | `depix-medusa:9000` | APIهای کامل فروشگاه، سبد خرید، پرداخت و ادمین Medusa |
+| `http://localhost/api/medusa/*` | `http://medusa_backend/*` | `depix-medusa:9000` | APIهای کامل فروشگاه، سبد خرید، مشخصات OpenAPI، رابط‌های Swagger UI و ReDoc UI |
 | `http://localhost/*` (روت اصلی) | `http://payload_backend` | `depix-payload:3000` | فرانت‌اند عمومی سایت / Fallback Route |
 
 ---
