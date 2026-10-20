@@ -1,0 +1,1261 @@
+openapi: 3.0.0
+info:
+  title: Medusa E-Commerce Backend API Specification
+  description: >
+    Comprehensive OpenAPI 3.0 specification for the Depix E-Commerce Medusa v2 backend service.
+    Covers Storefront REST APIs, Admin Management REST APIs, custom modules (Reviews, Product Videos,
+    JSON-LD, Recommendations, Discovery, Comparison, Wishlist, Invoices, Sales & Margin Reports,
+    Stock Alerts, Price Alerts, In-App Notification Center, Customer Wallet, and SMS OTP Auth).
+  version: 2.0.0
+servers:
+  - url: http://localhost:9000/api/medusa
+    description: Nginx Reverse Proxy Endpoint
+  - url: http://localhost:9000
+    description: Direct Medusa Application Container Endpoint
+
+paths:
+  # ---------------------------------------------------------------------------
+  # Auth & OTP APIs
+  # ---------------------------------------------------------------------------
+  /store/auth/otp/send:
+    post:
+      summary: Send SMS OTP Code
+      tags: [Auth & OTP]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  example: "09123456789"
+      responses:
+        '200':
+          description: OTP code sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "OTP sent successfully"
+
+  /store/auth/otp/verify:
+    post:
+      summary: Verify SMS OTP Code & Authenticate Customer
+      tags: [Auth & OTP]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone:
+                  type: string
+                  example: "09123456789"
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+
+  # ---------------------------------------------------------------------------
+  # Products & Discovery APIs
+  # ---------------------------------------------------------------------------
+  /store/products:
+    get:
+      summary: List Products with Filtering and Pagination
+      tags: [Products & Discovery]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: category_id
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+            example: "-created_at"
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /store/products/{id}:
+    get:
+      summary: Get Single Product Details
+      tags: [Products & Discovery]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+
+  /store/products/bestsellers:
+    get:
+      summary: Get Bestseller Products
+      tags: [Products & Discovery]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of bestselling products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+  /store/products/newest:
+    get:
+      summary: Get Newest Arrival Products
+      tags: [Products & Discovery]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of newest products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+  /store/products/popular:
+    get:
+      summary: Get Popular Products
+      tags: [Products & Discovery]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of popular products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+  /store/products/trending:
+    get:
+      summary: Get Trending Products
+      tags: [Products & Discovery]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of trending products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+  /store/products/{id}/json-ld:
+    get:
+      summary: Get Schema.org Product JSON-LD Structured Data
+      tags: [Products & Discovery]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Schema.org Product JSON-LD object
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["@context", "@type", "name"]
+                properties:
+                  "@context":
+                    type: string
+                    example: "https://schema.org"
+                  "@type":
+                    type: string
+                    example: "Product"
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  offers:
+                    type: object
+
+  # ---------------------------------------------------------------------------
+  # Product Reviews & Ratings
+  # ---------------------------------------------------------------------------
+  /store/products/{id}/reviews:
+    get:
+      summary: List Approved Product Reviews
+      tags: [Product Reviews & Ratings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Product reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductReview'
+                  count:
+                    type: integer
+    post:
+      summary: Submit Product Review
+      tags: [Product Reviews & Ratings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating, content, author_name, author_email]
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                title:
+                  type: string
+                content:
+                  type: string
+                author_name:
+                  type: string
+                author_email:
+                  type: string
+      responses:
+        '201':
+          description: Review submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  review:
+                    $ref: '#/components/schemas/ProductReview'
+
+  /store/products/{id}/reviews/summary:
+    get:
+      summary: Get Aggregate Rating Summary
+      tags: [Product Reviews & Ratings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Aggregate rating summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: object
+                    properties:
+                      average_rating:
+                        type: number
+                        example: 4.5
+                      total_reviews:
+                        type: integer
+                        example: 12
+                      rating_breakdown:
+                        type: object
+
+  /admin/reviews:
+    get:
+      summary: List All Reviews (Admin Moderation)
+      tags: [Product Reviews & Ratings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, SPAM]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: All product reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductReview'
+
+  /admin/reviews/{id}/approve:
+    post:
+      summary: Approve Review
+      tags: [Product Reviews & Ratings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  review:
+                    $ref: '#/components/schemas/ProductReview'
+
+  /admin/reviews/{id}/reject:
+    post:
+      summary: Reject Review
+      tags: [Product Reviews & Ratings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review rejected
+
+  /admin/reviews/{id}/reply:
+    post:
+      summary: Add Admin Response to Review
+      tags: [Product Reviews & Ratings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Reply created
+
+  # ---------------------------------------------------------------------------
+  # Product Videos
+  # ---------------------------------------------------------------------------
+  /store/products/{id}/videos:
+    get:
+      summary: Get Active Product Videos
+      tags: [Product Videos]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product videos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  videos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductVideo'
+
+  /admin/product-videos:
+    get:
+      summary: List Product Videos (Admin)
+      tags: [Product Videos]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of videos
+    post:
+      summary: Create Product Video
+      tags: [Product Videos]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, url]
+              properties:
+                product_id:
+                  type: string
+                url:
+                  type: string
+                provider:
+                  type: string
+                  example: "youtube"
+                title:
+                  type: string
+                is_primary:
+                  type: boolean
+      responses:
+        '201':
+          description: Video created
+
+  # ---------------------------------------------------------------------------
+  # Recommendations & Comparison & Wishlist
+  # ---------------------------------------------------------------------------
+  /store/products/{id}/related:
+    get:
+      summary: Get Related Products
+      tags: [Recommendations & Comparison & Wishlist]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of related products
+
+  /store/recommendations:
+    get:
+      summary: Get Personalized Product Recommendations
+      tags: [Recommendations & Comparison & Wishlist]
+      responses:
+        '200':
+          description: Recommended products
+
+  /store/comparison:
+    get:
+      summary: Get Active Comparison List
+      tags: [Recommendations & Comparison & Wishlist]
+      responses:
+        '200':
+          description: Comparison list
+    post:
+      summary: Create Comparison List
+      tags: [Recommendations & Comparison & Wishlist]
+      responses:
+        '201':
+          description: Comparison list created
+
+  /store/products/compare:
+    post:
+      summary: Side-by-Side Product Comparison Matrix
+      tags: [Recommendations & Comparison & Wishlist]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_ids]
+              properties:
+                product_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Comparison matrix
+
+  /store/wishlist:
+    get:
+      summary: Get Customer Wishlist
+      tags: [Recommendations & Comparison & Wishlist]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Customer wishlist
+    post:
+      summary: Create Wishlist
+      tags: [Recommendations & Comparison & Wishlist]
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Wishlist created
+
+  /store/wishlist/items:
+    post:
+      summary: Add Item to Wishlist
+      tags: [Recommendations & Comparison & Wishlist]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variant_id]
+              properties:
+                variant_id:
+                  type: string
+      responses:
+        '201':
+          description: Item added
+
+  /store/wishlist/items/{id}:
+    delete:
+      summary: Remove Item from Wishlist
+      tags: [Recommendations & Comparison & Wishlist]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item removed
+
+  # ---------------------------------------------------------------------------
+  # Cart & Checkout & Orders
+  # ---------------------------------------------------------------------------
+  /store/carts:
+    post:
+      summary: Create New Cart
+      tags: [Carts & Checkout]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                region_id:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+
+  /store/carts/{id}:
+    get:
+      summary: Get Cart
+      tags: [Carts & Checkout]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cart details
+
+  /store/carts/{id}/line-items:
+    post:
+      summary: Add Item to Cart
+      tags: [Carts & Checkout]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variant_id, quantity]
+              properties:
+                variant_id:
+                  type: string
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Item added to cart
+
+  /store/carts/{id}/complete:
+    post:
+      summary: Complete Cart / Place Order
+      tags: [Carts & Checkout]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order placed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "order"
+                  order:
+                    $ref: '#/components/schemas/Order'
+
+  /store/orders/{id}:
+    get:
+      summary: Get Order Details
+      tags: [Orders & Fulfillments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order details
+
+  # ---------------------------------------------------------------------------
+  # Invoices
+  # ---------------------------------------------------------------------------
+  /admin/invoices:
+    get:
+      summary: List Invoices
+      tags: [Invoices]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of invoices
+    post:
+      summary: Generate Invoice for Order
+      tags: [Invoices]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id]
+              properties:
+                order_id:
+                  type: string
+      responses:
+        '201':
+          description: Invoice generated
+
+  /admin/invoices/{id}/pdf:
+    get:
+      summary: Stream Persian Invoice PDF
+      tags: [Invoices]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PDF Stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  # ---------------------------------------------------------------------------
+  # Wallet System
+  # ---------------------------------------------------------------------------
+  /store/wallet:
+    get:
+      summary: Get Customer Wallet Balance
+      tags: [Wallet System]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Wallet balance and currency
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wallet:
+                    $ref: '#/components/schemas/Wallet'
+
+  /store/wallet/deposit:
+    post:
+      summary: Initiate Wallet Top-Up Deposit
+      tags: [Wallet System]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency_code]
+              properties:
+                amount:
+                  type: number
+                currency_code:
+                  type: string
+                  example: "IRR"
+      responses:
+        '200':
+          description: Payment session created for deposit
+
+  /store/wallet/transactions:
+    get:
+      summary: List Customer Wallet Transactions
+      tags: [Wallet System]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of wallet ledger transactions
+
+  /admin/wallets:
+    get:
+      summary: List Customer Wallets (Admin)
+      tags: [Wallet System]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of wallets
+
+  /admin/wallets/{id}/credit:
+    post:
+      summary: Credit Wallet Balance
+      tags: [Wallet System]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Wallet credited successfully
+
+  /admin/wallets/{id}/debit:
+    post:
+      summary: Debit Wallet Balance
+      tags: [Wallet System]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Wallet debited successfully
+
+  # ---------------------------------------------------------------------------
+  # Stock & Price Alerts
+  # ---------------------------------------------------------------------------
+  /store/stock-alerts:
+    post:
+      summary: Subscribe for Back-in-Stock Alert
+      tags: [Stock & Price Alerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variant_id, email]
+              properties:
+                variant_id:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '201':
+          description: Subscribed successfully
+
+  /store/price-alerts:
+    get:
+      summary: List Price Change Alert Subscriptions
+      tags: [Stock & Price Alerts]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active price alert subscriptions
+    post:
+      summary: Subscribe for Price Change Alert
+      tags: [Stock & Price Alerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variant_id, email, alert_type]
+              properties:
+                variant_id:
+                  type: string
+                email:
+                  type: string
+                alert_type:
+                  type: string
+                  enum: [any_change, price_drop, target_price]
+                target_price:
+                  type: number
+      responses:
+        '201':
+          description: Price alert created
+
+  /store/price-alerts/{id}:
+    delete:
+      summary: Cancel Price Alert Subscription
+      tags: [Stock & Price Alerts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription cancelled
+
+  # ---------------------------------------------------------------------------
+  # In-App Notification Center
+  # ---------------------------------------------------------------------------
+  /store/notifications:
+    get:
+      summary: List Authenticated Customer Notifications
+      tags: [Notification Center]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: is_read
+          in: query
+          schema:
+            type: boolean
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+        - name: channel
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Notifications list
+
+  /store/notifications/unread-count:
+    get:
+      summary: Get Count of Unread Notifications
+      tags: [Notification Center]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Unread notification count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 3
+
+  /store/notifications/{id}/read:
+    post:
+      summary: Mark Single Notification as Read
+      tags: [Notification Center]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification marked as read
+
+  /store/notifications/read-all:
+    post:
+      summary: Bulk Mark All Customer Notifications as Read
+      tags: [Notification Center]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All notifications marked as read
+
+  # ---------------------------------------------------------------------------
+  # Reports & Analytics
+  # ---------------------------------------------------------------------------
+  /admin/reports/sales:
+    get:
+      summary: Sales Analytics Report
+      tags: [Reports & Analytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, year, product, category, customer]
+      responses:
+        '200':
+          description: Sales report data
+
+  /admin/reports/margin:
+    get:
+      summary: Profit Margin & Gross Profit Report
+      tags: [Reports & Analytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, product, variant, category]
+      responses:
+        '200':
+          description: Profit margin metrics (Gross Sales, COGS, Net Margin, Gross Profit)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        description:
+          type: string
+        handle:
+          type: string
+        is_giftcard:
+          type: boolean
+        status:
+          type: string
+        thumbnail:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        sku:
+          type: string
+        barcode:
+          type: string
+        price:
+          type: number
+
+    ProductReview:
+      type: object
+      properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        rating:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        author_name:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, SPAM]
+        created_at:
+          type: string
+          format: date-time
+
+    ProductVideo:
+      type: object
+      properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        url:
+          type: string
+        provider:
+          type: string
+        video_id:
+          type: string
+        title:
+          type: string
+        is_primary:
+          type: boolean
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        total:
+          type: number
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        total:
+          type: number
+
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        balance:
+          type: number
+        currency_code:
+          type: string
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
