@@ -15,8 +15,23 @@ import {
   VerificationRequest,
   ResetPasswordRequest,
 } from "./validators"
+import { SendOtpRequest, VerifyOtpRequest } from "./phone/validators"
 
 export const authRoutesMiddlewares: MiddlewareRoute[] = [
+  {
+    method: ["POST"],
+    matcher: "/auth/phone/send-otp",
+    middlewares: [
+      validateAndTransformBody(SendOtpRequest),
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/auth/phone/verify",
+    middlewares: [
+      validateAndTransformBody(VerifyOtpRequest),
+    ],
+  },
   {
     method: ["POST"],
     matcher: "/auth/session",
