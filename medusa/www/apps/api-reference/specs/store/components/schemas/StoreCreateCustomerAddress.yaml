@@ -12,7 +12,7 @@ properties:
   phone:
     type: string
     title: phone
-    description: The customer's phone.
+    description: The customer's phone number. Must be a valid 11-digit mobile number for Iranian addresses (e.g. 09123456789).
   company:
     type: string
     title: company
@@ -32,23 +32,20 @@ properties:
   country_code:
     type: string
     title: country_code
-    description: The address's country code.
+    description: The address's two-character ISO country code (e.g., 'ir' or 'us').
   province:
     type: string
     title: province
-    description: The address's ISO 3166-2 province code. Must be lower-case.
-    example: us-ca
-    externalDocs:
-      url: https://en.wikipedia.org/wiki/ISO_3166-2
-      description: Learn more about ISO 3166-2
+    description: The address's ISO 3166-2 province code or region name.
+    example: tehran
   postal_code:
     type: string
     title: postal_code
-    description: The address's postal code.
+    description: The address's postal code. Must be exactly 10 digits for Iranian addresses.
   address_name:
     type: string
     title: address_name
-    description: The address's name.
+    description: The address's name or label.
   is_default_shipping:
     type: boolean
     title: is_default_shipping
@@ -59,5 +56,5 @@ properties:
     description: Whether the address is used by default for billing during checkout.
   metadata:
     type: object
-    description: Holds custom key-value pairs.
+    description: Holds custom key-value pairs (e.g., `national_code` required for Iranian addresses).
 x-schemaName: StoreCreateCustomerAddress
