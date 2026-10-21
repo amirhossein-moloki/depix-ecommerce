@@ -39,6 +39,7 @@ export const Modules = {
   RECOMMENDATION: "recommendation",
   PRODUCT_VIDEO: "product_video",
   INVOICE: "invoice",
+  TICKET: "ticket",
   BRAND: "brand",
   MEDIA: "media",
 } as const
@@ -84,6 +85,7 @@ export const MODULE_PACKAGE_NAMES = {
   [Modules.RECOMMENDATION]: "@medusajs/recommendation",
   [Modules.PRODUCT_VIDEO]: "@medusajs/product-video",
   [Modules.INVOICE]: "@medusajs/invoice",
+  [Modules.TICKET]: "@medusajs/ticket",
   [Modules.BRAND]: "@medusajs/brand",
   [Modules.MEDIA]: "@medusajs/media",
 }

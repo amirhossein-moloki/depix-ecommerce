@@ -4363,6 +4363,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/ticket@workspace:packages/modules/ticket":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/ticket@workspace:packages/modules/ticket"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/toolbox@2.21.2, @medusajs/toolbox@workspace:packages/design-system/toolbox":
   version: 0.0.0-use.local
   resolution: "@medusajs/toolbox@workspace:packages/design-system/toolbox"
