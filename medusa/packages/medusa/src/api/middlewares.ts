@@ -100,8 +100,10 @@ import { adminCategoryRoutesMiddlewares } from "./admin/categories/middlewares"
 import { storeCategoryRoutesMiddlewares } from "./store/categories/middlewares"
 import { adminMediaRoutesMiddlewares } from "./admin/media/middlewares"
 import { storeReviewMediaRoutesMiddlewares } from "./store/reviews/media/middlewares"
+import { adminSettingsRoutesMiddlewares } from "./admin/settings/middlewares"
 
 export default defineMiddlewares([
+  ...adminSettingsRoutesMiddlewares,
   ...storeBrandRoutesMiddlewares,
   ...adminBrandRoutesMiddlewares,
   ...storeCategoryRoutesMiddlewares,

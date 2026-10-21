@@ -21,7 +21,7 @@ import {
   removeUndefined,
 } from "@medusajs/framework/utils"
 
-import { Store, StoreCurrency, StoreLocale } from "@models"
+import { Store, StoreCurrency, StoreLocale, StoreSetting, StoreAddress } from "@models"
 import { UpdateStoreInput } from "@types"
 
 type InjectedDependencies = {
@@ -34,7 +34,7 @@ export default class StoreModuleService
     Store: { dto: StoreTypes.StoreDTO }
     StoreCurrency: { dto: StoreTypes.StoreCurrencyDTO }
     StoreLocale: { dto: StoreTypes.StoreLocaleDTO }
-  }>({ Store, StoreCurrency, StoreLocale })
+  }>({ Store, StoreCurrency, StoreLocale, StoreSetting, StoreAddress })
   implements IStoreModuleService
 {
   protected baseRepository_: DAL.RepositoryService
