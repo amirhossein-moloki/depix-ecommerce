@@ -34,5 +34,6 @@ module.exports = defineJestConfig({
     "^@medusajs/ticket": path.resolve(__dirname, "../modules/ticket/src"),
     "^@medusajs/brand": path.resolve(__dirname, "../modules/brand/src"),
     "^@medusajs/media": path.resolve(__dirname, "../modules/media/src"),
+    "^@medusajs/size-guide": path.resolve(__dirname, "../modules/size-guide/src"),
   },
 })
