@@ -1,0 +1,589 @@
+openapi: 3.0.0
+info:
+  title: Medusa Store & Admin API - Brands, Categories, and Media
+  version: 2.21.2
+  description: Complete OpenAPI 3.0 specification for Brands Management, Categories Management, and Media Management Services.
+servers:
+  - url: http://localhost:9000
+    description: Local Medusa Backend
+paths:
+  /store/brands:
+    get:
+      summary: List Public Brands
+      description: Retrieve a paginated list of publicly active brands.
+      tags:
+        - Store Brands
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of active brands.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  brands:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Brand'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+
+  /store/brands/{id}:
+    get:
+      summary: Get Public Brand
+      description: Retrieve public details of an active brand by ID or slug.
+      tags:
+        - Store Brands
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active brand details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  brand:
+                    $ref: '#/components/schemas/Brand'
+        '404':
+          description: Brand not found or inactive.
+
+  /admin/brands:
+    get:
+      summary: List Admin Brands
+      description: Retrieve a list of all brands including inactive ones.
+      tags:
+        - Admin Brands
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated brand list for admin.
+    post:
+      summary: Create Brand
+      description: Create a new brand. Enforces slug uniqueness.
+      tags:
+        - Admin Brands
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name: slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                logo_id:
+                  type: string
+                is_active:
+                  type: boolean
+                  default: true
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: Brand created successfully.
+        '400':
+          description: Validation error or duplicate slug.
+
+  /admin/brands/{id}:
+    get:
+      summary: Get Admin Brand Details
+      tags:
+        - Admin Brands
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Brand details.
+        '404':
+          description: Brand not found.
+    put:
+      summary: Update Brand
+      tags:
+        - Admin Brands
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                logo_id:
+                  type: string
+                is_active:
+                  type: boolean
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Brand updated successfully.
+        '400':
+          description: Validation or duplicate slug conflict.
+    delete:
+      summary: Delete Brand
+      description: Safely deletes brand if not referenced by products.
+      tags:
+        - Admin Brands
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Brand deleted successfully.
+        '400':
+          description: Brand is referenced by products and cannot be deleted.
+
+  /store/categories:
+    get:
+      summary: List Public Categories
+      tags:
+        - Store Categories
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: parent_category_id
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of active, publishable categories.
+
+  /store/categories/{id}:
+    get:
+      summary: Get Public Category
+      tags:
+        - Store Categories
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public category details.
+        '404':
+          description: Category not found or internal/inactive.
+
+  /admin/categories:
+    get:
+      summary: List Admin Categories
+      tags:
+        - Admin Categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: parent_category_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of categories for admin.
+    post:
+      summary: Create Category
+      tags:
+        - Admin Categories
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                image_id:
+                  type: string
+                is_active:
+                  type: boolean
+                display_order:
+                  type: integer
+                parent_category_id:
+                  type: string
+      responses:
+        '201':
+          description: Category created.
+        '400':
+          description: Duplicate slug or invalid parent reference.
+
+  /admin/categories/{id}:
+    get:
+      summary: Get Admin Category
+      tags:
+        - Admin Categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category details.
+    put:
+      summary: Update Category
+      tags:
+        - Admin Categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                image_id:
+                  type: string
+                is_active:
+                  type: boolean
+                display_order:
+                  type: integer
+                parent_category_id:
+                  type: string
+      responses:
+        '200':
+          description: Category updated.
+        '400':
+          description: Invalid self-parenting or circular relationship.
+    delete:
+      summary: Delete Category
+      tags:
+        - Admin Categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category deleted, products preserved.
+
+  /admin/media/upload:
+    post:
+      summary: Upload Media File
+      description: Uploads a media file with buffer magic-byte MIME validation, size limit enforcement, and dimensions calculation.
+      tags:
+        - Admin Media
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Media uploaded successfully.
+        '400':
+          description: File validation failure, invalid content type, or size limit exceeded.
+
+  /admin/media:
+    get:
+      summary: List Media Library
+      tags:
+        - Admin Media
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: mime_type
+          in: query
+          schema:
+            type: string
+        - name: uploaded_by_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated media library.
+
+  /admin/media/{id}:
+    get:
+      summary: Get Media Metadata
+      tags:
+        - Admin Media
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Media details.
+    delete:
+      summary: Delete Media
+      description: Deletes media from DB and disk if not referenced by brands, categories, or products.
+      tags:
+        - Admin Media
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Media deleted successfully.
+        '400':
+          description: Media is currently in use and cannot be deleted.
+
+  /store/reviews/media:
+    post:
+      summary: Upload Customer Review Image
+      tags:
+        - Store Reviews
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Image uploaded for review attachment.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Brand:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logo_id:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        image_id:
+          type: string
+        is_active:
+          type: boolean
+        display_order:
+          type: integer
+        parent_category_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+        original_filename:
+          type: string
+        file_key:
+          type: string
+        mime_type:
+          type: string
+        file_size:
+          type: integer
+        storage_provider:
+          type: string
+        url:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        uploaded_by_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
