@@ -26,7 +26,7 @@ import {
   MedusaService,
   partitionArray,
 } from "@medusajs/framework/utils"
-import { InventoryItem, InventoryLevel, ReservationItem } from "@models"
+import { InventoryItem, InventoryLevel, ReservationItem, InventoryTransaction } from "@models"
 import { joinerConfig } from "../joiner-config"
 import { applyEntityHooks } from "../utils/apply-decorators"
 import InventoryLevelService from "./inventory-level"
@@ -36,6 +36,7 @@ type InjectedDependencies = {
   inventoryItemService: ModulesSdkTypes.IMedusaInternalService<any>
   inventoryLevelService: InventoryLevelService
   reservationItemService: ModulesSdkTypes.IMedusaInternalService<any>
+  inventoryTransactionService: ModulesSdkTypes.IMedusaInternalService<any>
 }
 
 type InventoryItemCheckLevel = {
@@ -44,6 +45,33 @@ type InventoryItemCheckLevel = {
   inventory_item_id: string
   quantity?: BigNumberInput
   allow_backorder?: boolean
+}
+
+export type CreateInventoryTransactionInput = {
+  inventory_item_id: string
+  inventory_level_id?: string | null
+  product_id?: string | null
+  variant_id?: string | null
+  location_id?: string | null
+  quantity_before: number
+  quantity_change: number
+  quantity_after: number
+  type: "increase" | "decrease" | string
+  reason:
+    | "initial_stock"
+    | "purchase"
+    | "sale"
+    | "cancellation"
+    | "return"
+    | "damaged"
+    | "manual_adjustment"
+    | "inventory_count"
+    | string
+  note?: string | null
+  reference_type?: string | null
+  reference_id?: string | null
+  created_by?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 applyEntityHooks()
@@ -59,10 +87,14 @@ export default class InventoryModuleService
     ReservationItem: {
       dto: InventoryTypes.ReservationItemDTO
     }
+    InventoryTransaction: {
+      dto: any
+    }
   }>({
     InventoryItem,
     InventoryLevel,
     ReservationItem,
+    InventoryTransaction,
   })
   implements IInventoryService
 {
@@ -75,6 +107,9 @@ export default class InventoryModuleService
     typeof ReservationItem
   >
   protected readonly inventoryLevelService_: InventoryLevelService
+  protected readonly inventoryTransactionService_: ModulesSdkTypes.IMedusaInternalService<
+    typeof InventoryTransaction
+  >
 
   constructor(
     {
@@ -82,6 +117,7 @@ export default class InventoryModuleService
       inventoryItemService,
       inventoryLevelService,
       reservationItemService,
+      inventoryTransactionService,
     }: InjectedDependencies,
     protected readonly moduleDeclaration?: InternalModuleDeclaration
   ) {
@@ -93,6 +129,7 @@ export default class InventoryModuleService
     this.inventoryItemService_ = inventoryItemService
     this.inventoryLevelService_ = inventoryLevelService
     this.reservationItemService_ = reservationItemService
+    this.inventoryTransactionService_ = inventoryTransactionService
   }
 
   __joinerConfig(): ModuleJoinerConfig {
@@ -218,6 +255,26 @@ export default class InventoryModuleService
 
       return validInput as TDTO
     })
+  }
+
+  @InjectManager()
+  @EmitEvents()
+  async createInventoryTransaction(
+    input: CreateInventoryTransactionInput | CreateInventoryTransactionInput[],
+    @MedusaContext() context: Context = {}
+  ): Promise<any> {
+    const toCreate = Array.isArray(input) ? input : [input]
+    const created = await this.createInventoryTransaction_(toCreate, context)
+    const serialized = await this.baseRepository_.serialize(created)
+    return Array.isArray(input) ? serialized : serialized[0]
+  }
+
+  @InjectTransactionManager()
+  async createInventoryTransaction_(
+    input: CreateInventoryTransactionInput[],
+    @MedusaContext() context: Context = {}
+  ): Promise<InferEntityType<typeof InventoryTransaction>[]> {
+    return await this.inventoryTransactionService_.create(input, context)
   }
 
   // @ts-expect-error
