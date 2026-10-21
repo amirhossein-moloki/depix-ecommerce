@@ -12,6 +12,7 @@ import { adminFulfillmentProvidersRoutesMiddlewares } from "./admin/fulfillment-
 import { adminFulfillmentSetsRoutesMiddlewares } from "./admin/fulfillment-sets/middlewares"
 import { adminFulfillmentsRoutesMiddlewares } from "./admin/fulfillments/middlewares"
 import { adminInventoryRoutesMiddlewares } from "./admin/inventory-items/middlewares"
+import { adminCustomInventoryRoutesMiddlewares } from "./admin/inventory/middlewares"
 import { adminInviteRoutesMiddlewares } from "./admin/invites/middlewares"
 import { adminNotificationRoutesMiddlewares } from "./admin/notifications/middlewares"
 import { adminOrderChangesRoutesMiddlewares } from "./admin/order-changes/middlewares"
@@ -92,8 +93,20 @@ import { adminTranslationsRoutesMiddlewares } from "./admin/translations/middlew
 import { adminInvoiceRoutesMiddlewares } from "./admin/invoices/middlewares"
 import { adminSalesReportRoutesMiddlewares } from "./admin/reports/sales/middlewares"
 import { adminMarginReportRoutesMiddlewares } from "./admin/reports/margin/middlewares"
+import { adminBrandRoutesMiddlewares } from "./admin/brands/middlewares"
+import { storeBrandRoutesMiddlewares } from "./store/brands/middlewares"
+import { adminCategoryRoutesMiddlewares } from "./admin/categories/middlewares"
+import { storeCategoryRoutesMiddlewares } from "./store/categories/middlewares"
+import { adminMediaRoutesMiddlewares } from "./admin/media/middlewares"
+import { storeReviewMediaRoutesMiddlewares } from "./store/reviews/media/middlewares"
 
 export default defineMiddlewares([
+  ...storeBrandRoutesMiddlewares,
+  ...adminBrandRoutesMiddlewares,
+  ...storeCategoryRoutesMiddlewares,
+  ...adminCategoryRoutesMiddlewares,
+  ...adminMediaRoutesMiddlewares,
+  ...storeReviewMediaRoutesMiddlewares,
   ...storeRoutesMiddlewares,
   {
     matcher: "/admin*",
@@ -138,6 +151,7 @@ export default defineMiddlewares([
   ...adminPriceListsRoutesMiddlewares,
   ...adminPricePreferencesRoutesMiddlewares,
   ...adminInventoryRoutesMiddlewares,
+  ...adminCustomInventoryRoutesMiddlewares,
   ...adminCollectionRoutesMiddlewares,
   ...adminShippingOptionRoutesMiddlewares,
   ...adminDraftOrderRoutesMiddlewares,

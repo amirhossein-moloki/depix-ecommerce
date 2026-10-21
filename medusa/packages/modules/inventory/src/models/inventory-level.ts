@@ -1,5 +1,6 @@
 import { model } from "@medusajs/framework/utils"
 import InventoryItem from "./inventory-item"
+import InventoryTransaction from "./inventory-transaction"
 
 const InventoryLevel = model
   .define("InventoryLevel", {
@@ -11,6 +12,9 @@ const InventoryLevel = model
     metadata: model.json().nullable(),
     inventory_item: model.belongsTo(() => InventoryItem, {
       mappedBy: "location_levels",
+    }),
+    transactions: model.hasMany(() => InventoryTransaction, {
+      mappedBy: "inventory_level",
     }),
     available_quantity: model.bigNumber().computed(),
   })
