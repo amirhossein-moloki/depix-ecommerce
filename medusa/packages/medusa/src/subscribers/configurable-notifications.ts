@@ -362,8 +362,34 @@ export default async function configurableNotifications({
   const handlers = configAsMap[event.name] ?? []
   const payload = event.data
 
+  // Fetch store settings to enforce notification toggles
+  let storeSettings: any = null
+  try {
+    const storeService = container.resolve(Modules.STORE) as any
+    if (storeService && typeof storeService.listStoreSettings === "function") {
+      const settingsList = await storeService.listStoreSettings({}, { take: 1 })
+      if (settingsList && settingsList.length > 0) {
+        storeSettings = settingsList[0]
+      }
+    }
+  } catch (err: any) {
+    logger.debug?.(`Could not resolve store settings in subscriber: ${err.message}`)
+  }
+
+  const enableSms = storeSettings ? Boolean(storeSettings.enable_sms_notifications ?? storeSettings.enableSmsNotifications ?? true) : true
+  const enableEmail = storeSettings ? Boolean(storeSettings.enable_email_notifications ?? storeSettings.enableEmailNotifications ?? true) : true
+
   await promiseAll(
     handlers.map(async (handler) => {
+      // Enforce SMS and Email notification settings
+      if (handler.channel === "sms" && !enableSms) {
+        logger.debug?.(`Skipping SMS notification for ${event.name}: SMS notifications disabled in Store Settings.`)
+        return
+      }
+      if (handler.channel === "email" && !enableEmail) {
+        logger.debug?.(`Skipping Email notification for ${event.name}: Email notifications disabled in Store Settings.`)
+        return
+      }
       let recipient: string | null = null
 
       if (Array.isArray(handler.to)) {
