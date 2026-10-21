@@ -3266,6 +3266,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/brand@workspace:packages/modules/brand":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/brand@workspace:packages/modules/brand"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/cache-inmemory@2.21.2, @medusajs/cache-inmemory@workspace:*, @medusajs/cache-inmemory@workspace:packages/modules/cache-inmemory":
   version: 0.0.0-use.local
   resolution: "@medusajs/cache-inmemory@workspace:packages/modules/cache-inmemory"
@@ -3850,6 +3860,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/media@workspace:packages/modules/media":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/media@workspace:packages/modules/media"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/medusa-oas-cli@2.21.2, @medusajs/medusa-oas-cli@workspace:packages/cli/oas/medusa-oas-cli":
   version: 0.0.0-use.local
   resolution: "@medusajs/medusa-oas-cli@workspace:packages/cli/oas/medusa-oas-cli"
@@ -4071,6 +4091,17 @@ __metadata:
   dependencies:
     "@medusajs/framework": 2.21.2
     stripe: ^15.5.0
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/payment-wallet@workspace:packages/modules/providers/payment-wallet":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/payment-wallet@workspace:packages/modules/providers/payment-wallet"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+    "@medusajs/wallet": "workspace:*"
   peerDependencies:
     "@medusajs/framework": 2.21.2
   languageName: unknown
@@ -4446,6 +4477,16 @@ __metadata:
     ulid: ^2.3.0
   peerDependencies:
     express: ^4.21.0
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/wallet@workspace:*, @medusajs/wallet@workspace:packages/modules/wallet":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/wallet@workspace:packages/modules/wallet"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
   languageName: unknown
   linkType: soft
 

@@ -39,6 +39,8 @@ export const Modules = {
   RECOMMENDATION: "recommendation",
   PRODUCT_VIDEO: "product_video",
   INVOICE: "invoice",
+  BRAND: "brand",
+  MEDIA: "media",
 } as const
 
 export const MODULE_PACKAGE_NAMES = {
@@ -82,6 +84,8 @@ export const MODULE_PACKAGE_NAMES = {
   [Modules.RECOMMENDATION]: "@medusajs/recommendation",
   [Modules.PRODUCT_VIDEO]: "@medusajs/product-video",
   [Modules.INVOICE]: "@medusajs/invoice",
+  [Modules.BRAND]: "@medusajs/brand",
+  [Modules.MEDIA]: "@medusajs/media",
 }
 
 export const REVERSED_MODULE_PACKAGE_NAMES = Object.entries(
