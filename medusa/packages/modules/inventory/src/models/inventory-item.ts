@@ -1,6 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 import InventoryLevel from "./inventory-level"
 import ReservationItem from "./reservation-item"
+import InventoryTransaction from "./inventory-transaction"
 
 const InventoryItem = model
   .define("InventoryItem", {
@@ -26,11 +27,14 @@ const InventoryItem = model
     reservation_items: model.hasMany(() => ReservationItem, {
       mappedBy: "inventory_item",
     }),
+    transactions: model.hasMany(() => InventoryTransaction, {
+      mappedBy: "inventory_item",
+    }),
     reserved_quantity: model.bigNumber().computed(),
     stocked_quantity: model.bigNumber().computed(),
   })
   .cascades({
-    delete: ["location_levels", "reservation_items"],
+    delete: ["location_levels", "reservation_items", "transactions"],
   })
   .indexes([
     {

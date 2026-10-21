@@ -12,6 +12,7 @@ import { adminFulfillmentProvidersRoutesMiddlewares } from "./admin/fulfillment-
 import { adminFulfillmentSetsRoutesMiddlewares } from "./admin/fulfillment-sets/middlewares"
 import { adminFulfillmentsRoutesMiddlewares } from "./admin/fulfillments/middlewares"
 import { adminInventoryRoutesMiddlewares } from "./admin/inventory-items/middlewares"
+import { adminCustomInventoryRoutesMiddlewares } from "./admin/inventory/middlewares"
 import { adminInviteRoutesMiddlewares } from "./admin/invites/middlewares"
 import { adminNotificationRoutesMiddlewares } from "./admin/notifications/middlewares"
 import { adminOrderChangesRoutesMiddlewares } from "./admin/order-changes/middlewares"
@@ -138,6 +139,7 @@ export default defineMiddlewares([
   ...adminPriceListsRoutesMiddlewares,
   ...adminPricePreferencesRoutesMiddlewares,
   ...adminInventoryRoutesMiddlewares,
+  ...adminCustomInventoryRoutesMiddlewares,
   ...adminCollectionRoutesMiddlewares,
   ...adminShippingOptionRoutesMiddlewares,
   ...adminDraftOrderRoutesMiddlewares,
