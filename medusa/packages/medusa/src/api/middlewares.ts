@@ -95,6 +95,7 @@ import { adminSalesReportRoutesMiddlewares } from "./admin/reports/sales/middlew
 import { adminMarginReportRoutesMiddlewares } from "./admin/reports/margin/middlewares"
 import { adminTicketRoutesMiddlewares } from "./admin/tickets/middlewares"
 import { adminBrandRoutesMiddlewares } from "./admin/brands/middlewares"
+import { adminSizeGuideRoutesMiddlewares } from "./admin/size-guides/middlewares"
 import { storeBrandRoutesMiddlewares } from "./store/brands/middlewares"
 import { adminCategoryRoutesMiddlewares } from "./admin/categories/middlewares"
 import { storeCategoryRoutesMiddlewares } from "./store/categories/middlewares"
@@ -104,6 +105,7 @@ import { storeReviewMediaRoutesMiddlewares } from "./store/reviews/media/middlew
 export default defineMiddlewares([
   ...storeBrandRoutesMiddlewares,
   ...adminBrandRoutesMiddlewares,
+  ...adminSizeGuideRoutesMiddlewares,
   ...storeCategoryRoutesMiddlewares,
   ...adminCategoryRoutesMiddlewares,
   ...adminMediaRoutesMiddlewares,

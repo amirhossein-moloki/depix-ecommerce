@@ -3963,6 +3963,7 @@ __metadata:
     "@medusajs/search": 2.21.2
     "@medusajs/search-postgres": 2.21.2
     "@medusajs/settings": 2.21.2
+    "@medusajs/size-guide": 2.21.2
     "@medusajs/stock-alert": 2.21.2
     "@medusajs/stock-location": 2.21.2
     "@medusajs/store": 2.21.2
@@ -4276,6 +4277,16 @@ __metadata:
   dependencies:
     "@medusajs/framework": 2.21.2
     "@medusajs/test-utils": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/size-guide@2.21.2, @medusajs/size-guide@workspace:packages/modules/size-guide":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/size-guide@workspace:packages/modules/size-guide"
+  dependencies:
+    "@medusajs/framework": 2.21.2
   peerDependencies:
     "@medusajs/framework": 2.21.2
   languageName: unknown
