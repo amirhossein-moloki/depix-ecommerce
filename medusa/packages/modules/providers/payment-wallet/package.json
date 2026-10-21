@@ -19,7 +19,7 @@
     "test": "../../../../node_modules/.bin/jest --passWithNoTests --bail --forceExit --testPathPattern=src"
   },
   "dependencies": {
-    "@amirhossein-moloki/wallet-core": "^1.0.0",
+    "@amirhossein-moloki/wallet-core": "1.0.0",
     "@medusajs/wallet": "workspace:*"
   },
   "devDependencies": {

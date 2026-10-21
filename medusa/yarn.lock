@@ -26,6 +26,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@amirhossein-moloki/wallet-core@1.0.0, @amirhossein-moloki/wallet-core@workspace:*, @amirhossein-moloki/wallet-core@workspace:packages/wallet-core":
+  version: 0.0.0-use.local
+  resolution: "@amirhossein-moloki/wallet-core@workspace:packages/wallet-core"
+  languageName: unknown
+  linkType: soft
+
+"@amirhossein-moloki/wallet-persistence-postgres@workspace:*, @amirhossein-moloki/wallet-persistence-postgres@workspace:packages/wallet-persistence-postgres":
+  version: 0.0.0-use.local
+  resolution: "@amirhossein-moloki/wallet-persistence-postgres@workspace:packages/wallet-persistence-postgres"
+  languageName: unknown
+  linkType: soft
+
 "@apidevtools/swagger-methods@npm:^3.0.2":
   version: 3.0.2
   resolution: "@apidevtools/swagger-methods@npm:3.0.2"
@@ -4076,6 +4088,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/payment-wallet@workspace:packages/modules/providers/payment-wallet":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/payment-wallet@workspace:packages/modules/providers/payment-wallet"
+  dependencies:
+    "@amirhossein-moloki/wallet-core": 1.0.0
+    "@medusajs/framework": 2.21.2
+    "@medusajs/wallet": "workspace:*"
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/payment@2.21.2, @medusajs/payment@workspace:^, @medusajs/payment@workspace:packages/modules/payment":
   version: 0.0.0-use.local
   resolution: "@medusajs/payment@workspace:packages/modules/payment"
@@ -4446,6 +4470,18 @@ __metadata:
     ulid: ^2.3.0
   peerDependencies:
     express: ^4.21.0
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/wallet@workspace:*, @medusajs/wallet@workspace:packages/modules/wallet":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/wallet@workspace:packages/modules/wallet"
+  dependencies:
+    "@amirhossein-moloki/wallet-core": "workspace:*"
+    "@amirhossein-moloki/wallet-persistence-postgres": "workspace:*"
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
   languageName: unknown
   linkType: soft
 
