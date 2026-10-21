@@ -31,5 +31,6 @@ module.exports = defineJestConfig({
     "^@medusajs/recommendation": path.resolve(__dirname, "../modules/recommendation/src"),
     "^@medusajs/product-video": path.resolve(__dirname, "../modules/product-video/src"),
     "^@medusajs/invoice": path.resolve(__dirname, "../modules/invoice/src"),
+    "^@medusajs/ticket": path.resolve(__dirname, "../modules/ticket/src"),
   },
 })

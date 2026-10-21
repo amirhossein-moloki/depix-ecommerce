@@ -39,6 +39,7 @@ export const Modules = {
   RECOMMENDATION: "recommendation",
   PRODUCT_VIDEO: "product_video",
   INVOICE: "invoice",
+  TICKET: "ticket",
 } as const
 
 export const MODULE_PACKAGE_NAMES = {
@@ -82,6 +83,7 @@ export const MODULE_PACKAGE_NAMES = {
   [Modules.RECOMMENDATION]: "@medusajs/recommendation",
   [Modules.PRODUCT_VIDEO]: "@medusajs/product-video",
   [Modules.INVOICE]: "@medusajs/invoice",
+  [Modules.TICKET]: "@medusajs/ticket",
 }
 
 export const REVERSED_MODULE_PACKAGE_NAMES = Object.entries(

@@ -261,6 +261,81 @@ const handlerConfig: HandlerConfig[] = [
       code: "code",
     },
   },
+  // Ticket Created In-App
+  {
+    event: "ticket.created",
+    template: "ticket-created",
+    channel: "in-app",
+    to: "user_email",
+    resource_id: "id",
+    resource_type: "ticket",
+    receiver_id: "user_id",
+    data: {
+      title: "Ticket Created",
+      message: "Your support ticket has been created.",
+      ticket_number: "ticket_number",
+    },
+  },
+  // Ticket Message Created In-App
+  {
+    event: "ticket.message_created",
+    template: "ticket-message-created",
+    channel: "in-app",
+    to: "user_email",
+    resource_id: "ticket_id",
+    resource_type: "ticket",
+    receiver_id: "sender_id",
+    data: {
+      title: "New Ticket Response",
+      message: "There is a new response on your ticket.",
+      ticket_id: "ticket_id",
+    },
+  },
+  // Ticket Assigned In-App
+  {
+    event: "ticket.assigned",
+    template: "ticket-assigned",
+    channel: "in-app",
+    to: "assigned_to",
+    resource_id: "id",
+    resource_type: "ticket",
+    receiver_id: "assigned_to",
+    data: {
+      title: "Ticket Assigned",
+      message: "A support ticket has been assigned to you.",
+      ticket_number: "ticket_number",
+    },
+  },
+  // Ticket Status Updated In-App
+  {
+    event: "ticket.status_updated",
+    template: "ticket-status-updated",
+    channel: "in-app",
+    to: "user_email",
+    resource_id: "id",
+    resource_type: "ticket",
+    receiver_id: "user_id",
+    data: {
+      title: "Ticket Status Updated",
+      message: "Your support ticket status has been updated.",
+      status: "status",
+    },
+  },
+  // Ticket Closed In-App
+  {
+    event: "ticket.closed",
+    template: "ticket-closed",
+    channel: "in-app",
+    to: "user_email",
+    resource_id: "id",
+    resource_type: "ticket",
+    receiver_id: "user_id",
+    data: {
+      title: "Ticket Closed",
+      message: "Your support ticket has been closed.",
+      ticket_number: "ticket_number",
+    },
+  },
 ]
 
 const configAsMap = handlerConfig.reduce(

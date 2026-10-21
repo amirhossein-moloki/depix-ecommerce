@@ -4076,6 +4076,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/payment-wallet@workspace:packages/modules/providers/payment-wallet":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/payment-wallet@workspace:packages/modules/providers/payment-wallet"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+    "@medusajs/wallet": "workspace:*"
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/payment@2.21.2, @medusajs/payment@workspace:^, @medusajs/payment@workspace:packages/modules/payment":
   version: 0.0.0-use.local
   resolution: "@medusajs/payment@workspace:packages/modules/payment"
@@ -4319,6 +4330,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/ticket@workspace:packages/modules/ticket":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/ticket@workspace:packages/modules/ticket"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/toolbox@2.21.2, @medusajs/toolbox@workspace:packages/design-system/toolbox":
   version: 0.0.0-use.local
   resolution: "@medusajs/toolbox@workspace:packages/design-system/toolbox"
@@ -4446,6 +4467,16 @@ __metadata:
     ulid: ^2.3.0
   peerDependencies:
     express: ^4.21.0
+  languageName: unknown
+  linkType: soft
+
+"@medusajs/wallet@workspace:*, @medusajs/wallet@workspace:packages/modules/wallet":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/wallet@workspace:packages/modules/wallet"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
   languageName: unknown
   linkType: soft
 
