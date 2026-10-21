@@ -32,5 +32,7 @@ module.exports = defineJestConfig({
     "^@medusajs/product-video": path.resolve(__dirname, "../modules/product-video/src"),
     "^@medusajs/invoice": path.resolve(__dirname, "../modules/invoice/src"),
     "^@medusajs/ticket": path.resolve(__dirname, "../modules/ticket/src"),
+    "^@medusajs/brand": path.resolve(__dirname, "../modules/brand/src"),
+    "^@medusajs/media": path.resolve(__dirname, "../modules/media/src"),
   },
 })

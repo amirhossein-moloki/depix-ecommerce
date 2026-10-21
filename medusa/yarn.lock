@@ -26,6 +26,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@amirhossein-moloki/wallet-core@1.0.0, @amirhossein-moloki/wallet-core@workspace:*, @amirhossein-moloki/wallet-core@workspace:packages/wallet-core":
+  version: 0.0.0-use.local
+  resolution: "@amirhossein-moloki/wallet-core@workspace:packages/wallet-core"
+  languageName: unknown
+  linkType: soft
+
+"@amirhossein-moloki/wallet-persistence-postgres@workspace:*, @amirhossein-moloki/wallet-persistence-postgres@workspace:packages/wallet-persistence-postgres":
+  version: 0.0.0-use.local
+  resolution: "@amirhossein-moloki/wallet-persistence-postgres@workspace:packages/wallet-persistence-postgres"
+  languageName: unknown
+  linkType: soft
+
 "@apidevtools/swagger-methods@npm:^3.0.2":
   version: 3.0.2
   resolution: "@apidevtools/swagger-methods@npm:3.0.2"
@@ -3266,6 +3278,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/brand@workspace:packages/modules/brand":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/brand@workspace:packages/modules/brand"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/cache-inmemory@2.21.2, @medusajs/cache-inmemory@workspace:*, @medusajs/cache-inmemory@workspace:packages/modules/cache-inmemory":
   version: 0.0.0-use.local
   resolution: "@medusajs/cache-inmemory@workspace:packages/modules/cache-inmemory"
@@ -3850,6 +3872,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@medusajs/media@workspace:packages/modules/media":
+  version: 0.0.0-use.local
+  resolution: "@medusajs/media@workspace:packages/modules/media"
+  dependencies:
+    "@medusajs/framework": 2.21.2
+  peerDependencies:
+    "@medusajs/framework": 2.21.2
+  languageName: unknown
+  linkType: soft
+
 "@medusajs/medusa-oas-cli@2.21.2, @medusajs/medusa-oas-cli@workspace:packages/cli/oas/medusa-oas-cli":
   version: 0.0.0-use.local
   resolution: "@medusajs/medusa-oas-cli@workspace:packages/cli/oas/medusa-oas-cli"
@@ -4080,6 +4112,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@medusajs/payment-wallet@workspace:packages/modules/providers/payment-wallet"
   dependencies:
+    "@amirhossein-moloki/wallet-core": 1.0.0
     "@medusajs/framework": 2.21.2
     "@medusajs/wallet": "workspace:*"
   peerDependencies:
@@ -4474,6 +4507,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@medusajs/wallet@workspace:packages/modules/wallet"
   dependencies:
+    "@amirhossein-moloki/wallet-core": "workspace:*"
+    "@amirhossein-moloki/wallet-persistence-postgres": "workspace:*"
     "@medusajs/framework": 2.21.2
   peerDependencies:
     "@medusajs/framework": 2.21.2
