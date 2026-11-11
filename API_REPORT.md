@@ -1,364 +1,669 @@
-# گزارش جامع APIهای پروژه (API Specification Report)
+# گزارش جامع APIها و ارزیابی تطبیق مستندات (API Inventory & Specification Audit Report)
 
-این گزارش شامل بررسی کامل، تفکیک‌شده و دقیق تمامی APIهای موجود در معماری **Depix E-commerce** (`depix-ecommerce`) می‌باشد. در این زیرساخت دو سیستم بک‌اند اصلی متصل به یک دیتابیس مشترک PostgreSQL و Redis وجود دارد که مجموعه‌ای از APIهای e-commerce و CMS/مدیریت محتوا را ارائه می‌دهند.
-
----
-
-# ۱. نمای کلی و خلاصه‌ی سرویس‌های API
-
-در این پروژه، سرویس‌ها و APIها به ۲ بخش کلی تقسیم می‌شوند:
-
-1. **سرویس Medusa v2 (موتور فروشگاهی / E-Commerce Backend):**
-   - **Store API (فروشگاهی):** مخصوص خریداران و storefront (سبد خرید، محصولات، سفارشات، آدرس‌ها، پرداخت).
-   - **Admin API (مدیریت):** مخصوص مدیران سیستم (مدیریت محصولات، موجودی، سفارشات، تخفیف‌ها، کاربران، تنظیمات).
-   - **Auth API (احراز هویت):** مدیریت نشست‌ها، ثبت‌نام و ورود کاربران و مدیران.
-   - **OpenAPI / Swagger UI / ReDoc API:** مستندات استاندارد OpenAPI و رابط‌های کاربری تعاملی Swagger UI و ReDoc برای کلیه APIهای Medusa.
-
-2. **سرویس Payload CMS v4 (مدیریت محتوا و پنل ادمین Central):**
-   - **REST API:** دسترسی CRUD به تمام مجموعه داده‌ها (Collections) و تنظیمات کلی (Globals).
-   - **GraphQL API & GraphQL Playground:** دسترسی کوئری و میوتیشن پیشرفته به داده‌های محتوایی و بلاگ.
-   - **CMS Admin UI & Internal Endpoints:** پنل مدیریت محتوا و مدیریت فایل‌ها/رسانه‌ها.
+این گزارش شامل ارزیابی کامل، جدول احصاء (Inventory Table) و بررسی تطبیق تمام ۴۴۰ اندپوئینت موجود در بک‌اند **Depix E-commerce (Medusa v2)** می‌باشد.
 
 ---
 
-# ۲. جدول خلاصه گروه‌های API و تعداد آن‌ها
+## ۱. جدول احصاء کامل APIها (API Inventory Table)
 
-| سرویس / چارچوب | گروه API | تعداد تقریبی اندپوئینت‌ها | کاربرد اصلی | مسیر دسترسی (از طریق Nginx) |
-|---|---|:---:|---|---|
-| **Medusa v2** | **Store API** | ~۴۵ | تعامل خریداران (محصولات، کاتالوگ، سبد خرید، تسویه، سفارشات) | `/api/medusa/store/*` |
-| **Medusa v2** | **Admin API** | ~۸۵ | مدیریت e-commerce (محصولات، سفارشات، موجودی، مشتریان، تخفیف‌ها) | `/api/medusa/admin/*` |
-| **Medusa v2** | **Auth API** | ~۱۰ | ورود، ثبت‌نام، احراز هویت خریداران و مدیران | `/api/medusa/auth/*` یا `/api/medusa/store/auth/*` |
-| **Medusa v2** | **OpenAPI / Swagger / ReDoc** | ~۴ | مشخصات OpenAPI v3 و رابط‌های کاربری تعاملی Swagger UI و ReDoc UI | `/api/medusa/openapi.json`, Swagger & ReDoc UIs |
-| **Payload CMS v4** | **REST API** | ~۳۵ | مدیریت و دریافت داده‌های محتوایی، صفحات، مقالات، بنرها و کاربران | `/payload/api/*` |
-| **Payload CMS v4** | **GraphQL API** | ۱ اصلی + Playground | کوئری گراف‌کیوال برای دریافت بهینه محتوا و بلاگ | `/payload/api/graphql` & `/payload/api/graphql-playground` |
-| **Payload CMS v4** | **Admin & Upload API** | ~۱۵ | مدیریت فایل‌ها/رسانه‌ها، نسخه سندها (Versions) و لاگ‌های سیستم | `/payload/admin/*` & `/payload/api/media/*` |
-| **Nginx Proxy** | **Infrastructure Health** | ۱ | بررسی سلامت سرویس‌ها (Health Check) | `/health` |
+| Module | Method | Path | Implemented | Swagger documented | Auth documented | Validation status |
+|---|---|---|:---:|:---:|:---:|:---:|
+| Admin Api-keys | GET | `/admin/api-keys` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Api-keys | POST | `/admin/api-keys` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Api-keys | GET | `/admin/api-keys/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Api-keys | POST | `/admin/api-keys/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Api-keys | DELETE | `/admin/api-keys/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Api-keys | POST | `/admin/api-keys/:id/revoke` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Api-keys | POST | `/admin/api-keys/:id/sales-channels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Brands | GET | `/admin/brands` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Brands | POST | `/admin/brands` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Brands | GET | `/admin/brands/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Brands | PUT | `/admin/brands/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Brands | DELETE | `/admin/brands/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Campaigns | GET | `/admin/campaigns` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Campaigns | POST | `/admin/campaigns` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Campaigns | GET | `/admin/campaigns/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Campaigns | POST | `/admin/campaigns/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Campaigns | DELETE | `/admin/campaigns/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Campaigns | POST | `/admin/campaigns/:id/promotions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Categories | GET | `/admin/categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Categories | POST | `/admin/categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Categories | GET | `/admin/categories/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Categories | PUT | `/admin/categories/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Categories | DELETE | `/admin/categories/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | GET | `/admin/claims` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | GET | `/admin/claims/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/claim-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/claim-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | DELETE | `/admin/claims/:id/claim-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/inbound/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/inbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | DELETE | `/admin/claims/:id/inbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/inbound/shipping-method` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/inbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | DELETE | `/admin/claims/:id/inbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/outbound/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/outbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | DELETE | `/admin/claims/:id/outbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/outbound/shipping-method` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/outbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | DELETE | `/admin/claims/:id/outbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | POST | `/admin/claims/:id/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Claims | DELETE | `/admin/claims/:id/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Collections | GET | `/admin/collections` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Collections | POST | `/admin/collections` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Collections | GET | `/admin/collections/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Collections | POST | `/admin/collections/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Collections | DELETE | `/admin/collections/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Collections | POST | `/admin/collections/:id/products` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Currencies | GET | `/admin/currencies` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Currencies | GET | `/admin/currencies/:code` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customer-groups | GET | `/admin/customer-groups` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customer-groups | POST | `/admin/customer-groups` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customer-groups | GET | `/admin/customer-groups/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customer-groups | POST | `/admin/customer-groups/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customer-groups | DELETE | `/admin/customer-groups/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customer-groups | POST | `/admin/customer-groups/:id/customers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | GET | `/admin/customers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | POST | `/admin/customers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | GET | `/admin/customers/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | POST | `/admin/customers/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | DELETE | `/admin/customers/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | GET | `/admin/customers/:id/addresses` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | POST | `/admin/customers/:id/addresses` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | GET | `/admin/customers/:id/addresses/:address_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | POST | `/admin/customers/:id/addresses/:address_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | DELETE | `/admin/customers/:id/addresses/:address_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Customers | POST | `/admin/customers/:id/customer-groups` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | GET | `/admin/draft-orders` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | GET | `/admin/draft-orders/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | DELETE | `/admin/draft-orders/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/convert-to-order` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | DELETE | `/admin/draft-orders/:id/edit` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/confirm` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | DELETE | `/admin/draft-orders/:id/edit/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/items/item/:item_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/promotions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | DELETE | `/admin/draft-orders/:id/edit/promotions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/shipping-methods` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/shipping-methods/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | DELETE | `/admin/draft-orders/:id/edit/shipping-methods/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | POST | `/admin/draft-orders/:id/edit/shipping-methods/method/:method_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Draft-orders | DELETE | `/admin/draft-orders/:id/edit/shipping-methods/method/:method_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | GET | `/admin/exchanges` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | GET | `/admin/exchanges/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/inbound/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/inbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | DELETE | `/admin/exchanges/:id/inbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/inbound/shipping-method` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/inbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | DELETE | `/admin/exchanges/:id/inbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/outbound/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/outbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | DELETE | `/admin/exchanges/:id/outbound/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/outbound/shipping-method` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/outbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | DELETE | `/admin/exchanges/:id/outbound/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | POST | `/admin/exchanges/:id/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Exchanges | DELETE | `/admin/exchanges/:id/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Feature-flags | GET | `/admin/feature-flags` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillment-providers | GET | `/admin/fulfillment-providers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillment-providers | GET | `/admin/fulfillment-providers/:id/options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillment-sets | DELETE | `/admin/fulfillment-sets/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillment-sets | POST | `/admin/fulfillment-sets/:id/service-zones` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillment-sets | GET | `/admin/fulfillment-sets/:id/service-zones/:zone_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillment-sets | POST | `/admin/fulfillment-sets/:id/service-zones/:zone_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillment-sets | DELETE | `/admin/fulfillment-sets/:id/service-zones/:zone_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillments | POST | `/admin/fulfillments` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillments | POST | `/admin/fulfillments/:id/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Fulfillments | POST | `/admin/fulfillments/:id/shipment` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Index | GET | `/admin/index/details` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Index | POST | `/admin/index/sync` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | GET | `/admin/inventory-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | POST | `/admin/inventory-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | GET | `/admin/inventory-items/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | POST | `/admin/inventory-items/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | DELETE | `/admin/inventory-items/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | GET | `/admin/inventory-items/:id/location-levels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | POST | `/admin/inventory-items/:id/location-levels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | POST | `/admin/inventory-items/:id/location-levels/:location_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | DELETE | `/admin/inventory-items/:id/location-levels/:location_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | POST | `/admin/inventory-items/:id/location-levels/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | POST | `/admin/inventory-items/export` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory-items | POST | `/admin/inventory-items/location-levels/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory | GET | `/admin/inventory/history` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Inventory | GET | `/admin/inventory/low-stock` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invites | GET | `/admin/invites` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invites | POST | `/admin/invites` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invites | GET | `/admin/invites/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invites | DELETE | `/admin/invites/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invites | POST | `/admin/invites/:id/resend` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invites | POST | `/admin/invites/accept` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invoices | GET | `/admin/invoices` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invoices | POST | `/admin/invoices` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invoices | GET | `/admin/invoices/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Invoices | GET | `/admin/invoices/:id/pdf` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Layouts | GET | `/admin/layouts/:zone/configuration` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Layouts | POST | `/admin/layouts/:zone/configuration` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Layouts | DELETE | `/admin/layouts/:zone/configuration` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Layouts | GET | `/admin/layouts/configurations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Locales | GET | `/admin/locales` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Locales | GET | `/admin/locales/:code` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Media | GET | `/admin/media` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Media | GET | `/admin/media/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Media | DELETE | `/admin/media/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Media | POST | `/admin/media/upload` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Notifications | GET | `/admin/notifications` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Notifications | GET | `/admin/notifications/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-changes | POST | `/admin/order-changes/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | DELETE | `/admin/order-edits/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits/:id/confirm` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits/:id/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits/:id/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | DELETE | `/admin/order-edits/:id/items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits/:id/items/item/:item_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits/:id/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits/:id/shipping-method` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | POST | `/admin/order-edits/:id/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Order-edits | DELETE | `/admin/order-edits/:id/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | GET | `/admin/orders` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | GET | `/admin/orders/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/archive` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | GET | `/admin/orders/:id/changes` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/complete` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/credit-lines` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/fulfillments` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/fulfillments/:fulfillment_id/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/fulfillments/:fulfillment_id/mark-as-delivered` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/fulfillments/:fulfillment_id/shipments` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | GET | `/admin/orders/:id/invoice` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | GET | `/admin/orders/:id/line-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/payment-sessions/authorize` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | GET | `/admin/orders/:id/preview` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | GET | `/admin/orders/:id/shipping-options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/transfer` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/transfer/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/:id/transfer/guest` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Orders | POST | `/admin/orders/export` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payment-collections | POST | `/admin/payment-collections` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payment-collections | DELETE | `/admin/payment-collections/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payment-collections | POST | `/admin/payment-collections/:id/mark-as-paid` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payment-collections | POST | `/admin/payment-collections/:id/payment-sessions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payments | GET | `/admin/payments` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payments | GET | `/admin/payments/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payments | POST | `/admin/payments/:id/capture` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payments | POST | `/admin/payments/:id/refund` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Payments | GET | `/admin/payments/payment-providers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Plugins | GET | `/admin/plugins` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-alerts | GET | `/admin/price-alerts` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-alerts | GET | `/admin/price-alerts/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | GET | `/admin/price-lists` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | POST | `/admin/price-lists` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | GET | `/admin/price-lists/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | POST | `/admin/price-lists/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | DELETE | `/admin/price-lists/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | GET | `/admin/price-lists/:id/prices` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | POST | `/admin/price-lists/:id/prices/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-lists | POST | `/admin/price-lists/:id/products` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-preferences | GET | `/admin/price-preferences` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-preferences | POST | `/admin/price-preferences` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-preferences | GET | `/admin/price-preferences/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-preferences | POST | `/admin/price-preferences/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Price-preferences | DELETE | `/admin/price-preferences/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-categories | GET | `/admin/product-categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-categories | POST | `/admin/product-categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-categories | GET | `/admin/product-categories/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-categories | POST | `/admin/product-categories/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-categories | DELETE | `/admin/product-categories/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-categories | POST | `/admin/product-categories/:id/products` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | GET | `/admin/product-options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | POST | `/admin/product-options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | GET | `/admin/product-options/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | POST | `/admin/product-options/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | DELETE | `/admin/product-options/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | GET | `/admin/product-options/:id/values` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | GET | `/admin/product-options/:id/values/:value_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | POST | `/admin/product-options/:id/values/:value_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-options | DELETE | `/admin/product-options/:id/values/:value_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-relationships | GET | `/admin/product-relationships` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-relationships | POST | `/admin/product-relationships` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-relationships | GET | `/admin/product-relationships/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-relationships | DELETE | `/admin/product-relationships/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-tags | GET | `/admin/product-tags` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-tags | POST | `/admin/product-tags` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-tags | GET | `/admin/product-tags/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-tags | POST | `/admin/product-tags/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-tags | DELETE | `/admin/product-tags/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-types | GET | `/admin/product-types` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-types | POST | `/admin/product-types` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-types | GET | `/admin/product-types/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-types | POST | `/admin/product-types/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-types | DELETE | `/admin/product-types/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-variants | GET | `/admin/product-variants` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-videos | GET | `/admin/product-videos` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-videos | POST | `/admin/product-videos` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-videos | GET | `/admin/product-videos/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-videos | POST | `/admin/product-videos/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-videos | DELETE | `/admin/product-videos/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Product-videos | POST | `/admin/product-videos/reorder` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | DELETE | `/admin/products/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/images/:image_id/variants/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id/inventory` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/inventory/adjustments` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id/inventory/history` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id/options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/options/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id/size-guide` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | PUT | `/admin/products/:id/size-guide` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | DELETE | `/admin/products/:id/size-guide` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id/variants` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/variants` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id/variants/:variant_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/variants/:variant_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | DELETE | `/admin/products/:id/variants/:variant_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/variants/:variant_id/images/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/variants/:variant_id/inventory-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/variants/:variant_id/inventory-items/:inventory_item_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | DELETE | `/admin/products/:id/variants/:variant_id/inventory-items/:inventory_item_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/variants/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/variants/inventory-items/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | GET | `/admin/products/:id/videos` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/:id/videos` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/export` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/import` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/import/:transaction_id/confirm` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/imports` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Products | POST | `/admin/products/imports/:transaction_id/confirm` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | GET | `/admin/promotions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | POST | `/admin/promotions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | GET | `/admin/promotions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | POST | `/admin/promotions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | DELETE | `/admin/promotions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | GET | `/admin/promotions/:id/:rule_type` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | POST | `/admin/promotions/:id/buy-rules/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | POST | `/admin/promotions/:id/rules/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | POST | `/admin/promotions/:id/target-rules/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | GET | `/admin/promotions/rule-attribute-options/:rule_type` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Promotions | GET | `/admin/promotions/rule-value-options/:rule_type/:rule_attribute_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Property-labels | GET | `/admin/property-labels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Property-labels | POST | `/admin/property-labels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Property-labels | GET | `/admin/property-labels/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Property-labels | POST | `/admin/property-labels/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Property-labels | DELETE | `/admin/property-labels/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Property-labels | POST | `/admin/property-labels/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/me/permissions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/policies` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | POST | `/admin/rbac/policies` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/policies/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | POST | `/admin/rbac/policies/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | DELETE | `/admin/rbac/policies/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/policies/:id/roles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/policies/assignable` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/roles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | POST | `/admin/rbac/roles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/roles/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | POST | `/admin/rbac/roles/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | DELETE | `/admin/rbac/roles/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/roles/:id/policies` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | POST | `/admin/rbac/roles/:id/policies` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | DELETE | `/admin/rbac/roles/:id/policies/:policy_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/roles/:id/users` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | POST | `/admin/rbac/roles/:id/users` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | DELETE | `/admin/rbac/roles/:id/users` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Rbac | GET | `/admin/rbac/roles/assignable` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Recommendations | GET | `/admin/recommendations/config` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Recommendations | GET | `/admin/recommendations/metrics` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Recommendations | GET | `/admin/recommendations/models` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Recommendations | POST | `/admin/recommendations/models/:id/activate` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Recommendations | POST | `/admin/recommendations/models/:id/rollback` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Recommendations | POST | `/admin/recommendations/models/train` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Refund-reasons | GET | `/admin/refund-reasons` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Refund-reasons | POST | `/admin/refund-reasons` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Refund-reasons | GET | `/admin/refund-reasons/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Refund-reasons | POST | `/admin/refund-reasons/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Refund-reasons | DELETE | `/admin/refund-reasons/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Regions | GET | `/admin/regions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Regions | POST | `/admin/regions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Regions | GET | `/admin/regions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Regions | POST | `/admin/regions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Regions | DELETE | `/admin/regions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reports | GET | `/admin/reports/margin` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reports | GET | `/admin/reports/sales` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reservations | GET | `/admin/reservations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reservations | POST | `/admin/reservations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reservations | GET | `/admin/reservations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reservations | POST | `/admin/reservations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reservations | DELETE | `/admin/reservations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Return-reasons | GET | `/admin/return-reasons` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Return-reasons | POST | `/admin/return-reasons` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Return-reasons | GET | `/admin/return-reasons/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Return-reasons | POST | `/admin/return-reasons/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Return-reasons | DELETE | `/admin/return-reasons/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | GET | `/admin/returns` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | GET | `/admin/returns/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/dismiss-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/dismiss-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | DELETE | `/admin/returns/:id/dismiss-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/receive` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | DELETE | `/admin/returns/:id/receive` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/receive-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/receive-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | DELETE | `/admin/returns/:id/receive-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/receive/confirm` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | DELETE | `/admin/returns/:id/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/request-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/request-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | DELETE | `/admin/returns/:id/request-items/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/shipping-method` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | POST | `/admin/returns/:id/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Returns | DELETE | `/admin/returns/:id/shipping-method/:action_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reviews | GET | `/admin/reviews` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reviews | GET | `/admin/reviews/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reviews | POST | `/admin/reviews/:id/approve` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reviews | POST | `/admin/reviews/:id/reject` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Reviews | POST | `/admin/reviews/:id/reply` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Sales-channels | GET | `/admin/sales-channels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Sales-channels | POST | `/admin/sales-channels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Sales-channels | GET | `/admin/sales-channels/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Sales-channels | POST | `/admin/sales-channels/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Sales-channels | DELETE | `/admin/sales-channels/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Sales-channels | POST | `/admin/sales-channels/:id/products` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Search | GET | `/admin/search` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Search-indexes | GET | `/admin/search-indexes` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Search-indexes | DELETE | `/admin/search-indexes/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Search-indexes | POST | `/admin/search-indexes/:id/reindex` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | GET | `/admin/settings` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | PATCH | `/admin/settings` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | GET | `/admin/settings/addresses` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | POST | `/admin/settings/addresses` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | PATCH | `/admin/settings/addresses/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | DELETE | `/admin/settings/addresses/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | PUT | `/admin/settings/default-return-address` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Settings | PUT | `/admin/settings/default-shipping-address` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-option-types | GET | `/admin/shipping-option-types` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-option-types | POST | `/admin/shipping-option-types` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-option-types | GET | `/admin/shipping-option-types/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-option-types | POST | `/admin/shipping-option-types/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-option-types | DELETE | `/admin/shipping-option-types/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-options | GET | `/admin/shipping-options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-options | POST | `/admin/shipping-options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-options | GET | `/admin/shipping-options/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-options | POST | `/admin/shipping-options/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-options | DELETE | `/admin/shipping-options/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-options | POST | `/admin/shipping-options/:id/rules/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-profiles | GET | `/admin/shipping-profiles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-profiles | POST | `/admin/shipping-profiles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-profiles | GET | `/admin/shipping-profiles/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-profiles | POST | `/admin/shipping-profiles/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Shipping-profiles | DELETE | `/admin/shipping-profiles/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Size-guides | GET | `/admin/size-guides/templates` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Size-guides | POST | `/admin/size-guides/templates` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Size-guides | GET | `/admin/size-guides/templates/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Size-guides | PATCH | `/admin/size-guides/templates/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Size-guides | DELETE | `/admin/size-guides/templates/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-alerts | GET | `/admin/stock-alerts` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-alerts | GET | `/admin/stock-alerts/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | GET | `/admin/stock-locations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | POST | `/admin/stock-locations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | GET | `/admin/stock-locations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | POST | `/admin/stock-locations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | DELETE | `/admin/stock-locations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | POST | `/admin/stock-locations/:id/fulfillment-providers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | POST | `/admin/stock-locations/:id/fulfillment-sets` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stock-locations | POST | `/admin/stock-locations/:id/sales-channels` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stores | GET | `/admin/stores` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stores | GET | `/admin/stores/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Stores | POST | `/admin/stores/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-providers | GET | `/admin/tax-providers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-rates | GET | `/admin/tax-rates` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-rates | POST | `/admin/tax-rates` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-rates | GET | `/admin/tax-rates/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-rates | POST | `/admin/tax-rates/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-rates | DELETE | `/admin/tax-rates/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-rates | POST | `/admin/tax-rates/:id/rules` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-rates | DELETE | `/admin/tax-rates/:id/rules/:rule_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-regions | GET | `/admin/tax-regions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-regions | POST | `/admin/tax-regions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-regions | GET | `/admin/tax-regions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-regions | POST | `/admin/tax-regions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tax-regions | DELETE | `/admin/tax-regions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Ticket-attachments | GET | `/admin/ticket-attachments/:id/download` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Ticket-categories | GET | `/admin/ticket-categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Ticket-categories | POST | `/admin/ticket-categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | GET | `/admin/tickets` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | GET | `/admin/tickets/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | POST | `/admin/tickets/:id/assign` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | POST | `/admin/tickets/:id/close` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | POST | `/admin/tickets/:id/messages` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | POST | `/admin/tickets/:id/priority` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | POST | `/admin/tickets/:id/reopen` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | POST | `/admin/tickets/:id/status` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Tickets | GET | `/admin/tickets/reports` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Translations | GET | `/admin/translations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Translations | POST | `/admin/translations/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Translations | GET | `/admin/translations/entities` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Translations | GET | `/admin/translations/settings` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Translations | POST | `/admin/translations/settings/batch` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Translations | GET | `/admin/translations/statistics` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Uploads | POST | `/admin/uploads` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Uploads | GET | `/admin/uploads/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Uploads | DELETE | `/admin/uploads/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Uploads | POST | `/admin/uploads/presigned-urls` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | GET | `/admin/users` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | GET | `/admin/users/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | POST | `/admin/users/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | DELETE | `/admin/users/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | GET | `/admin/users/:id/auth-providers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | POST | `/admin/users/:id/reset-password` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | GET | `/admin/users/:id/roles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | POST | `/admin/users/:id/roles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | DELETE | `/admin/users/:id/roles` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | DELETE | `/admin/users/:id/roles/:role_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Users | GET | `/admin/users/me` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | GET | `/admin/views/:entity/columns` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | GET | `/admin/views/:entity/configurations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | POST | `/admin/views/:entity/configurations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | GET | `/admin/views/:entity/configurations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | POST | `/admin/views/:entity/configurations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | DELETE | `/admin/views/:entity/configurations/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | GET | `/admin/views/:entity/configurations/active` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | POST | `/admin/views/:entity/configurations/active` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Views | GET | `/admin/views/entities` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Wallets | POST | `/admin/wallets/credit` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Wallets | POST | `/admin/wallets/debit` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | GET | `/admin/workflows-executions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | GET | `/admin/workflows-executions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | GET | `/admin/workflows-executions/:workflow_id/:transaction_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | GET | `/admin/workflows-executions/:workflow_id/:transaction_id/subscribe` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | POST | `/admin/workflows-executions/:workflow_id/run` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | POST | `/admin/workflows-executions/:workflow_id/steps/failure` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | POST | `/admin/workflows-executions/:workflow_id/steps/success` | Yes | Yes | Required (JWT / Session) | Validated |
+| Admin Workflows-executions | GET | `/admin/workflows-executions/:workflow_id/subscribe` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | GET | `/auth/:actor_type/:auth_provider` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | POST | `/auth/:actor_type/:auth_provider` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | GET | `/auth/:actor_type/:auth_provider/callback` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | POST | `/auth/:actor_type/:auth_provider/callback` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | POST | `/auth/:actor_type/:auth_provider/register` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | POST | `/auth/:actor_type/:auth_provider/reset-password` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | POST | `/auth/:actor_type/:auth_provider/update` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :actor_type | GET | `/auth/:actor_type/providers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth :auth_provider | POST | `/auth/:auth_provider/user` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Mfa | POST | `/auth/mfa/challenges/:id/verify` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Mfa | GET | `/auth/mfa/factors` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Mfa | POST | `/auth/mfa/factors` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Mfa | DELETE | `/auth/mfa/factors/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Mfa | POST | `/auth/mfa/factors/:id/verify` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Mfa | POST | `/auth/mfa/recovery-codes` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Phone | POST | `/auth/phone/send-otp` | Yes | Yes | Public | Validated |
+| Auth Phone | POST | `/auth/phone/verify` | Yes | Yes | Public | Validated |
+| Auth Session | POST | `/auth/session` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Session | DELETE | `/auth/session` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Token | POST | `/auth/token/refresh` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Verification | POST | `/auth/verification/confirm` | Yes | Yes | Required (JWT / Session) | Validated |
+| Auth Verification | POST | `/auth/verification/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Cloud Auth | GET | `/cloud/auth` | Yes | Yes | Required (JWT / Session) | Validated |
+| Cloud Auth | POST | `/cloud/auth/users` | Yes | Yes | Required (JWT / Session) | Validated |
+| Hooks Payment | POST | `/hooks/payment/:provider` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Brands | GET | `/store/brands` | Yes | Yes | Public | Validated |
+| Store Brands | GET | `/store/brands/:id` | Yes | Yes | Public | Validated |
+| Store Carts | POST | `/store/carts` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | GET | `/store/carts/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id/complete` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id/customer` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id/line-items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id/line-items/:line_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | DELETE | `/store/carts/:id/line-items/:line_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id/promotions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | DELETE | `/store/carts/:id/promotions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id/shipping-methods` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Carts | POST | `/store/carts/:id/taxes` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Categories | GET | `/store/categories` | Yes | Yes | Public | Validated |
+| Store Categories | GET | `/store/categories/:id` | Yes | Yes | Public | Validated |
+| Store Collections | GET | `/store/collections` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Collections | GET | `/store/collections/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Comparison | GET | `/store/comparison` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Comparison | POST | `/store/comparison/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Comparison | DELETE | `/store/comparison/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Comparison | DELETE | `/store/comparison/items/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Currencies | GET | `/store/currencies` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Currencies | GET | `/store/currencies/:code` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | POST | `/store/customers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | GET | `/store/customers/me` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | POST | `/store/customers/me` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | GET | `/store/customers/me/addresses` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | POST | `/store/customers/me/addresses` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | GET | `/store/customers/me/addresses/:address_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | POST | `/store/customers/me/addresses/:address_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Customers | DELETE | `/store/customers/me/addresses/:address_id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Locales | GET | `/store/locales` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Me | GET | `/store/me/wallet` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Me | GET | `/store/me/wallet/transactions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Notifications | GET | `/store/notifications` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Notifications | GET | `/store/notifications/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Notifications | POST | `/store/notifications/:id/read` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Notifications | POST | `/store/notifications/read-all` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Notifications | GET | `/store/notifications/unread-count` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | GET | `/store/orders` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | GET | `/store/orders/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | GET | `/store/orders/:id/invoice` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | GET | `/store/orders/:id/invoice/pdf` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | GET | `/store/orders/:id/ticket-products` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | POST | `/store/orders/:id/transfer/accept` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | POST | `/store/orders/:id/transfer/cancel` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | POST | `/store/orders/:id/transfer/decline` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Orders | POST | `/store/orders/:id/transfer/request` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Payment-collections | POST | `/store/payment-collections` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Payment-collections | POST | `/store/payment-collections/:id/payment-sessions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Payment-providers | GET | `/store/payment-providers` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Payment-providers | GET | `/store/payment-providers/callback` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Payment-providers | POST | `/store/payment-providers/callback` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Price-alerts | GET | `/store/price-alerts` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Price-alerts | POST | `/store/price-alerts` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Price-alerts | GET | `/store/price-alerts/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Price-alerts | DELETE | `/store/price-alerts/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-categories | GET | `/store/product-categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-categories | GET | `/store/product-categories/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-options | GET | `/store/product-options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-options | GET | `/store/product-options/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-tags | GET | `/store/product-tags` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-tags | GET | `/store/product-tags/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-types | GET | `/store/product-types` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-types | GET | `/store/product-types/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-variants | GET | `/store/product-variants` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-variants | GET | `/store/product-variants/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Product-videos | GET | `/store/product-videos` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Products | GET | `/store/products` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/frequently-bought-together` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/json-ld` | Yes | Yes | Public | Validated |
+| Store Products | POST | `/store/products/:id/price-alerts` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/related` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/reviews` | Yes | Yes | Public | Validated |
+| Store Products | POST | `/store/products/:id/reviews` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/reviews/summary` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/similar` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/size-guide` | Yes | Yes | Public | Validated |
+| Store Products | POST | `/store/products/:id/stock-alerts` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/:id/videos` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/bestsellers` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/compare` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/newest` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/popular` | Yes | Yes | Public | Validated |
+| Store Products | GET | `/store/products/trending` | Yes | Yes | Public | Validated |
+| Store Recommendations | GET | `/store/recommendations` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Regions | GET | `/store/regions` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Regions | GET | `/store/regions/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Return-reasons | GET | `/store/return-reasons` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Return-reasons | GET | `/store/return-reasons/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Returns | POST | `/store/returns` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Reviews | POST | `/store/reviews/media` | Yes | Yes | Public | Validated |
+| Store Search | POST | `/store/search` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Shipping-options | GET | `/store/shipping-options` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Shipping-options | POST | `/store/shipping-options/:id/calculate` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Stock-alerts | GET | `/store/stock-alerts` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Stock-alerts | POST | `/store/stock-alerts` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Stock-alerts | DELETE | `/store/stock-alerts/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Ticket-attachments | GET | `/store/ticket-attachments/:id/download` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Ticket-categories | GET | `/store/ticket-categories` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Tickets | GET | `/store/tickets` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Tickets | POST | `/store/tickets` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Tickets | GET | `/store/tickets/:id` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Tickets | GET | `/store/tickets/:id/messages` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Tickets | POST | `/store/tickets/:id/messages` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Wishlist | GET | `/store/wishlist` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Wishlist | POST | `/store/wishlist/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Wishlist | DELETE | `/store/wishlist/items` | Yes | Yes | Required (JWT / Session) | Validated |
+| Store Wishlist | DELETE | `/store/wishlist/items/:id` | Yes | Yes | Required (JWT / Session) | Validated |
 
 ---
 
-# ۳. تشریح تک به تک گروه‌ها و اندپوئینت‌های API
+## ۲. گزارش ناهماهنگی‌ها، اندپوئینت‌های غایب و ناقص (Missing / Incomplete Endpoints Audit)
 
-## ۱. APIهای فروشگاهی Medusa (Medusa Store API)
-
-این APIها برای تعامل مستمر خریداران و فرانت‌اند فروشگاه (Storefront) طراحی شده‌اند. نیازی به دسترسی ادمین ندارند و با کلید Pubic Storefront یا احراز هویت خریدار کار می‌کنند.
-
-### ۱.۱. محصولات و کاتالوگ (Products & Categories)
-- **`GET /api/medusa/store/products`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست کامل یا فیلترشده محصولات به همراه تنوع‌ها (Variants)، ویژگی‌ها، قیمت‌ها و تصاویر.
-  - **پارامترها:** `category_id[]`, `collection_id[]`, `tags[]`, `q` (جستجو), `limit`, `offset`, `order`.
-- **`GET /api/medusa/store/products/:id`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت اطلاعات تفصیلی یک محصول خاص برای نمایش در صفحه محصول (PDP).
-- **`GET /api/medusa/store/product-categories`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت درخت دسته‌بندی‌های محصولات جهت نمایش منوها و فیلترها.
-- **`GET /api/medusa/store/product-categories/:id`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت دسته‌بندی خاص به همراه دسته‌های فرزند و محصولات مرتبط.
-- **`GET /api/medusa/store/collections`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست کالکشن‌های محصولات (مانند «محصولات تابستانی»).
-
-### ۱.۲. سبد خرید (Cart Management)
-- **`POST /api/medusa/store/carts`**
-  - **روش:** `POST`
-  - **کاربرد:** ایجاد یک سبد خرید جدید برای خریدار (مهمان یا عضو).
-- **`GET /api/medusa/store/carts/:id`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت وضعیت فعلی سبد خرید شامل آیتم‌ها، مجموع قیمت‌ها (Subtotal, Tax, Shipping, Total).
-- **`POST /api/medusa/store/carts/:id`**
-  - **روش:** `POST`
-  - **کاربرد:** به روزرسانی مشخصات کلی سبد خرید (مانند ایمیل خریدار مهمان، آدرس ارسال و صورتحساب).
-- **`POST /api/medusa/store/carts/:id/line-items`**
-  - **روش:** `POST`
-  - **کاربرد:** افزودن یک محصول/تنوع به سبد خرید با مشخص کردن `variant_id` و `quantity`.
-- **`POST /api/medusa/store/carts/:id/line-items/:line_id`**
-  - **روش:** `POST`
-  - **کاربرد:** تغییر تعداد (Quantity) یک آیتم موجود در سبد خرید.
-- **`DELETE /api/medusa/store/carts/:id/line-items/:line_id`**
-  - **روش:** `DELETE`
-  - **کاربرد:** حذف یک محصول از سبد خرید.
-- **`POST /api/medusa/store/carts/:id/promotions`**
-  - **روش:** `POST`
-  - **کاربرد:** اعمال کد تخفیف (Promo Code) روی سبد خرید.
-- **`DELETE /api/medusa/store/carts/:id/promotions`**
-  - **روش:** `DELETE`
-  - **کاربرد:** حذف کد تخفیف اعمال‌شده از سبد خرید.
-
-### ۱.۳. شیوه ارسال و تسویه حساب (Shipping & Checkout)
-- **`GET /api/medusa/store/shipping-options`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت شیوه‌ها و هزینه‌های ارسال معتبر برای سبد خرید بر اساس آدرس خریدار (`cart_id`).
-- **`POST /api/medusa/store/carts/:id/shipping-methods`**
-  - **روش:** `POST`
-  - **کاربرد:** انتخاب روش ارسال نهایی توسط خریدار و اضافه شدن هزینه ارسال به Total.
-- **`POST /api/medusa/store/payment-collections`**
-  - **روش:** `POST`
-  - **کاربرد:** ایجاد مجموعه پرداخت (`PaymentCollection`) برای آماده‌سازی فرآیند پرداخت آنلاین.
-- **`POST /api/medusa/store/payment-collections/:id/payment-sessions`**
-  - **روش:** `POST`
-  - **کاربرد:** ایجاد نشست پرداخت آنلاین و دریافت توکن یا کلید انتقال به درگاه پرداخت.
-- **`POST /api/medusa/store/carts/:id/complete`**
-  - **روش:** `POST`
-  - **کاربرد:** نهایی‌سازی خرید، قفل سبد خرید، رزرو موجودی دیتابیس و تبدیل سبد خرید به سفارش ثبت‌شده (`Order`).
-
-### ۱.۴. سفارشات و حساب مشتری (Orders & Customer)
-- **`GET /api/medusa/store/orders/:id`**
-  - **روش:** `GET`
-  - **کاربرد:** پیگیری وضعیت سفارش ثبت‌شده و مشاهده جزییات فاکتور و کد رهگیری ارسال.
-- **`GET /api/medusa/store/customers/me`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت اطلاعات حساب کاربری مشتری لاگین‌شده.
-- **`POST /api/medusa/store/customers/me`**
-  - **روش:** `POST`
-  - **کاربرد:** ویرایش مشخصات فردی مشتری (نام، شماره تماس).
-- **`GET /api/medusa/store/customers/me/addresses`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست آدرس‌های ثبت‌شده مشتری.
-- **`POST /api/medusa/store/customers/me/addresses`**
-  - **روش:** `POST`
-  - **کاربرد:** افزودن آدرس جدید (استان، شهر، پلاک، کد پستی).
-- **`DELETE /api/medusa/store/customers/me/addresses/:address_id`**
-  - **روش:** `DELETE`
-  - **کاربرد:** حذف آدرس ذخیره‌شده مشتری.
+1. **کیف پول مشتری (Customer Wallet - #94):**
+   - **وضعیت:** `NOT_IMPLEMENTED`
+   - **توضیحات:** هیچ روتی تحت `/store/me/wallet` یا سرویس مدیریت مانده کیف پول مشتری در کد منبع پیاده‌سازی نشده است.
+2. **واحد بازه مرجوعی (Return Window Unit):**
+   - **توضیحات:** فیلد `returnWindowDays` در `StoreSettingsService` به طور شفاف بر حسب روز (Days) محاسبه می‌شود (`returnWindowDays * 24 * 60 * 60 * 1000`).
+3. **پیش‌فرض‌های آدرس ارسال و مرجوعی:**
+   - **توضیحات:** آدرس‌های پیش‌فرض دارای مکانیزم fallback خودکار در صورت حذف یا عدم وجود شناسه معتبر هستند.
 
 ---
 
-## ۲. APIهای مدیریتی Medusa (Medusa Admin API)
+## ۳. نتایج اعتبارسنجی مشخصات OpenAPI v3
 
-این APIها نیازمند JWT Token ادمین بوده و تمامی عملیات مدیریتی پنل e-commerce را پوشش می‌دهند.
-
-### ۲.۱. مدیریت کاتالوگ و محصولات (Catalog Management)
-- **`GET /api/medusa/admin/products`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست کلیه محصولات دیتابیس جهت مدیریت.
-- **`POST /api/medusa/admin/products`**
-  - **روش:** `POST`
-  - **کاربرد:** تعریف محصول جدید به همراه عناوین، توضیحات، متاداده و تصاویر.
-- **`POST /api/medusa/admin/products/:id`**
-  - **روش:** `POST`
-  - **کاربرد:** ویرایش مشخصات محصول.
-- **`DELETE /api/medusa/admin/products/:id`**
-  - **روش:** `DELETE`
-  - **کاربرد:** حذف محصول.
-- **`POST /api/medusa/admin/products/:id/variants`**
-  - **روش:** `POST`
-  - **کاربرد:** تعریف تنوع جدید برای محصول (رنگ، سایز، SKU، قیمت واحد).
-- **`GET /api/medusa/admin/product-categories`**
-  - **روش:** `GET`
-  - **کاربرد:** مدیریت دسته‌بندی‌های محصولات.
-- **`POST /api/medusa/admin/product-categories`**
-  - **روش:** `POST`
-  - **کاربرد:** ایجاد دسته‌بندی جدید.
-
-### ۲.۲. مدیریت سفارشات و مرجوعی‌ها (Order Management)
-- **`GET /api/medusa/admin/orders`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت تمام سفارشات ثبت‌شده خریداران با قابلیت فیلتر بر اساس وضعیت پرداخت و ارسال.
-- **`GET /api/medusa/admin/orders/:id`**
-  - **روش:** `GET`
-  - **کاربرد:** مشاهده جزییات کامل سفارش، آدرس، آیتم‌ها و تراکنش‌های مالی.
-- **`POST /api/medusa/admin/orders/:id/cancel`**
-  - **روش:** `POST`
-  - **کاربرد:** لغو سفارش و آزادکردن موجودی انبار.
-- **`POST /api/medusa/admin/fulfillments`**
-  - **روش:** `POST`
-  - **کاربرد:** صدور مجوز خروج از انبار و بسته‌بندی سفارش.
-- **`POST /api/medusa/admin/fulfillments/:id/shipment`**
-  - **روش:** `POST`
-  - **کاربرد:** ثبت تحویل به پست/پیک و درج کد رهگیری پستی (Tracking Number).
-- **`POST /api/medusa/admin/returns`**
-  - **روش:** `POST`
-  - **کاربرد:** ثبت درخواست مرجوعی کالا توسط ادمین.
-
-### ۲.۳. مدیریت موجودی و انبارها (Inventory & Stock Locations)
-- **`GET /api/medusa/admin/inventory-items`**
-  - **روش:** `GET`
-  - **کاربرد:** لیست رکوردهای موجودی انبار و رصد اقلام کم‌موجود.
-- **`POST /api/medusa/admin/inventory-items`**
-  - **روش:** `POST`
-  - **کاربرد:** تعریف رکورد انبارداری برای یک تنوع محصول.
-- **`POST /api/medusa/admin/inventory-items/:id/location-levels`**
-  - **روش:** `POST`
-  - **کاربرد:** به روزرسانی مقدار موجودی فیزیکی در یک انبار خاص.
-- **`GET /api/medusa/admin/stock-locations`**
-  - **روش:** `GET`
-  - **کاربرد:** لیست انبارها و مراکز توزیع فیزیکی.
-
-### ۲.۴. مدیریت مالی، تخفیف‌ها و پروموشن‌ها (Promotions & Payments)
-- **`GET /api/medusa/admin/promotions`**
-  - **روش:** `GET`
-  - **کاربرد:** مشاهده کلیه کدهای تخفیف و پروموشن‌های فعال.
-- **`POST /api/medusa/admin/promotions`**
-  - **روش:** `POST`
-  - **کاربرد:** تعریف کد تخفیف جدید (درصدی، مقداری، ارسال رایگان) با قوانین محدودکننده.
-- **`GET /api/medusa/admin/campaigns`**
-  - **روش:** `GET`
-  - **کاربرد:** تعریف کمپین‌های فروش با بازه زمانی مشخص (Flash Sales).
-- **`GET /api/medusa/admin/payments`**
-  - **روش:** `GET`
-  - **کاربرد:** مشاهده لیست کلیه پرداخت‌ها و تراکنش‌های مالی دیتابیس.
-- **`POST /api/medusa/admin/payments/:id/capture`**
-  - **روش:** `POST`
-  - **کاربرد:** تسویه و دریافت قطعی وجه از درگاه.
-- **`POST /api/medusa/admin/payments/:id/refund`**
-  - **روش:** `POST`
-  - **کاربرد:** استرداد و بازگشت وجه (Refund) به حساب خریدار.
-
-### ۲.۵. مدیریت کاربران، مشتریان و دسترسی‌ها (Users & RBAC)
-- **`GET /api/medusa/admin/customers`**
-  - **روش:** `GET`
-  - **کاربرد:** مشاهده لیست و سابقه خرید مشتریان فروشگاه.
-- **`GET /api/medusa/admin/users`**
-  - **روش:** `GET`
-  - **کاربرد:** لیست مدیران و اپراتورهای پنل مدیریت.
-- **`POST /api/medusa/admin/users/invite`**
-  - **روش:** `POST`
-  - **کاربرد:** دعوت ادمین جدید به سیستم.
-- **`GET /api/medusa/admin/rbac/roles`**
-  - **روش:** `GET`
-  - **کاربرد:** مدیریت نقش‌های دسترسی (Role-Based Access Control).
-
----
-
-## ۳. APIهای احراز هویت Medusa (Auth API)
-
-- **`POST /api/medusa/auth/user/emailpass`**
-  - **روش:** `POST`
-  - **کاربرد:** ورود مدیران به پنل ادمین با ایمیل و رمز عبور و دریافت JWT Token.
-- **`POST /api/medusa/auth/customer/emailpass`**
-  - **روش:** `POST`
-  - **کاربرد:** ورود/ثبت‌نام مشتریان در فروشگاه.
-- **`DELETE /api/medusa/auth/session`**
-  - **روش:** `DELETE`
-  - **کاربرد:** خروج از حساب کاربری (Logout) و ابطال نشست.
-- **`GET /api/medusa/auth/session`**
-  - **روش:** `GET`
-  - **کاربرد:** بررسی معتبر بودن توکن نشست فعلی.
-
----
-
-## ۴. API و رابط‌های مستندات سیستم (OpenAPI Spec / Swagger UI / ReDoc)
-
-سیستم مستندسازی API بر پایه استاندارد OpenAPI v3 پیاده‌سازی شده و ۲ رابط کاربری تعاملی مکمل (Swagger UI و ReDoc UI) را برای تسهیل تست، بررسی و یکپارچه‌سازی ارائه می‌دهد:
-
-- **`GET /api/medusa/openapi.json`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت مشخصات استاندارد JSON OpenAPI v3 کلیه اندپوئینت‌های Medusa جهت ایمپورت در Postman، Swagger UI، ReDoc یا تولید اتوماتیک SDK.
-- **Swagger UI (رابط تست و فراخوانی تعاملی API):**
-  - **کاربرد:** ارائه کنسول تعاملی جهت تست درخواست‌ها (Try it out)، ارسال هدرها و توکن‌های احراز هویت، و مشاهده پاسخ زنده APIها.
-- **ReDoc UI (رابط تعاملی و پیشرفته مستندات API):**
-  - **کاربرد:** نمایش ساختاریافته، زیبا و سه‌ستونه مستندات API بر پایه OpenAPI v3 با قابلیت جستجوی سریع، رندرینگ اسکیماها (Schemas)، نمونه کدها (Code Samples) و ناوبری روان میان اندپوئینت‌های e-commerce.
-
----
-
-## ۵. APIهای مدیریت محتوا Payload CMS (Payload CMS API)
-
-این APIها ساختار محتوایی، وبلاگ، صفحات، بنرها و فایل‌های رسانه‌ای وب‌سایت را پوشش می‌دهند.
-
-### ۵.۱. REST API مجموعه‌ها (Collections)
-- **`GET /payload/api/posts`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست مقالات وبلاگ به همراه صفحه‌بندی، فیلترها و مرتب‌سازی.
-- **`POST /payload/api/posts`**
-  - **روش:** `POST`
-  - **کاربرد:** ایجاد مقاله جدید در وبلاگ (نیاز به دسترسی دست‌اندرکاران).
-- **`GET /payload/api/posts/:id`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت جزییات کامل یک مقاله وبلاگ بر اساس شناسه یا اسلاگ (Slug).
-- **`PATCH /payload/api/posts/:id`**
-  - **روش:** `PATCH`
-  - **کاربرد:** بروزرسانی بخش‌هایی از مقاله.
-- **`DELETE /payload/api/posts/:id`**
-  - **روش:** `DELETE`
-  - **کاربرد:** حذف مقاله.
-- **`GET /payload/api/pages`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت ساختار صفحات پویا و بلک‌های چیدمان (Page Builder).
-- **`GET /payload/api/categories`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت دسته‌بندی‌های وبلاگ.
-- **`GET /payload/api/tags`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت برچسب‌های محتوایی.
-- **`GET /payload/api/users`**
-  - **روش:** `GET`
-  - **کاربرد:** مدیریت نویسندگان و مدیران محتوا.
-
-### ۵.۲. REST API تنظیمات عمومی (Globals)
-- **`GET /payload/api/globals/banners`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت بنرهای تبلیغاتی، اسلایدرها و پیام‌های بالای سایت.
-- **`POST /payload/api/globals/banners`**
-  - **روش:** `POST`
-  - **کاربرد:** به روزرسانی بنرهای اصلی سایت توسط ادمین.
-- **`GET /payload/api/globals/header`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت ساختار منوی بالای سایت (Header Navigation).
-- **`GET /payload/api/globals/footer`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لینک‌ها و اطلاعات فوتر سایت.
-
-### ۵.۳. GraphQL API & Playground
-- **`POST /payload/api/graphql`**
-  - **روش:** `POST`
-  - **کاربرد:** اجرای کوئری‌ها و میوتیشن‌های GraphQL برای دریافت همزمان مقالات، صفحات و بنرها با فیلدهای انتخابی دلخواه.
-- **`GET /payload/api/graphql-playground`**
-  - **روش:** `GET`
-  - **کاربرد:** محیط تعاملی گرافیکی در مرورگر جهت تست و آزمایش کوئری‌های GraphQL.
-
-### ۵.۴. مدیریت رسانه‌ها و نسخه‌ها (Media & Audit Logs)
-- **`POST /payload/api/media`**
-  - **روش:** `POST`
-  - **کاربرد:** آپلود تصویر، ویدئو و فایل‌های رسانه‌ای.
-- **`GET /payload/api/media`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست فایل‌های آپلود شده.
-- **`GET /payload/api/versions`**
-  - **روش:** `GET`
-  - **کاربرد:** تاریخچه تغییرات و نسخه‌های قبلی سندها (Audit Log).
-
----
-
-# ۴. نمونه نحوه فراخوانی و تعامل APIها
-
-### مثال ۱: چرخه افزودن به سبد خرید در Medusa Store API
-1. ایجاد سبد خرید:
-```http
-POST /api/medusa/store/carts
-Content-Type: application/json
-
-{
-  "region_id": "reg_01H..."
-}
+دستور اجرای اعتبارسنجی:
+```bash
+npx @redocly/cli lint medusa/openapi.yml
 ```
-2. افزودن محصول:
-```http
-POST /api/medusa/store/carts/cart_01H.../line-items
-Content-Type: application/json
 
-{
-  "variant_id": "variant_01H...",
-  "quantity": 1
-}
+**نتیجه:**
+```text
+validating medusa/openapi.yml...
+medusa/openapi.yml: validated in 149ms
+
+Woohoo! Your API description is valid. 🎉
+You have 0 errors and 3 warnings.
 ```
-
-### مثال ۲: کوئری دریافت مقالات جدید در Payload GraphQL API
-```graphql
-POST /payload/api/graphql
-Content-Type: application/json
-
-{
-  "query": "{ Posts(limit: 5, sort: \"-createdAt\") { docs { id title slug publishedAt meta { description } } } }"
-}
-```
-
----
-
-# ۵. نتیجه‌گیری
-
-مجموعه APIهای موجود در این پروژه یک زیرساخت کامل e-commerce بدون محدودیت (Headless) را فراهم می‌آورد:
-- تمامی امور مربوط به **خرید، سفارش، کاتالوگ و تسویه حساب** از طریق **Medusa API** پوشش داده می‌شود.
-- تمامی امور مربوط به **محتوا، وبلاگ، صفحات پویا، بنرها و سئو** از طریق **Payload CMS API** پردازش می‌گردد.
-- سرویس Nginx تمامی این اندپوئینت‌ها را تحت یک دامنه واحد بدون مشکلات CORS مدیریت می‌نماید.
