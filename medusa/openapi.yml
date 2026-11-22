@@ -1,36 +1,47 @@
 openapi: 3.0.0
 info:
-  title: Medusa Store & Admin API - Brands, Categories, and Media
+  title: Depix E-Commerce Backend API (Medusa v2)
   version: 2.21.2
-  description: Complete OpenAPI 3.0 specification for Brands Management, Categories Management, and Media Management Services.
+  description: Comprehensive OpenAPI 3.0 specification for Depix E-Commerce backend
+    services including Storefront, Admin Management, Phone OTP Authentication, Customer
+    Addresses & Profiles, Notifications, Inventory Audit, Support Ticketing System,
+    Size Guides, Product Videos, Reviews, Recommendations, Price & Stock Alerts, Comparison,
+    Wishlist, Digital Wallet, Orders, Carts, and Invoices.
 servers:
-  - url: http://localhost:9000
-    description: Local Medusa Backend
+- url: http://localhost:9000
+  description: Local Medusa Backend
+- url: http://localhost/api/medusa
+  description: Nginx Reverse Proxy Gateway
+security:
+- bearerAuth: []
+- cookieAuth: []
 paths:
   /store/brands:
     get:
       summary: List Public Brands
+      operationId: listPublicBrands
       description: Retrieve a paginated list of publicly active brands.
       tags:
-        - Store Brands
+      - Store Brands
+      security: []
       parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-        - name: offset
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-        - name: q
-          in: query
-          required: false
-          schema:
-            type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
       responses:
         '200':
           description: A list of active brands.
@@ -38,6 +49,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - brands
+                - count
+                - offset
+                - limit
                 properties:
                   brands:
                     type: array
@@ -49,19 +65,22 @@ paths:
                     type: integer
                   limit:
                     type: integer
-
+        '400':
+          $ref: '#/components/responses/BadRequest'
   /store/brands/{id}:
     get:
       summary: Get Public Brand
+      operationId: getPublicBrand
       description: Retrieve public details of an active brand by ID or slug.
       tags:
-        - Store Brands
+      - Store Brands
+      security: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Active brand details.
@@ -69,49 +88,74 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - brand
                 properties:
                   brand:
                     $ref: '#/components/schemas/Brand'
         '404':
-          description: Brand not found or inactive.
-
+          $ref: '#/components/responses/NotFound'
   /admin/brands:
     get:
       summary: List Admin Brands
+      operationId: listAdminBrands
       description: Retrieve a list of all brands including inactive ones.
       tags:
-        - Admin Brands
+      - Admin Brands
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: is_active
-          in: query
-          schema:
-            type: boolean
-        - name: q
-          in: query
-          schema:
-            type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: is_active
+        in: query
+        schema:
+          type: boolean
+      - name: q
+        in: query
+        schema:
+          type: string
       responses:
         '200':
           description: Paginated brand list for admin.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - brands
+                - count
+                - offset
+                - limit
+                properties:
+                  brands:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Brand'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       summary: Create Brand
+      operationId: createAdminBrand
       description: Create a new brand. Enforces slug uniqueness.
       tags:
-        - Admin Brands
+      - Admin Brands
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -119,7 +163,8 @@ paths:
             schema:
               type: object
               required:
-                - name: slug
+              - name
+              - slug
               properties:
                 name:
                   type: string
@@ -137,39 +182,62 @@ paths:
       responses:
         '201':
           description: Brand created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - brand
+                properties:
+                  brand:
+                    $ref: '#/components/schemas/Brand'
         '400':
-          description: Validation error or duplicate slug.
-
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /admin/brands/{id}:
     get:
       summary: Get Admin Brand Details
+      operationId: getAdminBrand
       tags:
-        - Admin Brands
+      - Admin Brands
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Brand details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - brand
+                properties:
+                  brand:
+                    $ref: '#/components/schemas/Brand'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: Brand not found.
+          $ref: '#/components/responses/NotFound'
     put:
       summary: Update Brand
+      operationId: updateAdminBrand
       tags:
-        - Admin Brands
+      - Admin Brands
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       requestBody:
         required: true
         content:
@@ -192,105 +260,196 @@ paths:
       responses:
         '200':
           description: Brand updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - brand
+                properties:
+                  brand:
+                    $ref: '#/components/schemas/Brand'
         '400':
-          description: Validation or duplicate slug conflict.
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Delete Brand
+      operationId: deleteAdminBrand
       description: Safely deletes brand if not referenced by products.
       tags:
-        - Admin Brands
+      - Admin Brands
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Brand deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: brand
+                  deleted:
+                    type: boolean
+                    example: true
         '400':
-          description: Brand is referenced by products and cannot be deleted.
-
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /store/categories:
     get:
       summary: List Public Categories
+      operationId: listPublicCategories
       tags:
-        - Store Categories
+      - Store Categories
+      security: []
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: parent_category_id
-          in: query
-          schema:
-            type: string
-        - name: q
-          in: query
-          schema:
-            type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: parent_category_id
+        in: query
+        schema:
+          type: string
+      - name: q
+        in: query
+        schema:
+          type: string
       responses:
         '200':
           description: List of active, publishable categories.
-
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - categories
+                - count
+                - offset
+                - limit
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
   /store/categories/{id}:
     get:
       summary: Get Public Category
+      operationId: getPublicCategory
       tags:
-        - Store Categories
+      - Store Categories
+      security: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Public category details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - category
+                properties:
+                  category:
+                    $ref: '#/components/schemas/Category'
         '404':
-          description: Category not found or internal/inactive.
-
+          $ref: '#/components/responses/NotFound'
   /admin/categories:
     get:
       summary: List Admin Categories
+      operationId: listAdminCategories
       tags:
-        - Admin Categories
+      - Admin Categories
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-        - name: offset
-          in: query
-          schema:
-            type: integer
-        - name: is_active
-          in: query
-          schema:
-            type: boolean
-        - name: parent_category_id
-          in: query
-          schema:
-            type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        schema:
+          type: integer
+      - name: is_active
+        in: query
+        schema:
+          type: boolean
+      - name: parent_category_id
+        in: query
+        schema:
+          type: string
       responses:
         '200':
           description: List of categories for admin.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - categories
+                - count
+                - offset
+                - limit
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       summary: Create Category
+      operationId: createAdminCategory
       tags:
-        - Admin Categories
+      - Admin Categories
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -298,7 +457,7 @@ paths:
             schema:
               type: object
               required:
-                - name
+              - name
               properties:
                 name:
                   type: string
@@ -317,37 +476,62 @@ paths:
       responses:
         '201':
           description: Category created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - category
+                properties:
+                  category:
+                    $ref: '#/components/schemas/Category'
         '400':
-          description: Duplicate slug or invalid parent reference.
-
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /admin/categories/{id}:
     get:
       summary: Get Admin Category
+      operationId: getAdminCategory
       tags:
-        - Admin Categories
+      - Admin Categories
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Category details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - category
+                properties:
+                  category:
+                    $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       summary: Update Category
+      operationId: updateAdminCategory
       tags:
-        - Admin Categories
+      - Admin Categories
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       requestBody:
         required: true
         content:
@@ -372,32 +556,68 @@ paths:
       responses:
         '200':
           description: Category updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - category
+                properties:
+                  category:
+                    $ref: '#/components/schemas/Category'
         '400':
-          description: Invalid self-parenting or circular relationship.
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Delete Category
+      operationId: deleteAdminCategory
       tags:
-        - Admin Categories
+      - Admin Categories
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Category deleted, products preserved.
-
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: category
+                  deleted:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/media/upload:
     post:
       summary: Upload Media File
-      description: Uploads a media file with buffer magic-byte MIME validation, size limit enforcement, and dimensions calculation.
+      operationId: uploadAdminMedia
+      description: Uploads a media file with buffer magic-byte MIME validation, size
+        limit enforcement, and dimensions calculation.
       tags:
-        - Admin Media
+      - Admin Media
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -416,81 +636,151 @@ paths:
       responses:
         '201':
           description: Media uploaded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - media
+                properties:
+                  media:
+                    $ref: '#/components/schemas/Media'
         '400':
-          description: File validation failure, invalid content type, or size limit exceeded.
-
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /admin/media:
     get:
       summary: List Media Library
+      operationId: listAdminMedia
       tags:
-        - Admin Media
+      - Admin Media
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-        - name: offset
-          in: query
-          schema:
-            type: integer
-        - name: q
-          in: query
-          schema:
-            type: string
-        - name: mime_type
-          in: query
-          schema:
-            type: string
-        - name: uploaded_by_id
-          in: query
-          schema:
-            type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        schema:
+          type: integer
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: mime_type
+        in: query
+        schema:
+          type: string
+      - name: uploaded_by_id
+        in: query
+        schema:
+          type: string
       responses:
         '200':
           description: Paginated media library.
-
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - media
+                - count
+                - offset
+                - limit
+                properties:
+                  media:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /admin/media/{id}:
     get:
       summary: Get Media Metadata
+      operationId: getAdminMedia
       tags:
-        - Admin Media
+      - Admin Media
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Media details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - media
+                properties:
+                  media:
+                    $ref: '#/components/schemas/Media'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Delete Media
-      description: Deletes media from DB and disk if not referenced by brands, categories, or products.
+      operationId: deleteAdminMedia
+      description: Deletes media from DB and disk if not referenced by brands, categories,
+        or products.
       tags:
-        - Admin Media
+      - Admin Media
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Media deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: media
+                  deleted:
+                    type: boolean
+                    example: true
         '400':
-          description: Media is currently in use and cannot be deleted.
-
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /store/reviews/media:
     post:
       summary: Upload Customer Review Image
+      operationId: uploadStoreReviewMedia
       tags:
-        - Store Reviews
+      - Store Reviews
+      security: []
       requestBody:
         required: true
         content:
@@ -504,16 +794,4575 @@ paths:
       responses:
         '201':
           description: Image uploaded for review attachment.
-
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - url
+                properties:
+                  url:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /admin/settings:
+    get:
+      summary: Get Store Settings
+      operationId: getStoreSettings
+      description: Retrieve global store settings, notification toggles, return window
+        parameters, tax rates, and associated store addresses.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current store settings object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      summary: Update Store Settings
+      operationId: updateStoreSettings
+      description: Update editable store settings attributes (e.g., storeName, supportEmail,
+        taxRate, returnWindowDays, notification toggles). Rejects server-managed fields.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                storeName:
+                  type: string
+                contactPhone:
+                  type: string
+                supportEmail:
+                  type: string
+                address:
+                  type: string
+                taxRate:
+                  type: number
+                enableSmsNotifications:
+                  type: boolean
+                enableEmailNotifications:
+                  type: boolean
+                returnWindowDays:
+                  type: integer
+                autoApproveReturns:
+                  type: boolean
+                defaultShippingAddressId:
+                  type: string
+                  nullable: true
+                defaultReturnAddressId:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Updated store settings object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/settings/addresses:
+    get:
+      summary: List Store Addresses
+      operationId: listStoreAddresses
+      description: Retrieve all configured store physical addresses alongside current
+        default shipping/return ID pointers.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of store addresses with default pointers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - addresses
+                - defaultShippingAddressId
+                - defaultReturnAddressId
+                properties:
+                  addresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StoreAddress'
+                  defaultShippingAddressId:
+                    type: string
+                    nullable: true
+                  defaultReturnAddressId:
+                    type: string
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create Store Address
+      operationId: createStoreAddress
+      description: Create a new physical store address with Iranian 10-digit postal
+        code and phone validation.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              - recipientName
+              - phone
+              - province
+              - city
+              - address
+              - postalCode
+              properties:
+                title:
+                  type: string
+                recipientName:
+                  type: string
+                phone:
+                  type: string
+                province:
+                  type: string
+                city:
+                  type: string
+                address:
+                  type: string
+                plaque:
+                  type: string
+                  nullable: true
+                floor:
+                  type: string
+                  nullable: true
+                postalCode:
+                  type: string
+      responses:
+        '201':
+          description: Store address created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - address
+                properties:
+                  address:
+                    $ref: '#/components/schemas/StoreAddress'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/settings/addresses/{id}:
+    patch:
+      summary: Update Store Address
+      operationId: updateStoreAddress
+      description: Update fields of an existing store address.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                recipientName:
+                  type: string
+                phone:
+                  type: string
+                province:
+                  type: string
+                city:
+                  type: string
+                address:
+                  type: string
+                plaque:
+                  type: string
+                  nullable: true
+                floor:
+                  type: string
+                  nullable: true
+                postalCode:
+                  type: string
+      responses:
+        '200':
+          description: Updated store address.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - address
+                properties:
+                  address:
+                    $ref: '#/components/schemas/StoreAddress'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Store Address
+      operationId: deleteStoreAddress
+      description: Delete a store address and automatically reassign defaults if necessary.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Address deletion response.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - deleted
+                - id
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+                  id:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/settings/default-shipping-address:
+    put:
+      summary: Set Default Shipping Address
+      operationId: setDefaultShippingAddress
+      description: Set the active default shipping origin address ID for store dispatch.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - addressId
+              properties:
+                addressId:
+                  type: string
+      responses:
+        '200':
+          description: Updated store settings with new default shipping address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/settings/default-return-address:
+    put:
+      summary: Set Default Return Address
+      operationId: setDefaultReturnAddress
+      description: Set the active default return destination address ID for customer
+        returns.
+      tags:
+      - Admin Store Settings
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - addressId
+              properties:
+                addressId:
+                  type: string
+      responses:
+        '200':
+          description: Updated store settings with new default return address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/notifications:
+    get:
+      summary: List Customer Notifications
+      operationId: listStoreNotifications
+      description: Retrieve paginated notifications for the authenticated customer.
+      tags:
+      - Store Notifications
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: is_read
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Paginated notification list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - notifications
+                - count
+                - offset
+                - limit
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/notifications/unread-count:
+    get:
+      summary: Get Unread Notification Count
+      operationId: getStoreUnreadNotificationCount
+      description: Retrieve total unread notifications count for badge indicators.
+      tags:
+      - Store Notifications
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Unread notification count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - count
+                properties:
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/notifications/read-all:
+    post:
+      summary: Mark All Notifications As Read
+      operationId: markAllStoreNotificationsAsRead
+      description: Mark all unread notifications for current customer as read.
+      tags:
+      - Store Notifications
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Success response.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/notifications/{id}/read:
+    post:
+      summary: Mark Single Notification As Read
+      operationId: markSingleStoreNotificationAsRead
+      description: Mark a specific notification as read by ID.
+      tags:
+      - Store Notifications
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Updated notification object.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - notification
+                properties:
+                  notification:
+                    $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/inventory/history:
+    get:
+      summary: Get Global Inventory Transaction History
+      operationId: getGlobalInventoryHistory
+      description: Retrieve paginated audit trail of inventory balance adjustments
+        and transactions across all products.
+      tags:
+      - Admin Inventory
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: location_id
+        in: query
+        schema:
+          type: string
+      - name: type
+        in: query
+        schema:
+          type: string
+          enum:
+          - adjustment
+          - sale
+          - return
+          - transfer
+          - reservation
+      responses:
+        '200':
+          description: Paginated transaction list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - transactions
+                - count
+                - offset
+                - limit
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryTransaction'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/inventory/low-stock:
+    get:
+      summary: Get Low Stock Items Alert
+      operationId: getLowStockInventoryAlerts
+      description: Retrieve inventory items operating below low stock threshold levels.
+      tags:
+      - Admin Inventory
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: threshold
+        in: query
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          description: List of low stock inventory items.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/tickets:
+    get:
+      summary: List Customer Support Tickets
+      operationId: listStoreTickets
+      description: Retrieve support tickets created by or associated with the logged-in
+        customer.
+      tags:
+      - Store Support Tickets
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: List of tickets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - tickets
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create Customer Support Ticket
+      operationId: createStoreTicket
+      description: Open a new customer support ticket with atomic TKT-YYYY-XXXXXX
+        ticket number generation.
+      tags:
+      - Store Support Tickets
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - category_id
+              - subject
+              - message
+              properties:
+                category_id:
+                  type: string
+                subject:
+                  type: string
+                message:
+                  type: string
+                order_id:
+                  type: string
+                product_id:
+                  type: string
+                priority:
+                  type: string
+                  enum:
+                  - low
+                  - normal
+                  - high
+                  - urgent
+                  default: normal
+      responses:
+        '201':
+          description: Support ticket created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/tickets:
+    get:
+      summary: List Admin Support Tickets
+      operationId: listAdminTickets
+      description: Retrieve paginated support tickets with status and priority filtering
+        for customer service operators.
+      tags:
+      - Admin Support Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - open
+          - in_progress
+          - resolved
+          - closed
+      - name: priority
+        in: query
+        schema:
+          type: string
+          enum:
+          - low
+          - normal
+          - high
+          - urgent
+      - name: assigned_to_id
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated ticket list for admin.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - tickets
+                - count
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ticket'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/size-guides/templates:
+    get:
+      summary: List Size Guide Templates
+      operationId: listAdminSizeGuideTemplates
+      description: Retrieve reusable size guide layout templates.
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Size guide templates list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - templates
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SizeGuideTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create Size Guide Template
+      operationId: createAdminSizeGuideTemplate
+      description: Create a size guide template with measurement matrices.
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              - columns
+              - rows
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                columns:
+                  type: array
+                  items:
+                    type: string
+                rows:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '201':
+          description: Template created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - template
+                properties:
+                  template:
+                    $ref: '#/components/schemas/SizeGuideTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/products/{id}/size-guide:
+    get:
+      summary: Get Product Size Guide
+      operationId: getStoreProductSizeGuide
+      description: Retrieve size guide assigned to a product.
+      tags:
+      - Store Size Guides
+      security: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Size guide template object.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - size_guide
+                properties:
+                  size_guide:
+                    $ref: '#/components/schemas/SizeGuideTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/reports/margin:
+    get:
+      summary: Get Margin Analysis Report
+      operationId: getAdminMarginReport
+      description: Retrieve financial margin analysis aggregating Gross Sales, COGS,
+        Discounts, Shipping, Tax, Net Sales, Gross Profit, and Gross Margin percentage
+        across date ranges and product breakdowns.
+      tags:
+      - Admin Reports
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: start_date
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: end_date
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: group_by
+        in: query
+        schema:
+          type: string
+          enum:
+          - day
+          - week
+          - month
+          - product
+          - variant
+          - category
+          default: day
+      responses:
+        '200':
+          description: Financial margin report.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - summary
+                - breakdown
+                properties:
+                  summary:
+                    type: object
+                    required:
+                    - gross_sales
+                    - net_sales
+                    - cogs
+                    - gross_profit
+                    - gross_margin_percentage
+                    properties:
+                      gross_sales:
+                        type: number
+                      discounts:
+                        type: number
+                      taxes:
+                        type: number
+                      shipping:
+                        type: number
+                      refunds:
+                        type: number
+                      net_sales:
+                        type: number
+                      cogs:
+                        type: number
+                      gross_profit:
+                        type: number
+                      gross_margin_percentage:
+                        type: number
+                  breakdown:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/phone/send-otp:
+    post:
+      summary: Send Phone OTP Code
+      operationId: sendPhoneOtpCode
+      description: Dispatch verification OTP code to customer's Iranian mobile number
+        (`09...` or `+989...`).
+      tags:
+      - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - phone
+              properties:
+                phone:
+                  type: string
+                  example: 09123456789
+      responses:
+        '200':
+          description: OTP code sent successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - message
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/phone/verify:
+    post:
+      summary: Verify Phone OTP Code
+      operationId: verifyPhoneOtpCode
+      description: Verify OTP code and issue JWT session token for customer.
+      tags:
+      - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - phone
+              - code
+              properties:
+                phone:
+                  type: string
+                  example: 09123456789
+                code:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: Authentication successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - token
+                - customer
+                properties:
+                  token:
+                    type: string
+                  customer:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /store/products:
+    get:
+      summary: List Products with Filtering and Pagination
+      tags:
+      - Products & Discovery
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: category_id
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: order
+        in: query
+        schema:
+          type: string
+          example: -created_at
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+  /store/products/{id}:
+    get:
+      summary: Get Single Product Details
+      tags:
+      - Products & Discovery
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+  /store/products/bestsellers:
+    get:
+      summary: Get Bestseller Products
+      tags:
+      - Products & Discovery
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          description: List of bestselling products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /store/products/newest:
+    get:
+      summary: Get Newest Arrival Products
+      tags:
+      - Products & Discovery
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          description: List of newest products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /store/products/popular:
+    get:
+      summary: Get Popular Products
+      tags:
+      - Products & Discovery
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          description: List of popular products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /store/products/trending:
+    get:
+      summary: Get Trending Products
+      tags:
+      - Products & Discovery
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          description: List of trending products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /store/products/{id}/json-ld:
+    get:
+      summary: Get Schema.org Product JSON-LD Structured Data
+      tags:
+      - Products & Discovery
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Schema.org Product JSON-LD object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - '@context'
+                - '@type'
+                - name
+                properties:
+                  '@context':
+                    type: string
+                    example: https://schema.org
+                  '@type':
+                    type: string
+                    example: Product
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  offers:
+                    type: object
+  /store/products/{id}/reviews:
+    get:
+      summary: List Approved Product Reviews
+      tags:
+      - Product Reviews & Ratings
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: Product reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductReview'
+                  count:
+                    type: integer
+    post:
+      summary: Submit Product Review
+      tags:
+      - Product Reviews & Ratings
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - rating
+              - content
+              - author_name
+              - author_email
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                title:
+                  type: string
+                content:
+                  type: string
+                author_name:
+                  type: string
+                author_email:
+                  type: string
+      responses:
+        '201':
+          description: Review submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  review:
+                    $ref: '#/components/schemas/ProductReview'
+  /store/products/{id}/reviews/summary:
+    get:
+      summary: Get Aggregate Rating Summary
+      tags:
+      - Product Reviews & Ratings
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Aggregate rating summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: object
+                    properties:
+                      average_rating:
+                        type: number
+                        example: 4.5
+                      total_reviews:
+                        type: integer
+                        example: 12
+                      rating_breakdown:
+                        type: object
+  /admin/reviews:
+    get:
+      summary: List All Reviews (Admin Moderation)
+      tags:
+      - Product Reviews & Ratings
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - SPAM
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          description: All product reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductReview'
+  /admin/reviews/{id}/approve:
+    post:
+      summary: Approve Review
+      tags:
+      - Product Reviews & Ratings
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Review approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  review:
+                    $ref: '#/components/schemas/ProductReview'
+  /admin/reviews/{id}/reject:
+    post:
+      summary: Reject Review
+      tags:
+      - Product Reviews & Ratings
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Review rejected
+  /admin/reviews/{id}/reply:
+    post:
+      summary: Add Admin Response to Review
+      tags:
+      - Product Reviews & Ratings
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - content
+              properties:
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Reply created
+  /store/products/{id}/videos:
+    get:
+      summary: Get Active Product Videos
+      tags:
+      - Product Videos
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product videos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  videos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductVideo'
+  /admin/product-videos:
+    get:
+      summary: List Product Videos (Admin)
+      tags:
+      - Product Videos
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of videos
+    post:
+      summary: Create Product Video
+      tags:
+      - Product Videos
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - product_id
+              - url
+              properties:
+                product_id:
+                  type: string
+                url:
+                  type: string
+                provider:
+                  type: string
+                  example: youtube
+                title:
+                  type: string
+                is_primary:
+                  type: boolean
+      responses:
+        '201':
+          description: Video created
+  /store/products/{id}/related:
+    get:
+      summary: Get Related Products
+      tags:
+      - Recommendations & Comparison & Wishlist
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of related products
+  /store/recommendations:
+    get:
+      summary: Get Personalized Product Recommendations
+      tags:
+      - Recommendations & Comparison & Wishlist
+      responses:
+        '200':
+          description: Recommended products
+  /store/carts:
+    post:
+      summary: Create New Cart
+      tags:
+      - Carts & Checkout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                region_id:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+  /store/carts/{id}:
+    get:
+      summary: Get Cart
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Cart details
+  /store/carts/{id}/line-items:
+    post:
+      summary: Add Item to Cart
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - variant_id
+              - quantity
+              properties:
+                variant_id:
+                  type: string
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Item added to cart
+  /store/carts/{id}/complete:
+    post:
+      summary: Complete Cart / Place Order
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Order placed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: order
+                  order:
+                    $ref: '#/components/schemas/Order'
+  /store/orders/{id}:
+    get:
+      summary: Get Order Details
+      tags:
+      - Orders & Fulfillments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Order details
+  /admin/invoices:
+    get:
+      summary: List Invoices
+      tags:
+      - Invoices
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of invoices
+    post:
+      summary: Generate Invoice for Order
+      tags:
+      - Invoices
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - order_id
+              properties:
+                order_id:
+                  type: string
+      responses:
+        '201':
+          description: Invoice generated
+  /admin/invoices/{id}/pdf:
+    get:
+      summary: Stream Persian Invoice PDF
+      tags:
+      - Invoices
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: PDF Stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /admin/reports/sales:
+    get:
+      summary: Sales Analytics Report
+      tags:
+      - Reports & Analytics
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: group_by
+        in: query
+        schema:
+          type: string
+          enum:
+          - day
+          - week
+          - month
+          - year
+          - product
+          - category
+          - customer
+      responses:
+        '200':
+          description: Sales report data
+  /store/customers/me:
+    get:
+      summary: Get Authenticated Customer Profile
+      operationId: getCurrentCustomer
+      description: Retrieve profile details of the currently authenticated customer
+        session.
+      tags:
+      - Store Customers
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Customer profile details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customer
+                properties:
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Update Authenticated Customer Profile
+      operationId: updateCurrentCustomer
+      description: Update personal details (names, phone, company, metadata) of current
+        customer.
+      tags:
+      - Store Customers
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+                company_name:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Updated customer profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customer
+                properties:
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/customers/me/addresses:
+    get:
+      summary: List Customer Saved Addresses
+      operationId: listCustomerAddresses
+      description: Retrieve all saved shipping and billing addresses for authenticated
+        customer.
+      tags:
+      - Store Customers
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: List of saved customer addresses.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - addresses
+                properties:
+                  addresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomerAddress'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Add New Customer Address
+      operationId: createCustomerAddress
+      description: Save a new physical address under authenticated customer profile.
+      tags:
+      - Store Customers
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - address_1
+              - city
+              - country_code
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+                company:
+                  type: string
+                address_1:
+                  type: string
+                address_2:
+                  type: string
+                city:
+                  type: string
+                province:
+                  type: string
+                postal_code:
+                  type: string
+                country_code:
+                  type: string
+                  example: ir
+                is_default_shipping:
+                  type: boolean
+                  default: false
+                is_default_billing:
+                  type: boolean
+                  default: false
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: Address created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/customers/me/addresses/{address_id}:
+    get:
+      summary: Get Customer Address by ID
+      operationId: getCustomerAddress
+      tags:
+      - Store Customers
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: address_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Customer address details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - address
+                properties:
+                  address:
+                    $ref: '#/components/schemas/CustomerAddress'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Customer Address
+      operationId: updateCustomerAddress
+      tags:
+      - Store Customers
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: address_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+                company:
+                  type: string
+                address_1:
+                  type: string
+                address_2:
+                  type: string
+                city:
+                  type: string
+                province:
+                  type: string
+                postal_code:
+                  type: string
+                country_code:
+                  type: string
+                is_default_shipping:
+                  type: boolean
+                is_default_billing:
+                  type: boolean
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Updated customer address.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Customer Address
+      operationId: deleteCustomerAddress
+      tags:
+      - Store Customers
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: address_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Address deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: address
+                  deleted:
+                    type: boolean
+                    example: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/customers:
+    get:
+      summary: List Customers (Admin)
+      operationId: listAdminCustomers
+      tags:
+      - Admin Customers
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of customers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customers
+                - count
+                - offset
+                - limit
+                properties:
+                  customers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+    post:
+      summary: Create Customer (Admin)
+      operationId: createAdminCustomer
+      tags:
+      - Admin Customers
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+                company_name:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: Customer created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customer
+                properties:
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+  /admin/customers/{id}:
+    get:
+      summary: Get Customer Details (Admin)
+      operationId: getAdminCustomer
+      tags:
+      - Admin Customers
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Customer details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customer
+                properties:
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Customer (Admin)
+      operationId: updateAdminCustomer
+      tags:
+      - Admin Customers
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+                company_name:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customer
+                properties:
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+    delete:
+      summary: Delete Customer (Admin)
+      operationId: deleteAdminCustomer
+      tags:
+      - Admin Customers
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Customer deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: customer
+                  deleted:
+                    type: boolean
+                    example: true
+  /store/me/wallet:
+    get:
+      summary: Get Customer Wallet Balance
+      operationId: getCustomerWallet
+      description: Retrieve active digital wallet account and balance for authenticated
+        customer.
+      tags:
+      - Store Wallet
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: currency
+        in: query
+        required: false
+        schema:
+          type: string
+          default: IRR
+      responses:
+        '200':
+          description: Wallet and balance details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - wallet
+                - balance
+                properties:
+                  wallet:
+                    type: object
+                    required:
+                    - id
+                    - owner_id
+                    - currency
+                    properties:
+                      id:
+                        type: string
+                      owner_id:
+                        type: string
+                      currency:
+                        type: string
+                  balance:
+                    type: object
+                    required:
+                    - amount_minor
+                    - currency
+                    properties:
+                      amount_minor:
+                        type: string
+                        example: '1500000'
+                      currency:
+                        type: string
+                        example: IRR
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/me/wallet/transactions:
+    get:
+      summary: Get Customer Wallet Transactions
+      operationId: getCustomerWalletTransactions
+      description: Retrieve full ledger history of transactions (credits, debits,
+        payments) on customer wallet.
+      tags:
+      - Store Wallet
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: currency
+        in: query
+        required: false
+        schema:
+          type: string
+          default: IRR
+      responses:
+        '200':
+          description: Wallet ledger transaction history.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - wallet_id
+                - transactions
+                properties:
+                  wallet_id:
+                    type: string
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WalletTransaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/wallets/credit:
+    post:
+      summary: Credit Customer Wallet (Admin)
+      operationId: adminCreditWallet
+      description: Staff operation to deposit/credit funds to a customer's digital
+        wallet.
+      tags:
+      - Admin Wallet
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - wallet_id
+              - amount_minor
+              - reason
+              - idempotency_key
+              properties:
+                wallet_id:
+                  type: string
+                amount_minor:
+                  type: string
+                  description: Positive amount in minor currency unit
+                currency:
+                  type: string
+                  default: IRR
+                reason:
+                  type: string
+                  example: Promotional bonus credit
+                idempotency_key:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Transaction confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - transaction
+                properties:
+                  transaction:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      reference:
+                        type: string
+                      idempotency_key:
+                        type: string
+                      status:
+                        type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/wallets/debit:
+    post:
+      summary: Debit Customer Wallet (Admin)
+      operationId: adminDebitWallet
+      description: Staff operation to withdraw/debit funds from a customer's digital
+        wallet.
+      tags:
+      - Admin Wallet
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - wallet_id
+              - amount_minor
+              - reason
+              - idempotency_key
+              properties:
+                wallet_id:
+                  type: string
+                amount_minor:
+                  type: string
+                  description: Positive amount in minor currency unit
+                currency:
+                  type: string
+                  default: IRR
+                reason:
+                  type: string
+                  example: Manual correction debit
+                idempotency_key:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Transaction confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - transaction
+                properties:
+                  transaction:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      reference:
+                        type: string
+                      idempotency_key:
+                        type: string
+                      status:
+                        type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/size-guides/templates/{id}:
+    get:
+      summary: Get Size Guide Template Details
+      operationId: getAdminSizeGuideTemplate
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Size guide template details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - size_guide_template
+                properties:
+                  size_guide_template:
+                    $ref: '#/components/schemas/SizeGuideTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Size Guide Template
+      operationId: updateAdminSizeGuideTemplate
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                columns:
+                  type: array
+                  items:
+                    type: object
+                rows:
+                  type: array
+                  items:
+                    type: object
+                notes:
+                  type: string
+                is_active:
+                  type: boolean
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Updated template.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - size_guide_template
+                properties:
+                  size_guide_template:
+                    $ref: '#/components/schemas/SizeGuideTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Size Guide Template
+      operationId: deleteAdminSizeGuideTemplate
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Template deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: size_guide_template
+                  deleted:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/products/{id}/size-guide:
+    get:
+      summary: Get Product Size Guide Assignment (Admin)
+      operationId: getAdminProductSizeGuide
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product size guide.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  size_guide:
+                    $ref: '#/components/schemas/ProductSizeGuide'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Set or Update Product Size Guide
+      operationId: setAdminProductSizeGuide
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                source_template_id:
+                  type: string
+                columns:
+                  type: array
+                  items:
+                    type: object
+                rows:
+                  type: array
+                  items:
+                    type: object
+                notes:
+                  type: string
+                image_url:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Saved product size guide.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - size_guide
+                properties:
+                  size_guide:
+                    $ref: '#/components/schemas/ProductSizeGuide'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Remove Product Size Guide
+      operationId: removeAdminProductSizeGuide
+      tags:
+      - Admin Size Guides
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Size guide removed from product.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    nullable: true
+                  object:
+                    type: string
+                    example: product_size_guide
+                  deleted:
+                    type: boolean
+  /store/tickets/{id}:
+    get:
+      summary: Get Customer Ticket Details
+      operationId: getStoreTicket
+      tags:
+      - Store Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Ticket details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/tickets/{id}/messages:
+    get:
+      summary: List Customer Ticket Messages
+      operationId: getStoreTicketMessages
+      tags:
+      - Store Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Messages on the ticket.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - messages
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TicketMessage'
+    post:
+      summary: Post Customer Message to Ticket
+      operationId: createStoreTicketMessage
+      tags:
+      - Store Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - message
+              properties:
+                message:
+                  type: string
+                attachment_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Message posted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - message
+                properties:
+                  message:
+                    $ref: '#/components/schemas/TicketMessage'
+  /store/ticket-categories:
+    get:
+      summary: List Ticket Categories
+      operationId: listStoreTicketCategories
+      tags:
+      - Store Tickets
+      security: []
+      responses:
+        '200':
+          description: List of active support ticket categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - categories
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TicketCategory'
+  /admin/tickets/{id}:
+    get:
+      summary: Get Admin Ticket Details
+      operationId: getAdminTicket
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Ticket details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/tickets/{id}/messages:
+    post:
+      summary: Post Admin Reply to Ticket
+      operationId: createAdminTicketMessage
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - message
+              properties:
+                message:
+                  type: string
+                is_internal:
+                  type: boolean
+                  default: false
+                attachment_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Admin response sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - message
+                properties:
+                  message:
+                    $ref: '#/components/schemas/TicketMessage'
+  /admin/tickets/{id}/assign:
+    post:
+      summary: Assign Ticket to Staff Member
+      operationId: assignAdminTicket
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - user_id
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: Ticket assigned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+  /admin/tickets/{id}/status:
+    post:
+      summary: Update Ticket Status
+      operationId: updateAdminTicketStatus
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - OPEN
+                  - IN_PROGRESS
+                  - WAITING_ON_CUSTOMER
+                  - RESOLVED
+                  - CLOSED
+      responses:
+        '200':
+          description: Ticket status updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+  /admin/tickets/{id}/priority:
+    post:
+      summary: Update Ticket Priority
+      operationId: updateAdminTicketPriority
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - priority
+              properties:
+                priority:
+                  type: string
+                  enum:
+                  - LOW
+                  - MEDIUM
+                  - HIGH
+                  - URGENT
+      responses:
+        '200':
+          description: Ticket priority updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+  /admin/tickets/{id}/close:
+    post:
+      summary: Close Ticket
+      operationId: closeAdminTicket
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Ticket closed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+  /admin/tickets/{id}/reopen:
+    post:
+      summary: Reopen Ticket
+      operationId: reopenAdminTicket
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Ticket reopened.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ticket
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+  /admin/tickets/reports:
+    get:
+      summary: Ticketing Reports & SLA Metrics
+      operationId: getAdminTicketReports
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Ticketing analytics and SLA metrics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_tickets:
+                    type: integer
+                  open_tickets:
+                    type: integer
+                  resolved_tickets:
+                    type: integer
+                  avg_resolution_hours:
+                    type: number
+  /admin/ticket-categories:
+    get:
+      summary: List Ticket Categories (Admin)
+      operationId: listAdminTicketCategories
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of ticket categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - categories
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TicketCategory'
+    post:
+      summary: Create Ticket Category
+      operationId: createAdminTicketCategory
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_active:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Category created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - category
+                properties:
+                  category:
+                    $ref: '#/components/schemas/TicketCategory'
+  /store/comparison:
+    get:
+      summary: Get Customer Comparison List
+      operationId: getStoreComparison
+      tags:
+      - Store Comparison
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Comparison list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - comparison
+                properties:
+                  comparison:
+                    $ref: '#/components/schemas/Comparison'
+  /store/comparison/items:
+    post:
+      summary: Add Product to Comparison
+      operationId: addStoreComparisonItem
+      tags:
+      - Store Comparison
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - product_id
+              properties:
+                product_id:
+                  type: string
+      responses:
+        '201':
+          description: Item added to comparison.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    type: object
+                  comparison:
+                    $ref: '#/components/schemas/Comparison'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    delete:
+      summary: Clear All Comparison Items
+      operationId: clearStoreComparison
+      tags:
+      - Store Comparison
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Comparison cleared.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - deleted
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  object:
+                    type: string
+                    example: comparison
+                  deleted:
+                    type: boolean
+                    example: true
+  /store/comparison/items/{id}:
+    delete:
+      summary: Remove Item from Comparison
+      operationId: removeStoreComparisonItem
+      tags:
+      - Store Comparison
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Item removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: comparison_item
+                  deleted:
+                    type: boolean
+                    example: true
+  /store/products/compare:
+    get:
+      summary: Compare Products by Comma-Separated IDs
+      operationId: compareStoreProducts
+      tags:
+      - Store Comparison
+      security: []
+      parameters:
+      - name: ids
+        in: query
+        required: true
+        description: Comma-separated product IDs (max 4)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of compared products.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - products
+                - count
+                - max_items
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  max_items:
+                    type: integer
+                    default: 4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /store/wishlist:
+    get:
+      summary: Get Customer Wishlist
+      operationId: getStoreWishlist
+      tags:
+      - Store Wishlist
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Customer wishlist.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - wishlist
+                properties:
+                  wishlist:
+                    $ref: '#/components/schemas/Wishlist'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/wishlist/items:
+    post:
+      summary: Add Item to Wishlist
+      operationId: addStoreWishlistItem
+      tags:
+      - Store Wishlist
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - product_id
+              properties:
+                product_id:
+                  type: string
+                variant_id:
+                  type: string
+      responses:
+        '201':
+          description: Item added to wishlist.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - item
+                properties:
+                  item:
+                    $ref: '#/components/schemas/WishlistItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      summary: Clear Entire Customer Wishlist
+      operationId: clearStoreWishlist
+      tags:
+      - Store Wishlist
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Wishlist cleared.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - deleted
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  object:
+                    type: string
+                    example: wishlist
+                  deleted:
+                    type: boolean
+                    example: true
+  /store/wishlist/items/{id}:
+    delete:
+      summary: Remove Item from Wishlist
+      operationId: removeStoreWishlistItem
+      tags:
+      - Store Wishlist
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Item removed from wishlist.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: wishlist_item
+                  deleted:
+                    type: boolean
+                    example: true
+  /store/price-alerts:
+    get:
+      summary: List Customer Price Alerts
+      operationId: listStorePriceAlerts
+      tags:
+      - Store Price Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: product_id
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of price alerts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - price_alerts
+                - count
+                - limit
+                - offset
+                properties:
+                  price_alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PriceAlert'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+    post:
+      summary: Create Customer Price Alert
+      operationId: createStorePriceAlert
+      tags:
+      - Store Price Alerts
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - product_id
+              - target_price
+              properties:
+                product_id:
+                  type: string
+                variant_id:
+                  type: string
+                target_price:
+                  type: number
+                currency_code:
+                  type: string
+                  default: IRR
+                channel:
+                  type: string
+                  enum:
+                  - SMS
+                  - EMAIL
+                  - PUSH
+                  default: SMS
+      responses:
+        '200':
+          description: Price alert created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - price_alert
+                properties:
+                  price_alert:
+                    $ref: '#/components/schemas/PriceAlert'
+  /store/price-alerts/{id}:
+    get:
+      summary: Get Customer Price Alert
+      operationId: getStorePriceAlert
+      tags:
+      - Store Price Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Price alert details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - price_alert
+                properties:
+                  price_alert:
+                    $ref: '#/components/schemas/PriceAlert'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Cancel Customer Price Alert
+      operationId: cancelStorePriceAlert
+      tags:
+      - Store Price Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Price alert cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - price_alert
+                properties:
+                  price_alert:
+                    $ref: '#/components/schemas/PriceAlert'
+  /store/products/{id}/price-alerts:
+    post:
+      summary: Subscribe to Product Price Alert
+      operationId: subscribeProductPriceAlert
+      tags:
+      - Store Price Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - target_price
+              properties:
+                target_price:
+                  type: number
+                variant_id:
+                  type: string
+                channel:
+                  type: string
+                  enum:
+                  - SMS
+                  - EMAIL
+                  - PUSH
+                  default: SMS
+      responses:
+        '200':
+          description: Subscribed to price alert.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - price_alert
+                properties:
+                  price_alert:
+                    $ref: '#/components/schemas/PriceAlert'
+  /store/stock-alerts:
+    get:
+      summary: List Customer Stock Alerts
+      operationId: listStoreStockAlerts
+      tags:
+      - Store Stock Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: product_id
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of stock alerts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - stock_alerts
+                - count
+                - limit
+                - offset
+                properties:
+                  stock_alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockAlert'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+    post:
+      summary: Create Customer Stock Alert
+      operationId: createStoreStockAlert
+      tags:
+      - Store Stock Alerts
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - product_id
+              properties:
+                product_id:
+                  type: string
+                variant_id:
+                  type: string
+                channel:
+                  type: string
+                  enum:
+                  - SMS
+                  - EMAIL
+                  - PUSH
+                  default: SMS
+      responses:
+        '200':
+          description: Stock alert created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - stock_alert
+                properties:
+                  stock_alert:
+                    $ref: '#/components/schemas/StockAlert'
+  /store/stock-alerts/{id}:
+    delete:
+      summary: Cancel Customer Stock Alert
+      operationId: cancelStoreStockAlert
+      tags:
+      - Store Stock Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Stock alert cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - deleted
+                - stock_alert
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: stock_alert
+                  deleted:
+                    type: boolean
+                    example: true
+                  stock_alert:
+                    $ref: '#/components/schemas/StockAlert'
+  /store/products/{id}/stock-alerts:
+    post:
+      summary: Subscribe to Product Back-in-Stock Alert
+      operationId: subscribeProductStockAlert
+      tags:
+      - Store Stock Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variant_id:
+                  type: string
+                channel:
+                  type: string
+                  enum:
+                  - SMS
+                  - EMAIL
+                  - PUSH
+                  default: SMS
+      responses:
+        '200':
+          description: Subscribed to stock alert.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - stock_alert
+                properties:
+                  stock_alert:
+                    $ref: '#/components/schemas/StockAlert'
+  /admin/price-alerts:
+    get:
+      summary: List All Price Alerts (Admin)
+      operationId: listAdminPriceAlerts
+      tags:
+      - Admin Price Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: customer_id
+        in: query
+        schema:
+          type: string
+      - name: product_id
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Admin price alerts list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - price_alerts
+                - count
+                - limit
+                - offset
+                properties:
+                  price_alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PriceAlert'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+  /admin/price-alerts/{id}:
+    get:
+      summary: Get Price Alert (Admin)
+      operationId: getAdminPriceAlert
+      tags:
+      - Admin Price Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Price alert details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - price_alert
+                properties:
+                  price_alert:
+                    $ref: '#/components/schemas/PriceAlert'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/stock-alerts:
+    get:
+      summary: List All Stock Alerts (Admin)
+      operationId: listAdminStockAlerts
+      tags:
+      - Admin Stock Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: customer_id
+        in: query
+        schema:
+          type: string
+      - name: product_id
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: channel
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Admin stock alerts list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - stock_alerts
+                - count
+                - limit
+                - offset
+                properties:
+                  stock_alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockAlert'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+  /admin/stock-alerts/{id}:
+    get:
+      summary: Get Stock Alert (Admin)
+      operationId: getAdminStockAlert
+      tags:
+      - Admin Stock Alerts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Stock alert details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - stock_alert
+                properties:
+                  stock_alert:
+                    $ref: '#/components/schemas/StockAlert'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/orders/{id}/invoice:
+    get:
+      summary: Get Customer Order Invoice Data
+      operationId: getStoreOrderInvoice
+      tags:
+      - Store Invoices
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Order invoice details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - invoice
+                properties:
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/orders/{id}/invoice/pdf:
+    get:
+      summary: Download Customer Order Invoice PDF
+      operationId: downloadStoreOrderInvoicePdf
+      tags:
+      - Store Invoices
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Invoice PDF binary stream.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/invoices/{id}:
+    get:
+      summary: Get Invoice Details (Admin)
+      operationId: getAdminInvoice
+      tags:
+      - Admin Invoices
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Invoice details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - invoice
+                properties:
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/orders/{id}/invoice:
+    get:
+      summary: Get Order Invoice (Admin)
+      operationId: getAdminOrderInvoice
+      tags:
+      - Admin Invoices
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Order invoice.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - invoice
+                properties:
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/product-videos:
+    get:
+      summary: List Public Product Videos
+      operationId: listStoreProductVideos
+      tags:
+      - Store Product Videos
+      security: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: List of product videos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product_videos
+                - count
+                - offset
+                - limit
+                properties:
+                  product_videos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductVideo'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+  /admin/product-videos/{id}:
+    get:
+      summary: Get Product Video Details
+      operationId: getAdminProductVideo
+      tags:
+      - Admin Product Videos
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product video details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product_video
+                properties:
+                  product_video:
+                    $ref: '#/components/schemas/ProductVideo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Product Video
+      operationId: updateAdminProductVideo
+      tags:
+      - Admin Product Videos
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                url:
+                  type: string
+                provider:
+                  type: string
+                  enum:
+                  - youtube
+                  - aparat
+                  - vimeo
+                  - direct
+                thumbnail_url:
+                  type: string
+                position:
+                  type: integer
+                is_featured:
+                  type: boolean
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Updated video.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product_video
+                properties:
+                  product_video:
+                    $ref: '#/components/schemas/ProductVideo'
+    delete:
+      summary: Delete Product Video
+      operationId: deleteAdminProductVideo
+      tags:
+      - Admin Product Videos
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Video deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: product_video
+                  deleted:
+                    type: boolean
+                    example: true
+  /store/product-categories:
+    get:
+      summary: List Product Categories Tree
+      operationId: listStoreProductCategories
+      tags:
+      - Store Categories
+      security: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of product categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product_categories
+                - count
+                - offset
+                - limit
+                properties:
+                  product_categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+  /store/product-categories/{id}:
+    get:
+      summary: Get Product Category Details
+      operationId: getStoreProductCategory
+      tags:
+      - Store Categories
+      security: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Category details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product_category
+                properties:
+                  product_category:
+                    $ref: '#/components/schemas/Category'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/products:
+    get:
+      summary: List Products (Admin)
+      operationId: listAdminProducts
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Admin product list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - products
+                - count
+                - offset
+                - limit
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+    post:
+      summary: Create Product (Admin)
+      operationId: createAdminProduct
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              properties:
+                title:
+                  type: string
+                subtitle:
+                  type: string
+                description:
+                  type: string
+                handle:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                  - draft
+                  - proposed
+                  - published
+                  - rejected
+                thumbnail:
+                  type: string
+                options:
+                  type: array
+                  items:
+                    type: object
+                variants:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '201':
+          description: Product created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+  /admin/products/{id}:
+    get:
+      summary: Get Product Details (Admin)
+      operationId: getAdminProduct
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Product (Admin)
+      operationId: updateAdminProduct
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                subtitle:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Updated product.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+    delete:
+      summary: Delete Product (Admin)
+      operationId: deleteAdminProduct
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: product
+                  deleted:
+                    type: boolean
+                    example: true
+  /store/orders:
+    get:
+      summary: List Customer Orders
+      operationId: listStoreOrders
+      tags:
+      - Store Orders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: List of orders.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - orders
+                - count
+                - offset
+                - limit
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+  /admin/orders:
+    get:
+      summary: List Orders (Admin)
+      operationId: listAdminOrders
+      tags:
+      - Admin Orders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: fulfillment_status
+        in: query
+        schema:
+          type: string
+      - name: payment_status
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of orders.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - orders
+                - count
+                - offset
+                - limit
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+  /admin/orders/{id}:
+    get:
+      summary: Get Order Details (Admin)
+      operationId: getAdminOrder
+      tags:
+      - Admin Orders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Order details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - order
+                properties:
+                  order:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Order Details (Admin)
+      operationId: updateAdminOrder
+      tags:
+      - Admin Orders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Updated order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - order
+                properties:
+                  order:
+                    $ref: '#/components/schemas/Order'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: JWT authentication bearer token for customer or admin session.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Session cookie authentication.
+  responses:
+    BadRequest:
+      description: Invalid client request parameters or payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication token missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient permissions to access this resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Internal server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    ErrorResponse:
+      type: object
+      required:
+      - message
+      - type
+      properties:
+        message:
+          type: string
+        type:
+          type: string
+        code:
+          type: string
     Brand:
       type: object
+      required:
+      - id
+      - name
+      - slug
+      - is_active
       properties:
         id:
           type: string
@@ -523,8 +5372,10 @@ components:
           type: string
         description:
           type: string
+          nullable: true
         logo_id:
           type: string
+          nullable: true
         is_active:
           type: boolean
         created_at:
@@ -535,6 +5386,11 @@ components:
           format: date-time
     Category:
       type: object
+      required:
+      - id
+      - name
+      - slug
+      - is_active
       properties:
         id:
           type: string
@@ -544,14 +5400,17 @@ components:
           type: string
         description:
           type: string
+          nullable: true
         image_id:
           type: string
+          nullable: true
         is_active:
           type: boolean
         display_order:
           type: integer
         parent_category_id:
           type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -560,6 +5419,11 @@ components:
           format: date-time
     Media:
       type: object
+      required:
+      - id
+      - original_filename
+      - file_key
+      - url
       properties:
         id:
           type: string
@@ -577,13 +5441,800 @@ components:
           type: string
         width:
           type: integer
+          nullable: true
         height:
           type: integer
+          nullable: true
         uploaded_by_id:
           type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
         updated_at:
+          type: string
+          format: date-time
+    StoreAddress:
+      type: object
+      required:
+      - id
+      - title
+      - recipientName
+      - phone
+      - province
+      - city
+      - address
+      - postalCode
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        recipientName:
+          type: string
+        recipient_name:
+          type: string
+        phone:
+          type: string
+        province:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        plaque:
+          type: string
+          nullable: true
+        floor:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+        postal_code:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    StoreSettings:
+      type: object
+      required:
+      - id
+      - storeName
+      - contactPhone
+      - supportEmail
+      - address
+      - taxRate
+      - enableSmsNotifications
+      - enableEmailNotifications
+      - returnWindowDays
+      - autoApproveReturns
+      - addresses
+      properties:
+        id:
+          type: string
+        storeName:
+          type: string
+        contactPhone:
+          type: string
+        supportEmail:
+          type: string
+        address:
+          type: string
+        taxRate:
+          type: number
+        enableSmsNotifications:
+          type: boolean
+        enableEmailNotifications:
+          type: boolean
+        returnWindowDays:
+          type: integer
+        autoApproveReturns:
+          type: boolean
+        defaultShippingAddressId:
+          type: string
+          nullable: true
+        defaultReturnAddressId:
+          type: string
+          nullable: true
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreAddress'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Notification:
+      type: object
+      required:
+      - id
+      - receiver_id
+      - channel
+      - template
+      - data
+      properties:
+        id:
+          type: string
+        receiver_id:
+          type: string
+        channel:
+          type: string
+        template:
+          type: string
+        data:
+          type: object
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    InventoryTransaction:
+      type: object
+      required:
+      - id
+      - inventory_item_id
+      - location_id
+      - quantity_change
+      - type
+      properties:
+        id:
+          type: string
+        inventory_item_id:
+          type: string
+        location_id:
+          type: string
+        quantity_change:
+          type: integer
+        type:
+          type: string
+          enum:
+          - adjustment
+          - sale
+          - return
+          - transfer
+          - reservation
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    Ticket:
+      type: object
+      required:
+      - id
+      - ticket_number
+      - customer_id
+      - category_id
+      - subject
+      - status
+      - priority
+      properties:
+        id:
+          type: string
+        ticket_number:
+          type: string
+          example: TKT-2026-000123
+        customer_id:
+          type: string
+        category_id:
+          type: string
+        subject:
+          type: string
+        status:
+          type: string
+          enum:
+          - open
+          - in_progress
+          - resolved
+          - closed
+        priority:
+          type: string
+          enum:
+          - low
+          - normal
+          - high
+          - urgent
+        order_id:
+          type: string
+          nullable: true
+        product_id:
+          type: string
+          nullable: true
+        assigned_to_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SizeGuideTemplate:
+      type: object
+      required:
+      - id
+      - title
+      - columns
+      - rows
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        columns:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        description:
+          type: string
+        handle:
+          type: string
+        is_giftcard:
+          type: boolean
+        status:
+          type: string
+        thumbnail:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        sku:
+          type: string
+        barcode:
+          type: string
+        price:
+          type: number
+    ProductReview:
+      type: object
+      properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        rating:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        author_name:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - SPAM
+        created_at:
+          type: string
+          format: date-time
+    ProductVideo:
+      type: object
+      properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        url:
+          type: string
+        provider:
+          type: string
+        video_id:
+          type: string
+        title:
+          type: string
+        is_primary:
+          type: boolean
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        total:
+          type: number
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        total:
+          type: number
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        balance:
+          type: number
+        currency_code:
+          type: string
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+    CustomerAddress:
+      type: object
+      required:
+      - id
+      - address_1
+      - city
+      - country_code
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        company:
+          type: string
+          nullable: true
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        address_1:
+          type: string
+        address_2:
+          type: string
+          nullable: true
+        city:
+          type: string
+        province:
+          type: string
+          nullable: true
+        postal_code:
+          type: string
+          nullable: true
+        country_code:
+          type: string
+          description: 2-letter ISO country code (e.g. 'ir')
+        phone:
+          type: string
+          nullable: true
+        is_default_shipping:
+          type: boolean
+          default: false
+        is_default_billing:
+          type: boolean
+          default: false
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProductSizeGuide:
+      type: object
+      required:
+      - id
+      - product_id
+      - title
+      - columns
+      - rows
+      properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        source_template_id:
+          type: string
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        columns:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - label
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              unit:
+                type: string
+        rows:
+          type: array
+          items:
+            type: object
+            required:
+            - size
+            properties:
+              size:
+                type: string
+              measurements:
+                type: object
+        notes:
+          type: string
+          nullable: true
+        image_id:
+          type: string
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TicketMessage:
+      type: object
+      required:
+      - id
+      - ticket_id
+      - sender_type
+      - message
+      properties:
+        id:
+          type: string
+        ticket_id:
+          type: string
+        sender_type:
+          type: string
+          enum:
+          - customer
+          - admin
+          - system
+        sender_id:
+          type: string
+          nullable: true
+        message:
+          type: string
+        is_internal:
+          type: boolean
+          default: false
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              file_name:
+                type: string
+              file_url:
+                type: string
+              file_size:
+                type: integer
+        created_at:
+          type: string
+          format: date-time
+    TicketCategory:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+        created_at:
+          type: string
+          format: date-time
+    WalletTransaction:
+      type: object
+      required:
+      - id
+      - wallet_id
+      - amount_minor
+      - currency
+      - type
+      - status
+      properties:
+        id:
+          type: string
+        wallet_id:
+          type: string
+        amount_minor:
+          type: string
+          description: Transaction amount in smallest currency unit
+        currency:
+          type: string
+          default: IRR
+        type:
+          type: string
+          enum:
+          - CREDIT
+          - DEBIT
+          - DEPOSIT
+          - WITHDRAWAL
+          - REFUND
+          - PAYMENT
+        reason:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - COMPLETED
+          - FAILED
+          - REVERSED
+        reference:
+          type: string
+          nullable: true
+        idempotency_key:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    Wishlist:
+      type: object
+      required:
+      - customer_id
+      - items
+      properties:
+        id:
+          type: string
+          nullable: true
+        customer_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WishlistItem'
+    WishlistItem:
+      type: object
+      required:
+      - id
+      - product_id
+      properties:
+        id:
+          type: string
+        wishlist_id:
+          type: string
+          nullable: true
+        product_id:
+          type: string
+        variant_id:
+          type: string
+          nullable: true
+        product:
+          $ref: '#/components/schemas/Product'
+        created_at:
+          type: string
+          format: date-time
+    Comparison:
+      type: object
+      required:
+      - items
+      - max_items
+      properties:
+        id:
+          type: string
+          nullable: true
+        customer_id:
+          type: string
+          nullable: true
+        max_items:
+          type: integer
+          default: 4
+        items:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - product_id
+            properties:
+              id:
+                type: string
+              comparison_id:
+                type: string
+                nullable: true
+              product_id:
+                type: string
+              product:
+                $ref: '#/components/schemas/Product'
+              created_at:
+                type: string
+                format: date-time
+    PriceAlert:
+      type: object
+      required:
+      - id
+      - customer_id
+      - product_id
+      - target_price
+      - currency_code
+      - status
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        product_id:
+          type: string
+        variant_id:
+          type: string
+          nullable: true
+        currency_code:
+          type: string
+          default: irr
+        region_id:
+          type: string
+          nullable: true
+        alert_type:
+          type: string
+          enum:
+          - PRICE_DROP
+          - TARGET_PRICE
+          default: TARGET_PRICE
+        reference_price:
+          type: number
+          nullable: true
+        target_price:
+          type: number
+        channel:
+          type: string
+          enum:
+          - SMS
+          - EMAIL
+          - PUSH
+          default: SMS
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - TRIGGERED
+          - CANCELLED
+          - EXPIRED
+          default: ACTIVE
+        created_at:
+          type: string
+          format: date-time
+    StockAlert:
+      type: object
+      required:
+      - id
+      - customer_id
+      - product_id
+      - status
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        product_id:
+          type: string
+        variant_id:
+          type: string
+          nullable: true
+        channel:
+          type: string
+          enum:
+          - SMS
+          - EMAIL
+          - PUSH
+          default: SMS
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - NOTIFIED
+          - CANCELLED
+          default: ACTIVE
+        created_at:
+          type: string
+          format: date-time
+    Invoice:
+      type: object
+      required:
+      - id
+      - order_id
+      - invoice_number
+      - total_amount
+      - currency_code
+      properties:
+        id:
+          type: string
+        order_id:
+          type: string
+        invoice_number:
+          type: string
+        total_amount:
+          type: number
+        subtotal:
+          type: number
+        tax_total:
+          type: number
+        discount_total:
+          type: number
+        shipping_total:
+          type: number
+        currency_code:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - ISSUED
+          - PAID
+          - CANCELLED
+        pdf_url:
+          type: string
+          nullable: true
+        created_at:
           type: string
           format: date-time
