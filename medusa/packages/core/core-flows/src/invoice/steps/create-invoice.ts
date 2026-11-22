@@ -132,8 +132,8 @@ export const createInvoiceStep = createStep(
     // 6. Generate PDF document and store reference
     try {
       const pdfBuffer = await invoiceService.generatePdf(invoice.id)
-      let fileUrl = null
-      let fileId = null
+      let fileUrl: string | null = null
+      let fileId: string | null = null
 
       try {
         const fileService = container.resolve<any>(Modules.FILE)

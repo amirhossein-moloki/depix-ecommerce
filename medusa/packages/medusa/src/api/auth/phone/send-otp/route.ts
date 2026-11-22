@@ -1,7 +1,9 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
-import { normalizePhoneNumber } from "../../../../modules/providers/notification-sms/src/utils/phone-normalizer"
-import { SmsNotificationService } from "../../../../modules/providers/notification-sms/src/services/sms"
+import {
+  normalizePhoneNumber,
+  SmsNotificationService,
+} from "@medusajs/notification-sms"
 import { SendOtpRequestType } from "../validators"
 
 // In-memory fallback OTP storage if cache module service is not configured
@@ -61,6 +63,8 @@ export const POST = async (
 
   const smsService = new SmsNotificationService({ logger })
   await smsService.send({
+    channel: "sms",
+    template: "otp-verification",
     to: normalizedPhone,
     content: {
       text: `کد تایید ورود به سایت: ${code}`,

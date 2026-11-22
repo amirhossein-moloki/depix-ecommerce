@@ -22,7 +22,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     return res.json({ size_guide: null })
   }
 
-  res.json({
+  return res.json({
     size_guide: {
       id: size_guide.id,
       product_id: size_guide.product_id,

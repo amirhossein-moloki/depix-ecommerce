@@ -1,7 +1,6 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import * as fs from "fs"
-import * as path from "path"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -56,7 +55,7 @@ export const GET = async (
   }
 
   // Return download metadata response if file is stored externally or as mock
-  res.json({
+  return res.json({
     id: attachment.id,
     original_filename: attachment.original_filename,
     mime_type: attachment.mime_type,

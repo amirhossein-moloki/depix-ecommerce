@@ -1,4 +1,4 @@
-import { createFindParams, createSelectParams } from "@medusajs/medusa/api/utils/validators"
+import { createFindParams, createSelectParams } from "../../utils/validators"
 import { z } from "zod"
 
 export type AdminGetProductVideosParamsType = z.infer<typeof AdminGetProductVideosParams>
@@ -18,17 +18,17 @@ export const AdminGetProductVideoParams = createSelectParams()
 
 export type AdminCreateProductVideoType = z.infer<typeof AdminCreateProductVideo>
 export const AdminCreateProductVideo = z.object({
-  product_id: z.string({ required_error: "product_id is required" }),
+  product_id: z.string().min(1, "product_id is required"),
   variant_id: z.string().nullable().optional(),
   provider: z.string().optional(),
-  video_url: z.string({ required_error: "video_url is required" }),
+  video_url: z.string().min(1, "video_url is required"),
   video_id: z.string().nullable().optional(),
   title: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   thumbnail_url: z.string().nullable().optional(),
   sort_order: z.number().int().optional(),
   status: z.string().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 })
 
 export type AdminUpdateProductVideoType = z.infer<typeof AdminUpdateProductVideo>
@@ -43,11 +43,11 @@ export const AdminUpdateProductVideo = z.object({
   thumbnail_url: z.string().nullable().optional(),
   sort_order: z.number().int().optional(),
   status: z.string().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 })
 
 export type AdminReorderProductVideosType = z.infer<typeof AdminReorderProductVideos>
 export const AdminReorderProductVideos = z.object({
-  product_id: z.string({ required_error: "product_id is required" }),
+  product_id: z.string().min(1, "product_id is required"),
   video_ids: z.array(z.string()).min(1, "video_ids array cannot be empty"),
 })

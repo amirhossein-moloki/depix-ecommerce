@@ -14,7 +14,7 @@ export const adminMediaRoutesMiddlewares: MiddlewareRoute[] = [
   {
     method: ["GET"],
     matcher: "/admin/media",
-    middlewares: [validateAndTransformQuery(AdminGetMediaParams)],
+    middlewares: [validateAndTransformQuery(AdminGetMediaParams, {})],
   },
   {
     method: ["POST"],

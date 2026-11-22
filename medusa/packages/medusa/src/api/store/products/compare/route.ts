@@ -45,7 +45,7 @@ export const GET = async (
     }
   )
 
-  res.json({
+  return res.json({
     products,
     count,
     max_items: MAX_COMPARISON_ITEMS,

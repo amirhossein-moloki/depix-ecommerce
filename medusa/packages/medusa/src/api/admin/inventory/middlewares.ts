@@ -1,5 +1,4 @@
-import { MiddlewareRoute } from "@medusajs/framework/http"
-import { authenticate } from "../../utils/middlewares"
+import { authenticate, MiddlewareRoute } from "@medusajs/framework/http"
 
 export const adminCustomInventoryRoutesMiddlewares: MiddlewareRoute[] = [
   {

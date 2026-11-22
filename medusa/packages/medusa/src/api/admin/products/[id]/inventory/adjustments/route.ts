@@ -163,7 +163,7 @@ export const POST = async (
   }
 
   // Determine Target Variant
-  let targetVariant = null
+  let targetVariant: any = null
   if (variant_id) {
     targetVariant = (product.variants || []).find((v: any) => v.id === variant_id)
     if (!targetVariant) {
@@ -209,7 +209,7 @@ export const POST = async (
 
   const [invItem] = await remoteQuery(invQuery)
 
-  let level = null
+  let level: any = null
   if (location_id) {
     level = (invItem.location_levels || []).find(
       (l: any) => l.location_id === location_id
@@ -267,7 +267,7 @@ export const POST = async (
 
   const actorId = req.auth_context?.actor_id || "admin"
 
-  const transaction = await inventoryService.createInventoryTransaction({
+  const transaction = await (inventoryService as any).createInventoryTransaction({
     inventory_item_id: inventoryItemId,
     inventory_level_id: level.id,
     product_id: productId,

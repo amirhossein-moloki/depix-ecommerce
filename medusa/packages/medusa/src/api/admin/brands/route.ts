@@ -9,7 +9,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest<AdminGetBrandsParamsType>,
   res: MedusaResponse
 ) => {
-  const brandService = req.scope.resolve(Modules.BRAND)
+  const brandService = req.scope.resolve<any>(Modules.BRAND)
   const queryConfig = req.queryConfig || {
     pagination: { skip: req.validatedQuery?.offset || 0, take: req.validatedQuery?.limit || 20 },
   }
@@ -43,7 +43,7 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<AdminCreateBrandType>,
   res: MedusaResponse
 ) => {
-  const brandService = req.scope.resolve(Modules.BRAND)
+  const brandService = req.scope.resolve<any>(Modules.BRAND)
   const { name, slug, description, logo_id, is_active, metadata } = req.validatedBody
 
   // Enforce slug uniqueness
@@ -58,7 +58,7 @@ export const POST = async (
   // Validate logo_id reference if provided
   if (logo_id) {
     try {
-      const mediaService = req.scope.resolve(Modules.MEDIA)
+      const mediaService = req.scope.resolve<any>(Modules.MEDIA)
       const media = await mediaService.retrieveMedia(logo_id).catch(() => null)
       if (!media) {
         throw new MedusaError(

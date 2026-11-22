@@ -34,10 +34,10 @@ export const POST = async (
     )
   }
 
-  const mediaService = req.scope.resolve(Modules.MEDIA)
+  const mediaService = req.scope.resolve<any>(Modules.MEDIA)
   const customerId = req.auth_context?.actor_id || null
 
-  const attachments = []
+  const attachments: any[] = []
 
   for (const file of filesList) {
     // 5MB limit for review attachments

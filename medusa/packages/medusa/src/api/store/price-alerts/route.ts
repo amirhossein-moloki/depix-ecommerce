@@ -1,4 +1,4 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import { createPriceAlertWorkflow } from "@medusajs/core-flows"
 import {
@@ -7,7 +7,7 @@ import {
 } from "./validators"
 
 export const POST = async (
-  req: MedusaRequest<StoreCreatePriceAlertType>,
+  req: AuthenticatedMedusaRequest<StoreCreatePriceAlertType>,
   res: MedusaResponse
 ) => {
   const customerId = req.auth_context?.actor_id
@@ -49,7 +49,7 @@ export const POST = async (
 }
 
 export const GET = async (
-  req: MedusaRequest<StoreGetPriceAlertsParamsType>,
+  req: AuthenticatedMedusaRequest<StoreGetPriceAlertsParamsType>,
   res: MedusaResponse
 ) => {
   const customerId = req.auth_context?.actor_id
@@ -62,7 +62,7 @@ export const GET = async (
 
   const priceAlertService = req.scope.resolve<any>(Modules.PRICE_ALERT)
   const { limit = 20, offset = 0, status, product_id, variant_id, currency_code } =
-    req.validatedQuery || {}
+    (req.validatedQuery || {}) as any
 
   const filters: Record<string, any> = {
     customer_id: customerId,
@@ -78,7 +78,7 @@ export const GET = async (
     filters.variant_id = variant_id
   }
   if (currency_code) {
-    filters.currency_code = currency_code.toLowerCase()
+    filters.currency_code = String(currency_code).toLowerCase()
   }
 
   const [priceAlerts, count] = await priceAlertService.listAndCountPriceAlerts(

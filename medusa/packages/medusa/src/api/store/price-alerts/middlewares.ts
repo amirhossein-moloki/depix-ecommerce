@@ -24,8 +24,8 @@ export const storePriceAlertRoutesMiddlewares: MiddlewareRoute[] = [
     middlewares: [
       authenticate("customer", ["session", "bearer"]),
       validateAndTransformQuery(StoreGetPriceAlertsParams, {
-        defaults: { limit: 20, offset: 0 },
-        isQuery: true,
+        defaults: [],
+        isList: true,
       }),
     ],
   },

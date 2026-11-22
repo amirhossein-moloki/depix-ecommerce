@@ -32,7 +32,7 @@ export const AdminCreateCategory = z
     display_order: z.number().optional().default(0),
     rank: z.number().optional(),
     parent_category_id: z.string().nullable().optional(),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
 
@@ -52,7 +52,7 @@ export const AdminUpdateCategory = z
     display_order: z.number().optional(),
     rank: z.number().optional(),
     parent_category_id: z.string().nullable().optional(),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
 

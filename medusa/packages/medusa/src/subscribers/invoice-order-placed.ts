@@ -37,8 +37,6 @@ export const config: SubscriberConfig = {
   event: [
     OrderWorkflowEvents.PLACED,
     OrderWorkflowEvents.COMPLETED,
-    "order.placed",
-    "order.completed",
   ],
   context: {
     subscriberId: "invoice-order-placed-subscriber",

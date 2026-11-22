@@ -1,5 +1,8 @@
-import { validate } from "@medusajs/framework"
-import { authenticate, MiddlewareRoute } from "@medusajs/framework/http"
+import {
+  authenticate,
+  MiddlewareRoute,
+  validateAndTransformBody,
+} from "@medusajs/framework/http"
 import { StoreAddComparisonItem } from "./validators"
 
 export const storeComparisonRoutesMiddlewares: MiddlewareRoute[] = [
@@ -19,7 +22,7 @@ export const storeComparisonRoutesMiddlewares: MiddlewareRoute[] = [
       authenticate("customer", ["session", "bearer"], {
         allowUnauthenticated: true,
       }),
-      validate(StoreAddComparisonItem),
+      validateAndTransformBody(StoreAddComparisonItem),
     ],
   },
   {

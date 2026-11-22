@@ -9,7 +9,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const mediaService = req.scope.resolve(Modules.MEDIA)
+  const mediaService = req.scope.resolve<any>(Modules.MEDIA)
   const { id } = req.params
 
   const media = await mediaService.retrieveMedia(id).catch(() => null)
@@ -27,7 +27,7 @@ export const DELETE = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const mediaService = req.scope.resolve(Modules.MEDIA)
+  const mediaService = req.scope.resolve<any>(Modules.MEDIA)
   const { id } = req.params
 
   const media = await mediaService.retrieveMedia(id).catch(() => null)
@@ -40,7 +40,7 @@ export const DELETE = async (
 
   // Check usage across Brands
   try {
-    const brandService = req.scope.resolve(Modules.BRAND)
+    const brandService = req.scope.resolve<any>(Modules.BRAND)
     const [brands, brandCount] = await brandService.listAndCountBrands({ logo_id: media.id }).catch(() => [[], 0])
     if (brandCount > 0 || (brands && brands.length > 0)) {
       throw new MedusaError(
@@ -55,9 +55,11 @@ export const DELETE = async (
   // Check usage across Categories
   try {
     const productService = req.scope.resolve(Modules.PRODUCT)
-    const [cats, catCount] = await productService.listAndCountProductCategories({
-      "metadata.image_id": media.id,
-    }).catch(() => [[], 0])
+    const [cats, catCount] = await productService
+      .listAndCountProductCategories({
+        "metadata.image_id": media.id,
+      } as any)
+      .catch(() => [[], 0] as [any[], number])
     if (catCount > 0 || (cats && cats.length > 0)) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -66,12 +68,14 @@ export const DELETE = async (
     }
 
     // Check usage across Products
-    const [prods, prodCount] = await productService.listAndCountProducts({
-      $or: [
-        { thumbnail: media.url },
-        { "metadata.image_id": media.id },
-      ],
-    }).catch(() => [[], 0])
+    const [prods, prodCount] = await productService
+      .listAndCountProducts({
+        $or: [
+          { thumbnail: media.url },
+          { "metadata.image_id": media.id },
+        ],
+      } as any)
+      .catch(() => [[], 0] as [any[], number])
     if (prodCount > 0 || (prods && prods.length > 0)) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,

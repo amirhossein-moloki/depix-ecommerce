@@ -1,4 +1,4 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import { createStockAlertWorkflow } from "@medusajs/core-flows"
 import {
@@ -7,7 +7,7 @@ import {
 } from "./validators"
 
 export const POST = async (
-  req: MedusaRequest<StoreCreateStockAlertType>,
+  req: AuthenticatedMedusaRequest<StoreCreateStockAlertType>,
   res: MedusaResponse
 ) => {
   const customerId = req.auth_context?.actor_id
@@ -33,7 +33,7 @@ export const POST = async (
 }
 
 export const GET = async (
-  req: MedusaRequest<StoreGetStockAlertsParamsType>,
+  req: AuthenticatedMedusaRequest<StoreGetStockAlertsParamsType>,
   res: MedusaResponse
 ) => {
   const customerId = req.auth_context?.actor_id

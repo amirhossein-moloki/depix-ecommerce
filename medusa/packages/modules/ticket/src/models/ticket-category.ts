@@ -1,4 +1,5 @@
 import { model } from "@medusajs/framework/utils"
+import Ticket from "./ticket"
 
 const TicketCategory = model.define("TicketCategory", {
   id: model.id({ prefix: "tktcat" }).primaryKey(),
@@ -7,6 +8,9 @@ const TicketCategory = model.define("TicketCategory", {
   description: model.text().nullable(),
   is_active: model.boolean().default(true),
   sort_order: model.number().default(0),
+  tickets: model.hasMany(() => Ticket, {
+    mappedBy: "category",
+  }),
   metadata: model.json().nullable(),
 }).indexes([
   {

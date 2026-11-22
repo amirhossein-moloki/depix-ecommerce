@@ -1,6 +1,6 @@
 # Depix E-commerce Workspace
 
-Welcome to the **Depix E-commerce** workspace repository. This monorepo workspace integrates Medusa v2 e-commerce engine and Payload CMS v4 into a unified monorepo infrastructure behind an Nginx reverse proxy.
+Welcome to the **Depix E-commerce** workspace repository. This workspace houses the Medusa v2 e-commerce backend behind an Nginx reverse proxy with PostgreSQL and Redis infrastructure.
 
 ---
 
@@ -24,11 +24,11 @@ Welcome to the **Depix E-commerce** workspace repository. This monorepo workspac
 
 ## Project Overview
 
-Depix E-commerce is an enterprise-grade e-commerce monorepo workspace designed to deliver robust store operations alongside rich content management.
+Depix E-commerce is an enterprise-grade e-commerce workspace designed to deliver robust store operations.
 
 - **Medusa Backend (`medusa/`)**: Serves as the core headless e-commerce backend managing catalog, orders, carts, checkout, customer accounts, payment collection, and notification workflows.
-- **Payload CMS (`payload/`)**: Serves as the headless content management system and content admin interface for dynamic page building, media management, articles, and marketing content.
-- **Nginx Reverse Proxy (`infrastructure/nginx/`)**: Acts as the central gateway routing public and admin traffic to the appropriate application services.
+- **Blog (`Blog/`)**: Integrated as an independent Git submodule tracking [`amirhossein-moloki/Blog`](https://github.com/amirhossein-moloki/Blog.git) (Python/Django blog platform).
+- **Nginx Reverse Proxy (`infrastructure/nginx/`)**: Acts as the central gateway routing public and admin traffic to the backend service.
 
 ---
 
@@ -40,24 +40,22 @@ Depix E-commerce is an enterprise-grade e-commerce monorepo workspace designed t
                            │  Port: 80    │
                            └──────┬───────┘
                                   │
-             ┌────────────────────┴────────────────────┐
-             │                                         │
-       /api/medusa/                                 /payload/
-             │                                     / (fallback)
-             ▼                                         ▼
-      ┌─────────────┐                           ┌─────────────┐
-      │   Medusa    │                           │   Payload   │
-      │   Backend   │                           │    CMS      │
-      │  Port: 9000 │                           │  Port: 3000 │
-      └──────┬──────┘                           └──────┬──────┘
-             │                                         │
-             ├────────────────────┬────────────────────┘
-             │                    │
-             ▼                    ▼
-      ┌─────────────┐      ┌─────────────┐
-      │ PostgreSQL  │      │    Redis    │
-      │  Port: 5432 │      │  Port: 6379 │
-      └─────────────┘      └─────────────┘
+                        /api/medusa/ & / (fallback)
+                                  │
+                                  ▼
+                           ┌─────────────┐
+                           │   Medusa    │
+                           │   Backend   │
+                           │  Port: 9000 │
+                           └──────┬──────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │                           │
+                    ▼                           ▼
+             ┌─────────────┐             ┌─────────────┐
+             │ PostgreSQL  │             │    Redis    │
+             │  Port: 5432 │             │  Port: 6379 │
+             └─────────────┘             └─────────────┘
 ```
 
 ---
@@ -67,25 +65,20 @@ Depix E-commerce is an enterprise-grade e-commerce monorepo workspace designed t
 ### E-Commerce Backend (Medusa)
 - **Product & Catalog Management**: Product categories, variants, tags, types, collections, pricing rules, and inventory management.
 - **Iranian Payment Gateway Provider Integration**: Native custom provider module (`@medusajs/payment-gateway`) supporting Mellat, Zibal, Zarinpal, and Saman gateways.
+- **Customer Wallet Module**: Internal customer wallet ledger (`@medusajs/wallet`) and `pp_wallet` payment provider (`@medusajs/payment-wallet`).
 - **SMS & Unified Notifications**: Agnostic SMS notification provider (`@medusajs/notification-sms`) supporting Iranian gateways (`kavenegar`, `smsir`, `melipayamak`, and local `fake` mock mode) with phone normalization (E.164 conversion) and log masking.
 - **Product Video Module**: Custom product video extension (`@medusajs/product-video`) with support for YouTube, Vimeo, and Aparat video extraction and validation.
-- **Customer Feature Suite**: Integrated wishlist management, product comparison, price alerts, stock alerts, and customer reviews.
+- **Customer Feature Suite**: Integrated wishlist management, product comparison, price alerts, stock alerts, support ticketing, size guides, and customer reviews.
 - **Structured Data (SEO)**: Store Product JSON-LD serialization (`generateProductJsonLd`, `serializeJsonLd`) supporting `Schema.org/Product` and `Schema.org/VideoObject` via endpoint `GET /store/products/:id/json-ld`.
-
-### Content Management (Payload CMS)
-- **CMS Collections & Globals**: Flexible content model for pages, media, categories, posts, users, and site configurations.
-- **Rich Text & Lexical Editor**: Advanced rich content creation with structured JSON-LD rendering (`generateArticleJsonLd`) and secure HTML escaping.
-- **Comments & Moderation**: Comments collection with threaded replies and moderation workflows (`pending`, `approved`, `rejected`, `spam`).
 
 ---
 
 ## Technology Stack
 
-- **Runtimes & Tooling**: Node.js v20+, TypeScript, Corepack, Turborepo
-- **Package Managers**: Yarn v3 (Medusa workspace), PNPM v11 (Payload workspace)
+- **Runtimes & Tooling**: Node.js v22+, TypeScript, Corepack, Turborepo
+- **Package Manager**: Yarn v3 (Medusa workspace)
 - **E-Commerce Framework**: Medusa v2
-- **CMS Framework**: Payload CMS v4 (Next.js-based)
-- **Databases**: PostgreSQL 16 (via MikroORM / Drizzle), Redis 7
+- **Databases**: PostgreSQL 16 (via MikroORM), Redis 7
 - **Reverse Proxy**: Nginx (Alpine)
 - **Containerization**: Docker & Docker Compose
 
@@ -102,16 +95,13 @@ depix-ecommerce/
 │   │   └── plugins/        # Custom Medusa plugins (loyalty, draft-order)
 │   ├── package.json        # Yarn monorepo configuration
 │   └── turbo.json          # Turbo build/test pipeline definitions
-├── payload/                # Payload CMS v4 Workspace
-│   ├── packages/           # Payload core packages & official plugins
-│   ├── templates/          # Website and e-commerce templates
-│   ├── package.json        # PNPM monorepo configuration
-│   └── turbo.json          # Payload build pipeline
+├── Blog/                   # Blog service (Git submodule -> amirhossein-moloki/Blog)
 ├── infrastructure/         # Shared Infrastructure Configurations
 │   └── nginx/              # Nginx reverse proxy routing rules
 │       └── nginx.conf
 ├── docker-compose.yml      # Local container orchestration
 ├── .env.example            # Environment variables template
+├── .gitmodules             # Git submodule configuration
 ├── .gitignore              # Git ignore rules
 └── README.md               # Repository documentation
 ```
@@ -120,18 +110,23 @@ depix-ecommerce/
 
 ## Prerequisites
 
-- **Node.js**: v20.x or higher
-- **Corepack**: Enabled (`corepack enable`) to manage Yarn v3 and PNPM v11.
+- **Node.js**: v22.x (for local development)
+- **Corepack**: Enabled (`corepack enable`) to manage Yarn v3.
 - **Docker**: Docker Desktop or Docker Engine with Docker Compose v2+.
 
 ---
 
 ## Installation & Setup
 
-1. **Clone the Repository**:
+1. **Clone the Repository (with Submodules)**:
    ```bash
-   git clone <repository-url>
+   git clone --recursive <repository-url>
    cd depix-ecommerce
+   ```
+
+   If you already cloned the repository without `--recursive`, initialize the `Blog` submodule:
+   ```bash
+   git submodule update --init --recursive
    ```
 
 2. **Configure Environment Variables**:
@@ -151,13 +146,9 @@ depix-ecommerce/
    cd ..
    ```
 
-   For Payload CMS:
-   ```bash
-   cd payload
-   corepack enable
-   pnpm install
-   cd ..
-   ```
+4. **Blog Submodule (`Blog/`)**:
+   `Blog/` tracks `https://github.com/amirhossein-moloki/Blog.git` (Django/Daphne/Celery/PostgreSQL/Redis/Nginx) as an independent Git submodule.
+   Note that `Blog/docker-compose.yml` binds host port `80` by default; if running the root `depix-ecommerce` and `Blog` Docker Compose stacks simultaneously, set `NGINX_PORT=8080` (or another free port) in the root `.env` and copy `Blog/.env.example` to `Blog/.env`.
 
 ---
 
@@ -169,21 +160,18 @@ All environment configurations are loaded from `.env` in the root workspace dire
 |---|---|---|---|
 | `NODE_ENV` | Application environment mode (`development`, `production`, `test`) | Optional | `development` |
 | `NGINX_PORT` | Port for Nginx reverse proxy | Optional | `80` |
-| `POSTGRES_USER` | PostgreSQL superuser username | **Required** | - |
-| `POSTGRES_PASSWORD` | PostgreSQL superuser password | **Required** | - |
+| `POSTGRES_USER` | PostgreSQL superuser username | Optional | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL superuser password | Optional | `postgres` |
 | `POSTGRES_DB` | Default database name for PostgreSQL container | Optional | `depix_db` |
 | `POSTGRES_PORT` | PostgreSQL external port binding | Optional | `5432` |
 | `MEDUSA_DB_NAME` | Database name for Medusa engine | Optional | `medusa_db` |
-| `PAYLOAD_DB_NAME` | Database name for Payload CMS | Optional | `payload_db` |
-| `MEDUSA_DATABASE_URL` | Direct connection string for Medusa database | **Required** | - |
-| `PAYLOAD_DATABASE_URL` | Direct connection string for Payload database | **Required** | - |
+| `MEDUSA_DATABASE_URL` | Direct connection string for Medusa database | Optional | `postgres://postgres:postgres@postgres:5432/depix_db?sslmode=disable` |
 | `REDIS_PORT` | Redis external port binding | Optional | `6379` |
 | `REDIS_URL` | Redis connection URL | Optional | `redis://redis:6379` |
 | `MEDUSA_PORT` | Port for Medusa server | Optional | `9000` |
-| `MEDUSA_JWT_SECRET` | Secret key for signing Medusa JWT tokens | **Required** | - |
-| `MEDUSA_COOKIE_SECRET` | Secret key for signing Medusa cookies | **Required** | - |
-| `PAYLOAD_PORT` | Port for Payload CMS server | Optional | `3000` |
-| `PAYLOAD_SECRET` | Secret key for signing Payload sessions/tokens | **Required** | - |
+| `MEDUSA_JWT_SECRET` | Secret key for signing Medusa JWT tokens | Optional | `supersecret` |
+| `MEDUSA_COOKIE_SECRET` | Secret key for signing Medusa cookies | Optional | `supersecret` |
+| `DISABLE_MEDUSA_ADMIN` | Disable Medusa Admin bundle in headless server mode | Optional | `true` |
 | `SMS_PROVIDER` | SMS Provider (`kavenegar`, `smsir`, `melipayamak`, `fake`) | Optional | `fake` |
 | `SMS_API_KEY` | API key for the SMS gateway provider | Optional | - |
 | `SMS_SENDER` | Configured SMS sender line or sender ID | Optional | - |
@@ -209,12 +197,12 @@ All environment configurations are loaded from `.env` in the root workspace dire
 
 ## Running the Application
 
-### 1. Docker Compose (Full Stack)
+### 1. Docker Compose (Full Backend Stack)
 
-Start all services (PostgreSQL, Redis, Medusa, Payload, and Nginx) in detached mode:
+Build and start all backend services (PostgreSQL, Redis, Medusa, and Nginx) in detached mode:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
 View application logs:
@@ -227,18 +215,12 @@ Stop all running containers:
 docker compose down
 ```
 
-### 2. Local Development (Individual Services)
+### 2. Local Development (Medusa)
 
-To run Medusa in development mode locally:
+To run Medusa locally:
 ```bash
 cd medusa
-yarn dev
-```
-
-To run Payload CMS in development mode locally:
-```bash
-cd payload
-pnpm dev
+yarn start
 ```
 
 ---
@@ -253,8 +235,7 @@ When running through Docker Compose, Nginx routes incoming requests on port `80`
 |---|---|---|
 | `/health` | Nginx Inline (`200 OK`) | Reverse proxy healthcheck endpoint |
 | `/api/medusa/` | Medusa (`http://medusa:9000/`) | Medusa Store & Admin API endpoints |
-| `/payload/` | Payload CMS (`http://payload:3000/`) | Payload CMS admin & API endpoints |
-| `/` | Payload CMS (`http://payload:3000`) | Default storefront fallback route |
+| `/` | Medusa (`http://medusa:9000`) | Default backend fallback route |
 
 ### API Specification & Documentation UIs (Swagger UI & ReDoc)
 
@@ -263,7 +244,6 @@ The platform provides standard OpenAPI v3 spec generation alongside two compleme
 - **OpenAPI v3 Specification**: Available via `GET /api/medusa/openapi.json` for API schema consumers, Postman imports, and SDK generation.
 - **Swagger UI**: Interactive API exploration and testing interface enabling direct request execution (`Try it out`), request header configuration, and live response inspection.
 - **ReDoc UI**: Clean, three-panel responsive documentation interface providing structured schema rendering, search capabilities, and code samples for developer onboarding.
-- **GraphQL Playground**: Interactive GraphQL query editor and schema explorer hosted at `/payload/api/graphql-playground` for Payload CMS content models.
 
 ### Key Medusa Store API Endpoints
 
@@ -285,13 +265,12 @@ The platform provides standard OpenAPI v3 spec generation alongside two compleme
 ### Authentication Mechanisms
 
 - **Medusa Backend**: Supports JWT bearer tokens and HTTP session cookies (`MEDUSA_JWT_SECRET`, `MEDUSA_COOKIE_SECRET`).
-- **Payload CMS**: Uses JWT-based cookie sessions managed by Payload Auth.
 
 ---
 
 ## Database & Data Architecture
 
-- **PostgreSQL 16**: Primary relational database service powering both applications via separate logical databases (`MEDUSA_DB_NAME` and `PAYLOAD_DB_NAME`).
+- **PostgreSQL 16**: Primary relational database service powering the Medusa e-commerce backend (`MEDUSA_DB_NAME` / `POSTGRES_DB`).
 - **Redis 7**: Used by Medusa for session caching, event bus messaging, and workflow execution states.
 
 ---
@@ -316,24 +295,9 @@ yarn test
 yarn test:integration:http
 ```
 
-### Payload CMS Workspace Commands
-
-```bash
-cd payload
-
-# Run static code linting
-pnpm lint
-
-# Run unit tests
-pnpm test:unit
-
-# Run integration tests
-pnpm test:int
-```
-
 ---
 
 ## Deployment Overview
 
-- **Production Docker Strategy**: The included `docker-compose.yml` provides containerized orchestration using Node 20 Alpine containers for Medusa and Payload, PostgreSQL 16 Alpine, Redis 7 Alpine, and Nginx Alpine.
-- **Environment Isolation**: Production deployments require establishing proper `DATABASE_URL` values, secure secrets (`MEDUSA_JWT_SECRET`, `MEDUSA_COOKIE_SECRET`, `PAYLOAD_SECRET`), and binding Nginx to SSL/TLS certificates (port `443`).
+- **Production Docker Strategy**: The included `docker-compose.yml` provides containerized orchestration using a custom Node 22 Medusa image, PostgreSQL 16 Alpine, Redis 7 Alpine, and Nginx Alpine.
+- **Environment Isolation**: Production deployments require establishing proper `DATABASE_URL` values, secure secrets (`MEDUSA_JWT_SECRET`, `MEDUSA_COOKIE_SECRET`), and binding Nginx to SSL/TLS certificates (port `443`).

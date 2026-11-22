@@ -34,6 +34,8 @@ export default class StoreModuleService
     Store: { dto: StoreTypes.StoreDTO }
     StoreCurrency: { dto: StoreTypes.StoreCurrencyDTO }
     StoreLocale: { dto: StoreTypes.StoreLocaleDTO }
+    StoreSetting: { dto: any }
+    StoreAddress: { dto: any }
   }>({ Store, StoreCurrency, StoreLocale, StoreSetting, StoreAddress })
   implements IStoreModuleService
 {

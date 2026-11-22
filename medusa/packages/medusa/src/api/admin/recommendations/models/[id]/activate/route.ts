@@ -9,7 +9,7 @@ export const POST = async (
   res: MedusaResponse
 ) => {
   const modelId = req.params.id
-  const recService = req.scope.resolve(Modules.RECOMMENDATION)
+  const recService = req.scope.resolve<any>(Modules.RECOMMENDATION)
 
   try {
     const activatedModel = await recService.activateModel(modelId)

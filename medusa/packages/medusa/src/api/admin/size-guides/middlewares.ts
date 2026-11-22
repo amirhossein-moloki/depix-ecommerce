@@ -14,7 +14,7 @@ export const adminSizeGuideRoutesMiddlewares: MiddlewareRoute[] = [
   {
     method: ["GET"],
     matcher: "/admin/size-guides/templates",
-    middlewares: [validateAndTransformQuery(AdminGetSizeGuideTemplatesParams)],
+    middlewares: [validateAndTransformQuery(AdminGetSizeGuideTemplatesParams, {})],
   },
   {
     method: ["POST"],

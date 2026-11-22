@@ -7,20 +7,25 @@ export enum SenderType {
   USER = "user",
 }
 
-const TicketMessage = model.define("TicketMessage", {
-  id: model.id({ prefix: "tktmsg" }).primaryKey(),
-  ticket_id: model.text().index(),
-  ticket: model.belongsTo(() => Ticket, {
-    mappedBy: "messages",
-  }),
-  sender_id: model.text().index(),
-  sender_type: model.enum(SenderType).default(SenderType.CUSTOMER),
-  message: model.text(),
-  is_internal_note: model.boolean().default(false),
-  attachments: model.hasMany(() => TicketAttachment, {
-    mappedBy: "message",
-  }),
-  metadata: model.json().nullable(),
-})
+const TicketMessage = model
+  .define("TicketMessage", {
+    id: model.id({ prefix: "tktmsg" }).primaryKey(),
+    ticket: model.belongsTo(() => Ticket, {
+      mappedBy: "messages",
+    }),
+    sender_id: model.text().index(),
+    sender_type: model.enum(SenderType).default(SenderType.CUSTOMER),
+    message: model.text(),
+    is_internal_note: model.boolean().default(false),
+    attachments: model.hasMany(() => TicketAttachment, {
+      mappedBy: "message",
+    }),
+    metadata: model.json().nullable(),
+  })
+  .indexes([
+    {
+      on: ["ticket_id"],
+    },
+  ])
 
 export default TicketMessage

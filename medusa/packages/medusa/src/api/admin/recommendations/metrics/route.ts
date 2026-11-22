@@ -8,7 +8,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const recService = req.scope.resolve(Modules.RECOMMENDATION)
+  const recService = req.scope.resolve<any>(Modules.RECOMMENDATION)
   const activeModel = await recService.getActiveModel()
 
   res.json({

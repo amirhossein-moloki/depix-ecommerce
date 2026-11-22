@@ -13,7 +13,7 @@ export const adminCategoryRoutesMiddlewares: MiddlewareRoute[] = [
   {
     method: ["GET"],
     matcher: "/admin/categories",
-    middlewares: [validateAndTransformQuery(AdminGetCategoriesParams)],
+    middlewares: [validateAndTransformQuery(AdminGetCategoriesParams, {})],
   },
   {
     method: ["POST"],

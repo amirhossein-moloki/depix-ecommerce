@@ -9,7 +9,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const brandService = req.scope.resolve(Modules.BRAND)
+  const brandService = req.scope.resolve<any>(Modules.BRAND)
   const { id } = req.params
 
   let brand = await brandService.retrieveBrand(id).catch(() => null)
@@ -33,7 +33,7 @@ export const PUT = async (
   req: AuthenticatedMedusaRequest<AdminUpdateBrandType>,
   res: MedusaResponse
 ) => {
-  const brandService = req.scope.resolve(Modules.BRAND)
+  const brandService = req.scope.resolve<any>(Modules.BRAND)
   const { id } = req.params
 
   let existing = await brandService.retrieveBrand(id).catch(() => null)
@@ -63,7 +63,7 @@ export const PUT = async (
 
   if (logo_id) {
     try {
-      const mediaService = req.scope.resolve(Modules.MEDIA)
+      const mediaService = req.scope.resolve<any>(Modules.MEDIA)
       const media = await mediaService.retrieveMedia(logo_id).catch(() => null)
       if (!media) {
         throw new MedusaError(
@@ -96,7 +96,7 @@ export const DELETE = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const brandService = req.scope.resolve(Modules.BRAND)
+  const brandService = req.scope.resolve<any>(Modules.BRAND)
   const { id } = req.params
 
   const existing = await brandService.retrieveBrand(id).catch(() => null)
@@ -110,13 +110,15 @@ export const DELETE = async (
   // Check if brand is referenced by products
   try {
     const productService = req.scope.resolve(Modules.PRODUCT)
-    const [referencedProducts] = await productService.listAndCountProducts({
-      $or: [
-        { "metadata.brand_id": existing.id },
-        { "metadata.brand": existing.name },
-        { "metadata.brand_slug": existing.slug },
-      ],
-    }).catch(() => [[], 0])
+    const [referencedProducts] = await productService
+      .listAndCountProducts({
+        $or: [
+          { "metadata.brand_id": existing.id },
+          { "metadata.brand": existing.name },
+          { "metadata.brand_slug": existing.slug },
+        ],
+      } as any)
+      .catch(() => [[], 0] as [any[], number])
 
     if (referencedProducts && referencedProducts.length > 0) {
       throw new MedusaError(

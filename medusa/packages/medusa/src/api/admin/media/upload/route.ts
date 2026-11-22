@@ -34,11 +34,11 @@ export const POST = async (
     )
   }
 
-  const mediaService = req.scope.resolve(Modules.MEDIA)
+  const mediaService = req.scope.resolve<any>(Modules.MEDIA)
   const uploaderId =
     req.auth_context?.actor_id || (req as any).user?.id || null
 
-  const createdMediaItems = []
+  const createdMediaItems: any[] = []
 
   for (const file of filesList) {
     const { originalFilename, fileKey, mimeType, fileSize, dimensions } =

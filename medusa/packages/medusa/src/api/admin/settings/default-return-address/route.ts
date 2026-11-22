@@ -7,7 +7,8 @@ export const PUT = async (
   res: MedusaResponse
 ) => {
   const service = new StoreSettingsService(req.scope)
-  const addressId = req.body?.addressId || req.body?.address_id
+  const body = (req.body || {}) as any
+  const addressId = body.addressId || body.address_id
   if (!addressId) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "addressId is required.")
   }

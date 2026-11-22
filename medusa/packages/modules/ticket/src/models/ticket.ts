@@ -23,7 +23,6 @@ const Ticket = model
     id: model.id({ prefix: "tkt" }).primaryKey(),
     ticket_number: model.text().unique(),
     user_id: model.text().index(),
-    category_id: model.text().index(),
     category: model.belongsTo(() => TicketCategory, {
       mappedBy: "tickets",
     }).nullable(),
@@ -50,6 +49,9 @@ const Ticket = model
     },
     {
       on: ["assigned_to", "status"],
+    },
+    {
+      on: ["category_id"],
     },
     {
       on: ["category_id", "status"],

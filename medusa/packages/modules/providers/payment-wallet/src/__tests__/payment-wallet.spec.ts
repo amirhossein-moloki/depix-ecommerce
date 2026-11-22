@@ -1,7 +1,6 @@
 import MedusaWalletPaymentProvider from "../services/payment-wallet-provider"
-import { WalletServiceContract } from "@medusajs/wallet"
 
-const fn = typeof vi !== "undefined" ? vi.fn : jest.fn
+const fn = typeof (globalThis as any).vi !== "undefined" ? (globalThis as any).vi.fn : jest.fn
 
 describe("MedusaWalletPaymentProvider (pp_wallet)", () => {
   let mockWalletService: any

@@ -8,7 +8,7 @@ export const POST = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const recService = req.scope.resolve(Modules.RECOMMENDATION)
+  const recService = req.scope.resolve<any>(Modules.RECOMMENDATION)
 
   try {
     const rolledBackModel = await recService.rollbackModel()
@@ -17,12 +17,12 @@ export const POST = async (
         message: "No archived model found to rollback to",
       })
     }
-    res.json({
+    return res.json({
       model: rolledBackModel,
       message: "Rolled back to previous model version successfully",
     })
   } catch (err: any) {
-    res.status(400).json({
+    return res.status(400).json({
       message: "Model rollback failed",
       error: err?.message || String(err),
     })

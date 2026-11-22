@@ -1,10 +1,10 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"
 import { createStockAlertWorkflow } from "@medusajs/core-flows"
 import { StoreCreateProductStockAlertType } from "./validators"
 
 export const POST = async (
-  req: MedusaRequest<StoreCreateProductStockAlertType>,
+  req: AuthenticatedMedusaRequest<StoreCreateProductStockAlertType>,
   res: MedusaResponse
 ) => {
   const customerId = req.auth_context?.actor_id

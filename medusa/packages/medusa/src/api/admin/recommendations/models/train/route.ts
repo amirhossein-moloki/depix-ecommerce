@@ -8,9 +8,10 @@ export const POST = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
+  const body = (req.body || {}) as any
   const pipeline = new OfflineTrainingPipeline({
-    lookbackDays: req.body?.lookback_days,
-    validationSplitRatio: req.body?.validation_ratio,
+    lookbackDays: body.lookback_days,
+    validationSplitRatio: body.validation_ratio,
   })
 
   try {

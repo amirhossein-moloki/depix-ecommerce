@@ -34,7 +34,7 @@ export const GET = async (
     return fs.createReadStream(filePath).pipe(res)
   }
 
-  res.json({
+  return res.json({
     id: attachment.id,
     original_filename: attachment.original_filename,
     mime_type: attachment.mime_type,

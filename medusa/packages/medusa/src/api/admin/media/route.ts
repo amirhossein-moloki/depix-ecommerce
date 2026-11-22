@@ -9,7 +9,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest<AdminGetMediaParamsType>,
   res: MedusaResponse
 ) => {
-  const mediaService = req.scope.resolve(Modules.MEDIA)
+  const mediaService = req.scope.resolve<any>(Modules.MEDIA)
   const queryConfig = req.queryConfig || {
     pagination: { skip: req.validatedQuery?.offset || 0, take: req.validatedQuery?.limit || 20 },
   }

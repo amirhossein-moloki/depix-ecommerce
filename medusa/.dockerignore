@@ -1,0 +1,10 @@
+www
+node_modules
+.git
+.turbo
+**/dist
+**/.medusa
+**/coverage
+*.log
+.env
+.env.*

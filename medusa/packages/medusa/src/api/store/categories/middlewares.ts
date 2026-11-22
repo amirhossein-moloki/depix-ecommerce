@@ -8,7 +8,7 @@ export const storeCategoryRoutesMiddlewares: MiddlewareRoute[] = [
   {
     method: ["GET"],
     matcher: "/store/categories",
-    middlewares: [validateAndTransformQuery(StoreGetCategoriesParams)],
+    middlewares: [validateAndTransformQuery(StoreGetCategoriesParams, {})],
   },
   {
     method: ["GET"],

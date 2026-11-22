@@ -8,7 +8,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const brandService = req.scope.resolve(Modules.BRAND)
+  const brandService = req.scope.resolve<any>(Modules.BRAND)
   const { id } = req.params
 
   let brand = await brandService.retrieveBrand(id).catch(() => null)

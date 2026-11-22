@@ -1,6 +1,5 @@
 import {
   detectMimeType,
-  getSafeExtension,
   getImageDimensions,
   validateAndPrepareUpload,
 } from "../utils/media-upload-helper"

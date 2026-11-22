@@ -113,7 +113,7 @@ export const PUT = async (
   // Validate image_id if updated
   if (image_id) {
     try {
-      const mediaService = req.scope.resolve(Modules.MEDIA)
+      const mediaService = req.scope.resolve<any>(Modules.MEDIA)
       const media = await mediaService.retrieveMedia(image_id).catch(() => null)
       if (!media) {
         throw new MedusaError(
@@ -148,7 +148,7 @@ export const PUT = async (
   }
   updateData.metadata = mergedMetadata
 
-  const updated = await productService.updateProductCategories(updateData)
+  const updated = await (productService as any).updateProductCategories(updateData)
 
   res.json({ category: formatCategory(updated) })
 }
@@ -169,7 +169,7 @@ export const DELETE = async (
   }
 
   // Delete category while preserving product records
-  await productService.deleteProductCategories(existing.id)
+  await (productService as any).deleteProductCategories(existing.id)
 
   res.json({
     id: existing.id,

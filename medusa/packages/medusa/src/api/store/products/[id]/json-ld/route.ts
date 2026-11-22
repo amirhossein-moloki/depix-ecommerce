@@ -107,5 +107,5 @@ export const GET = async (
     return res.send(serializeJsonLd(jsonLd))
   }
 
-  res.json({ json_ld: jsonLd })
+  return res.json({ json_ld: jsonLd })
 }

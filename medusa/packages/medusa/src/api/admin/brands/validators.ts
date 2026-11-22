@@ -28,7 +28,7 @@ export const AdminCreateBrand = z
     description: z.string().nullable().optional(),
     logo_id: z.string().nullable().optional(),
     is_active: z.boolean().optional().default(true),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
 
@@ -45,7 +45,7 @@ export const AdminUpdateBrand = z
     description: z.string().nullable().optional(),
     logo_id: z.string().nullable().optional(),
     is_active: z.boolean().optional(),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
 

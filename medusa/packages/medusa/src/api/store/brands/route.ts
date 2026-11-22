@@ -9,7 +9,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest<StoreGetBrandsParamsType>,
   res: MedusaResponse
 ) => {
-  const brandService = req.scope.resolve(Modules.BRAND)
+  const brandService = req.scope.resolve<any>(Modules.BRAND)
   const queryConfig = req.queryConfig || {
     pagination: { skip: req.validatedQuery?.offset || 0, take: req.validatedQuery?.limit || 20 },
   }

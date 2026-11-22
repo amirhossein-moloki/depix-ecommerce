@@ -29,7 +29,7 @@ export const POST = async (
   const productId = req.params.id
 
   const payload = {
-    ...req.body,
+    ...((req.body as Record<string, any>) || {}),
     product_id: productId,
   }
 

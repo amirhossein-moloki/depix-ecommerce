@@ -3,10 +3,9 @@
 
 ## Executive Summary
 
-This document presents a comprehensive, evidence-based **Full Technical Audit** for the **Depix E-commerce** workspace (`depix-ecommerce`). The repository is structured as a monorepo containing two core framework codebases and shared infrastructure:
+This document presents a comprehensive, evidence-based **Full Technical Audit** for the **Depix E-commerce** workspace (`depix-ecommerce`). The repository is structured around the e-commerce backend and shared infrastructure (with CMS/blog functionality decoupled into the standalone `Blog` repository):
 1. **`medusa/`**: Medusa v2 framework source repository operating as the E-commerce Backend engine.
-2. **`payload/`**: Payload CMS v4 framework source repository operating as the Content Backend / CMS / Admin engine.
-3. **`infrastructure/`**: Centralized Docker configurations, Nginx reverse proxy configuration (`infrastructure/nginx/nginx.conf`), and orchestration files.
+2. **`infrastructure/`**: Centralized Docker configurations, Nginx reverse proxy configuration (`infrastructure/nginx/nginx.conf`), and orchestration files.
 
 ### Scope Change Announcement
 > **The frontend/storefront is completely removed from this project scope.**
@@ -24,8 +23,8 @@ Backend APIs may still expose Store APIs where required by Medusa architecture, 
 ---
 
 ### Audit Principles & Platform-Aware Methodology
-- **API-First & Platform-Aware:** Capabilities provided natively by Medusa v2 or Payload CMS v4 through their APIs, modules, and application runtimes are evaluated based on platform availability rather than requiring redundant custom code reimplementations.
-- **Project Application Runtime Verification:** Features are verified against application startup entrypoints (`docker-compose.yml` services `depix-medusa` and `depix-payload`), reverse proxy routes (`infrastructure/nginx/nginx.conf`), and framework package APIs.
+- **API-First & Platform-Aware:** Capabilities provided natively by Medusa v2 through its APIs, modules, and application runtime are evaluated based on platform availability rather than requiring redundant custom code reimplementations.
+- **Project Application Runtime Verification:** Features are verified against application startup entrypoints (`docker-compose.yml` service `depix-medusa`), reverse proxy routes (`infrastructure/nginx/nginx.conf`), and framework package APIs.
 - **Allowed Statuses:**
   - 🟢 **IMPLEMENTED**: Backend/CMS/Platform capability is fully implemented, verified, and usable.
   - 🟡 **PARTIAL**: Meaningful backend implementation exists, but required backend functionality is incomplete.
@@ -59,7 +58,7 @@ $$\text{Actual Completion} = \frac{\text{IMPLEMENTED} + (0.5 \times \text{PARTIA
 ### B. Platform Capability Coverage Score
 $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{INTEGRATION\_REQUIRED}}{\text{Total In-Scope Features}} = \frac{71 + 1 + 8}{81} = 98.77\%$$
 
-*Measures backend and platform capabilities supported natively or via custom workspace modules by Medusa v2 and Payload CMS v4 in this application runtime.*
+*Measures backend and platform capabilities supported natively or via custom workspace modules by Medusa v2 in this application runtime.*
 
 ---
 
@@ -269,19 +268,19 @@ $$\text{Platform Coverage} = \frac{\text{IMPLEMENTED} + \text{PARTIAL} + \text{I
 
 ### Evidence
 - **Platform Capability:** YES
-- **Framework Module:** `@medusajs/admin` / `@payloadcms/ui`
-- **API Surface:** Admin Dashboard & CMS UI
-- **API Endpoints:** `GET /api/medusa/admin/`, `GET /payload/admin/`
-- **Framework Source:** `medusa/packages/admin`, `payload/packages/ui`
-- **Project Application:** Configured in `docker-compose.yml` (`depix-medusa` port 9000 and `depix-payload` port 3000).
-- **Runtime:** Verified via Nginx proxy (`/api/medusa/` and `/payload/`).
+- **Framework Module:** `@medusajs/admin`
+- **API Surface:** Admin Dashboard UI & API
+- **API Endpoints:** `GET /api/medusa/admin/`
+- **Framework Source:** `medusa/packages/admin`
+- **Project Application:** Configured in `docker-compose.yml` (`depix-medusa` port 9000).
+- **Runtime:** Verified via Nginx proxy (`/api/medusa/`).
 - **Configuration:** Natively configured and enabled in runtime entrypoint.
 - **External Integration:** None required.
 - **Custom Project Extension:** None required.
-- **Tests:** `medusa/integration-tests`, `payload/test`
+- **Tests:** `medusa/integration-tests`
 
 ### Evidence Trace
-Medusa Admin dashboard package (`medusa/packages/admin`) and Payload CMS Admin UI (`payload/packages/ui`) are served natively through runtime application services in `docker-compose.yml` and reverse-proxied via `infrastructure/nginx/nginx.conf`.
+Medusa Admin dashboard package (`medusa/packages/admin`) is served through the `depix-medusa` service in `docker-compose.yml` and reverse-proxied via `infrastructure/nginx/nginx.conf` (can be disabled in headless mode via `DISABLE_MEDUSA_ADMIN=true`).
 
 ### Missing / Remaining Work
 None required for core feature availability.
@@ -344,28 +343,14 @@ None required for core feature availability.
 
 ### 16. مدیریت بنر (Banner Management)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Decoupled from E-commerce Backend)
 
-**Implementation:** 100%
+**Reason:** CMS/content banner management was removed from the Medusa backend scope; content & media endpoints are managed outside the e-commerce backend via the standalone `Blog` repository.
 
 ### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `payload` (`payload/packages/payload`)
-- **API Surface:** CMS Admin UI & REST/GraphQL API
-- **API Endpoints:** `GET/POST /payload/api/globals/banners`, `GET/POST /payload/api/banners`
-- **Framework Source:** `payload/packages/payload/src/globals`, `payload/packages/payload/src/collections`
-- **Project Application:** Served via `depix-payload` container in `docker-compose.yml`.
-- **Runtime:** Verified via `/payload/` endpoint.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Banner and slide management capabilities are natively provided by Payload CMS Globals and Collections, exposed via Admin UI and REST API in the active `depix-payload` service.
-
-### Missing / Remaining Work
-None required for core feature availability.
+- **Platform Capability:** N/A (Decoupled CMS scope)
+- **Framework Source:** N/A (Removed from Medusa backend)
+- **Missing / Remaining Work:** Managed outside the Medusa e-commerce backend.
 
 ---
 
@@ -1400,190 +1385,57 @@ None required for core feature availability.
 
 ### 56. وبلاگ (Blog Base System)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `payload` (`payload/packages/payload`)
-- **API Surface:** CMS Admin UI & REST/GraphQL API
-- **API Endpoints:** `GET/POST /payload/api/posts`
-- **Framework Source:** `payload/packages/payload/src/collections`
-- **Project Application:** Payload CMS blog collection engine served in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/posts` route.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Complete CMS blog publishing system (collections, posts, draft/publish workflow) is natively provided by Payload CMS in the runtime application.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend and is provided by the separate `Blog` repository integrated as a Git submodule (`Blog/`).
 
 ---
 
 ### 57. مدیریت مقالات (Article Management)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `@payloadcms/richtext-lexical` & `payload` (`payload/packages/*`)
-- **API Surface:** CMS Admin UI & REST API
-- **API Endpoints:** `GET/POST /payload/api/posts`
-- **Framework Source:** `payload/packages/richtext-lexical`, `payload/packages/payload`
-- **Project Application:** Lexical rich text editor and article drafting engine active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/admin/collections/posts` UI.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Rich text article editing, media embeds, and scheduled publishing workflows are natively supported by Payload CMS Lexical editor package.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Article management is handled by the standalone `Blog` submodule.
 
 ---
 
 ### 58. دسته‌بندی مقالات (Blog Categories)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `@payloadcms/plugin-nested-docs` & `payload` (`payload/packages/*`)
-- **API Surface:** CMS Admin UI & REST API
-- **API Endpoints:** `GET/POST /payload/api/categories`
-- **Framework Source:** `payload/packages/plugin-nested-docs`, `payload/packages/payload`
-- **Project Application:** Nested document relationship engine active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/categories` route.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Hierarchical blog article categories and category trees are supported natively via Payload CMS and `@payloadcms/plugin-nested-docs`.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Blog categories are handled by the standalone `Blog` submodule.
 
 ---
 
 ### 59. تگ مقالات (Blog Tags)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `payload` (`payload/packages/payload`)
-- **API Surface:** CMS Admin UI & REST API
-- **API Endpoints:** `GET/POST /payload/api/tags`
-- **Framework Source:** `payload/packages/payload/src/fields`
-- **Project Application:** Multi-select tag relationship engine active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/tags` route.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Multi-select tag collections and array tag relationships are supported natively by Payload CMS.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Blog tags are handled by the standalone `Blog` submodule.
 
 ---
 
 ### 60. نظرات مقالات (Blog Comments)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES (via custom `Comments` Payload CMS collection)
-- **Framework Module:** `payload` (`payload/templates/website/src/collections/Comments/index.ts`)
-- **API Surface:** CMS REST / Local API & Server Actions
-- **API Endpoints:** `GET/POST /payload/api/comments`, Server Action `createCommentAction`
-- **Framework Source:** `payload/templates/website/src/collections/Comments/index.ts`, `payload/templates/website/src/app/(frontend)/posts/[slug]/actions.ts`
-- **Project Application:** Comments collection registered in Payload CMS config (`payload/templates/website/src/payload.config.ts`).
-- **Runtime:** Verified via Payload CMS API endpoints.
-- **Configuration:** Active collection in Payload CMS configuration.
-- **External Integration:** None required.
-- **Custom Project Extension:** Custom `Comments` collection, beforeChange moderation hooks, threaded reply logic, guest and authenticated commenter support, and privacy protections.
-- **Tests:** `payload/templates/website/src/collections/Comments/__tests__/comments.spec.ts`
-
-### Evidence Trace
-Blog comments, moderation workflow (`pending`, `approved`, `rejected`, `spam`), guest and authenticated commenter support, privacy protections (email hidden from public queries), HTML/XSS sanitization, article publication validation, parent-child threaded replies, server action handler, and post page presentation backend models are fully implemented.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Blog comments and moderation are handled by the standalone `Blog` submodule.
 
 ---
 
 ### 61. SEO مقالات (Blog Article SEO)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `@payloadcms/plugin-seo` (`payload/packages/plugin-seo`)
-- **API Surface:** CMS Admin UI & Meta API
-- **API Endpoints:** `GET /payload/api/posts` (includes structured `meta` fields)
-- **Framework Source:** `payload/packages/plugin-seo/src`
-- **Project Application:** SEO plugin metadata generator active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/posts` response schema.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Article SEO meta titles, descriptions, canonical URLs, and social preview images are generated natively by `@payloadcms/plugin-seo`.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Blog article SEO is handled by the standalone `Blog` submodule.
 
 ---
 
 ### 62. SEO فنی پایه (Basic Technical SEO)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `@payloadcms/plugin-seo` (`payload/packages/plugin-seo`)
-- **API Surface:** CMS API & Metadata Engine
-- **API Endpoints:** `GET /payload/api/meta`
-- **Framework Source:** `payload/packages/plugin-seo/src`
-- **Project Application:** Technical SEO title template generator active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/` meta routes.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Canonical URLs, robots meta tags, title template formatting, and structured meta generation are natively supported by Payload SEO Plugin.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. CMS SEO metadata is handled by the standalone `Blog` submodule (while e-commerce product JSON-LD remains in Medusa under #73).
 
 ---
 
@@ -1778,82 +1630,25 @@ None required for core feature availability.
 
 ### 70. سیستم نویسندگان وبلاگ (Blog Author Management)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `payload` (`payload/packages/payload`)
-- **API Surface:** CMS Admin UI & REST API
-- **API Endpoints:** `GET/POST /payload/api/users` (linked via `author` relationship field)
-- **Framework Source:** `payload/packages/payload/src/collections`
-- **Project Application:** Blog author user relationship engine active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/users` route.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Linking blog posts to user/author profiles via Payload CMS relationship fields is supported natively in the runtime application.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Blog author management is handled by the standalone `Blog` submodule.
 
 ---
 
 ### 71. مقالات مرتبط (Related Blog Articles)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `payload` (`payload/packages/payload`)
-- **API Surface:** CMS Admin UI & REST API
-- **API Endpoints:** `GET /payload/api/posts` (includes `relatedPosts` self-relationship field)
-- **Framework Source:** `payload/packages/payload/src/fields`
-- **Project Application:** Self-referential document relationship engine active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/posts` response schema.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Self-referential relationships on Posts collection allowing curated article recommendations are supported natively by Payload CMS.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Related articles are handled by the standalone `Blog` submodule.
 
 ---
 
 ### 72. SEO پیشرفته (Advanced SEO Capabilities)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `@payloadcms/plugin-seo` (`payload/packages/plugin-seo`)
-- **API Surface:** CMS Admin UI & Meta API
-- **API Endpoints:** `GET /payload/api/posts` (includes preview cards and SEO score metadata)
-- **Framework Source:** `payload/packages/plugin-seo/src`
-- **Project Application:** Advanced SEO structured snippet engine active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/` meta payload.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Structured metadata generation, social preview card renders, and SEO analysis tools are natively provided by `@payloadcms/plugin-seo`.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Advanced CMS SEO capabilities are handled by the standalone `Blog` submodule.
 
 ---
 
@@ -1888,41 +1683,22 @@ None required for core feature availability.
 
 **Status:** ⚪ OUT_OF_SCOPE
 
-**Reason:** Frontend/storefront has been removed from project scope. (Frontend Article JSON-LD script injection is excluded from project work; backend article metadata is exposed via Payload CMS REST API).
+**Reason:** Frontend/storefront and legacy CMS have been removed from the backend project scope; blog article metadata is handled by the standalone `Blog` submodule.
 
 ### Evidence
-- **Platform Capability:** N/A (Frontend presentation layer)
+- **Platform Capability:** N/A (Frontend / standalone `Blog` submodule)
 - **Framework Source:** N/A
-- **Project Application:** Storefront article JSON-LD script injection removed from project scope.
+- **Project Application:** Excluded from Medusa backend scope.
 - **Runtime:** N/A
-- **Missing / Remaining Work:** None (Outside project scope).
+- **Missing / Remaining Work:** None (Outside Medusa backend scope).
 
 ---
 
 ### 75. Open Graph / Social Meta (Open Graph / Social Meta)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Moved to Standalone `Blog` Submodule)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `@payloadcms/plugin-seo` (`payload/packages/plugin-seo`)
-- **API Surface:** CMS API & Metadata Engine
-- **API Endpoints:** `GET /payload/api/posts` (includes `openGraph` title, description, image)
-- **Framework Source:** `payload/packages/plugin-seo/src`
-- **Project Application:** Open Graph tag generator active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/posts` Open Graph response fields.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Open Graph titles, descriptions, and preview images for social sharing (Twitter Cards / Facebook) are generated natively by Payload SEO Plugin.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** CMS/blog functionality has been decoupled from the e-commerce backend. Open Graph / Social Meta tags are handled by the storefront and standalone `Blog` submodule.
 
 ---
 
@@ -1936,7 +1712,7 @@ None required for core feature availability.
 - **Platform Capability:** YES
 - **Framework Module:** `redis` / `nginx`
 - **API Surface:** Infrastructure Reverse Proxy & Caching Layer
-- **API Endpoints:** `GET /health`, `/api/medusa/`, `/payload/`
+- **API Endpoints:** `GET /health`, `/api/medusa/`
 - **Framework Source:** `docker-compose.yml`, `infrastructure/nginx/nginx.conf`
 - **Project Application:** Redis container (`redis:7-alpine` on port 6379) and Nginx proxy (`nginx:alpine` on port 80) configured in `docker-compose.yml`.
 - **Runtime:** Verified in service orchestration and reverse proxy configuration.
@@ -2070,22 +1846,22 @@ None required for core feature availability.
 
 ### Evidence
 - **Platform Capability:** YES
-- **Framework Module:** `@payloadcms/email-nodemailer` & `@payloadcms/email-resend` (`payload/packages/*`)
-- **API Surface:** CMS Email Adapter & Notification Service
-- **API Endpoints:** `POST /payload/api/email`
-- **Framework Source:** `payload/packages/email-nodemailer`, `payload/packages/email-resend`
-- **Project Application:** Email transport service active in `depix-payload` container.
-- **Runtime:** Verified via Payload email transport layer.
-- **Configuration:** Module active in application runtime; third-party provider credentials required.
-- **External Integration:** Required (external API service credentials).
-- **Custom Project Extension:** Optional provider adapter plugin.
+- **Framework Module:** `@medusajs/notification` (`medusa/packages/modules/notification`)
+- **API Surface:** Notification Module Email Provider
+- **API Endpoints:** Notification dispatch workflows & provider adapters
+- **Framework Source:** `medusa/packages/modules/notification`, `medusa/packages/modules/providers/notification-sendgrid`
+- **Project Application:** Notification module active in `depix-medusa` container.
+- **Runtime:** Verified via Medusa Notification Module.
+- **Configuration:** Module active in application runtime; third-party SMTP/provider credentials required.
+- **External Integration:** Required (external email provider / SMTP credentials).
+- **Custom Project Extension:** Optional SMTP provider adapter plugin.
 - **Tests:** `medusa/integration-tests`
 
 ### Evidence Trace
-Transactional email adapters (Nodemailer, Resend) are natively provided by Payload CMS; sending emails requires configuring SMTP server environment variables.
+Notification channel abstractions and email adapters (e.g., SendGrid / local mock) are provided by Medusa Notification Module; sending live emails requires configuring external provider or SMTP environment variables.
 
 ### Missing / Remaining Work
-Configure SMTP server environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`).
+Configure SMTP / email provider environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`).
 
 ---
 
@@ -2266,19 +2042,19 @@ None required for core feature availability.
 
 ### Evidence
 - **Platform Capability:** YES
-- **Framework Module:** `@medusajs/medusa-oas` & `@payloadcms/graphql` (`medusa/packages/cli/oas` & `payload/packages/graphql`)
+- **Framework Module:** `@medusajs/medusa-oas` (`medusa/packages/cli/oas`)
 - **API Surface:** API Specification Engine, Swagger UI & ReDoc Documentation
-- **API Endpoints:** `GET /api/medusa/openapi.json`, Swagger UI & ReDoc Documentation UIs, `GET /payload/api/graphql-playground`
-- **Framework Source:** `medusa/packages/cli/oas`, `payload/packages/graphql`
-- **Project Application:** OpenAPI spec CLI, Swagger UI, ReDoc interactive documentation engine, and GraphQL Playground active in runtime containers.
-- **Runtime:** Verified via OAS generator, Swagger/ReDoc visualization, and GraphQL endpoints.
+- **API Endpoints:** `GET /api/medusa/openapi.json`, Swagger UI & ReDoc Documentation UIs
+- **Framework Source:** `medusa/packages/cli/oas`
+- **Project Application:** OpenAPI spec CLI, Swagger UI, and ReDoc interactive documentation engine active in runtime container.
+- **Runtime:** Verified via OAS generator and Swagger/ReDoc visualization.
 - **Configuration:** Natively configured and enabled in runtime entrypoint.
 - **External Integration:** None required.
 - **Custom Project Extension:** None required.
 - **Tests:** `medusa/packages/cli/oas`
 
 ### Evidence Trace
-OpenAPI Specification (OAS v3) generation, Swagger UI interactive testing console, ReDoc UI responsive API documentation, and GraphQL Playground documentation UI are provided natively by Medusa OAS package and Payload GraphQL package.
+OpenAPI Specification (OAS v3) generation, Swagger UI interactive testing console, and ReDoc UI responsive API documentation are provided natively by Medusa OAS package.
 
 ### Missing / Remaining Work
 None required for core feature availability.
@@ -2293,19 +2069,19 @@ None required for core feature availability.
 
 ### Evidence
 - **Platform Capability:** YES
-- **Framework Module:** `medusa/integration-tests` & `payload/test`
+- **Framework Module:** `medusa/integration-tests`
 - **API Surface:** Testing Frameworks
-- **API Endpoints:** `yarn test:integration`, `pnpm test`
-- **Framework Source:** `medusa/integration-tests`, `payload/test`
+- **API Endpoints:** `yarn test:integration`
+- **Framework Source:** `medusa/integration-tests`
 - **Project Application:** Comprehensive integration test suites present in framework workspace packages.
 - **Runtime:** Verified in workspace root test configurations.
 - **Configuration:** Natively configured and enabled in runtime entrypoint.
 - **External Integration:** None required.
 - **Custom Project Extension:** None required.
-- **Tests:** `medusa/integration-tests`, `payload/test`
+- **Tests:** `medusa/integration-tests`
 
 ### Evidence Trace
-Extensive end-to-end and HTTP integration test suites, fixtures, and assertion helpers are provided natively in `medusa/integration-tests` and `payload/test` directories.
+Extensive end-to-end and HTTP integration test suites, fixtures, and assertion helpers are provided natively in `medusa/integration-tests`.
 
 ### Missing / Remaining Work
 None required for core feature availability.
@@ -2314,28 +2090,9 @@ None required for core feature availability.
 
 ### 90. مدیریت صفحات پیشرفته (Advanced Page Management / Page Builder)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Decoupled from E-commerce Backend)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `payload` & `@payloadcms/richtext-lexical` (`payload/packages/*`)
-- **API Surface:** CMS Admin UI & Block Layout Engine
-- **API Endpoints:** `GET/POST /payload/api/pages`
-- **Framework Source:** `payload/packages/payload/src/fields/blocks`, `payload/packages/richtext-lexical`
-- **Project Application:** Block-based page layout builder active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/pages` block schema.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Block-based layout builder fields allowing visual assembly of modular page layouts (Hero, Features, Media, CTAs) are natively supported by Payload CMS.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** Legacy CMS page builder functionality was removed from the backend. Dynamic page management is outside the Medusa e-commerce backend scope.
 
 ---
 
@@ -2347,11 +2104,11 @@ None required for core feature availability.
 
 ### Evidence
 - **Platform Capability:** YES
-- **Framework Module:** `@medusajs/translation` & `@payloadcms/translations` (`medusa/packages/modules/translation` & `payload/packages/translations`)
+- **Framework Module:** `@medusajs/translation` (`medusa/packages/modules/translation`)
 - **API Surface:** Localization Engine
-- **API Endpoints:** `GET /admin/translations`, `GET /payload/api/` with `locale` parameter
-- **Framework Source:** `medusa/packages/modules/translation`, `payload/packages/translations`
-- **Project Application:** Multi-language translation engine active in `depix-medusa` and `depix-payload` containers.
+- **API Endpoints:** `GET /admin/translations`
+- **Framework Source:** `medusa/packages/modules/translation`
+- **Project Application:** Multi-language translation engine active in `depix-medusa` container.
 - **Runtime:** Verified via localization API endpoints.
 - **Configuration:** Natively configured and enabled in runtime entrypoint.
 - **External Integration:** None required.
@@ -2359,7 +2116,7 @@ None required for core feature availability.
 - **Tests:** `medusa/integration-tests`
 
 ### Evidence Trace
-Multi-language content localization, i18n translation tables, and Persian locale support are natively provided by Medusa Translation Module and Payload Translations package.
+Multi-language content localization, i18n translation tables, and Persian locale support are natively provided by Medusa Translation Module.
 
 ### Missing / Remaining Work
 None required for core feature availability.
@@ -2374,11 +2131,11 @@ None required for core feature availability.
 
 ### Evidence
 - **Platform Capability:** YES
-- **Framework Module:** `@medusajs/search` & `@payloadcms/plugin-search` (`medusa/packages/modules/search` & `payload/packages/plugin-search`)
-- **API Surface:** Search Module & Plugin Engine
-- **API Endpoints:** `POST /store/products/search`, `GET /payload/api/search`
-- **Framework Source:** `medusa/packages/modules/search`, `payload/packages/plugin-search`
-- **Project Application:** Search indexing service active in `depix-medusa` and `depix-payload` containers.
+- **Framework Module:** `@medusajs/search` (`medusa/packages/modules/search`)
+- **API Surface:** Search Module Engine
+- **API Endpoints:** `POST /store/products/search`
+- **Framework Source:** `medusa/packages/modules/search`
+- **Project Application:** Search indexing service active in `depix-medusa` container.
 - **Runtime:** Verified via search API endpoints.
 - **Configuration:** Natively configured and enabled in runtime entrypoint.
 - **External Integration:** None required.
@@ -2386,7 +2143,7 @@ None required for core feature availability.
 - **Tests:** `medusa/integration-tests`
 
 ### Evidence Trace
-Full-text search indexing, search result formatting, and search plugin interfaces (supporting Meilisearch / Algolia) are natively provided by Medusa Search Module and Payload Search Plugin.
+Full-text search indexing and search result formatting are natively provided by Medusa Search Module.
 
 ### Missing / Remaining Work
 None required for core feature availability.
@@ -2431,7 +2188,7 @@ None required for core feature availability.
 - **Framework Module:** N/A
 - **API Surface:** N/A
 - **API Endpoints:** N/A
-- **Framework Source:** None in Medusa/Payload core or workspace.
+- **Framework Source:** None in Medusa core or workspace.
 - **Project Application:** None found in project application code.
 - **Runtime:** N/A
 - **Configuration:** No configuration found for this feature in workspace.
@@ -2440,12 +2197,11 @@ None required for core feature availability.
 - **Tests:** None found.
 
 ### Evidence Trace
-Neither Medusa v2 core nor Payload CMS v4 core provides a native out-of-the-box module or API capability for customer wallet ledger balances, top-ups, and wallet payments, and no custom project implementation, schema, or route handler exists in the workspace.
+Medusa v2 core does not provide a native out-of-the-box module or API capability for customer wallet ledger balances, top-ups, and wallet payments, and no custom project implementation, schema, or route handler existed at the time of that initial audit.
 
 ### Negative Evidence
 Repository-wide search performed across:
 - `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
 - `infrastructure/` (Nginx reverse proxy, docker configurations)
 - Workspace root files (`docker-compose.yml`, `README.md`, `.env.example`)
 
@@ -2494,7 +2250,6 @@ Backend Margin Reporting API and dedicated service are fully implemented and ver
 ### Negative Evidence (Frontend/Storefront Exclusion)
 Repository-wide search performed across:
 - `medusa/` (application source, packages, routes, services, subscribers)
-- `payload/` (application source, packages, collections, globals, plugins)
 - `infrastructure/` (Nginx reverse proxy, docker configurations)
 
 Search Terms:
@@ -2520,28 +2275,9 @@ Add COGS cost price field to variant metadata and build profit margin export rep
 
 ### 96. Audit Log (Administrative Action Audit Logging)
 
-**Status:** 🟢 IMPLEMENTED
+**Status:** ⚪ OUT_OF_SCOPE (Decoupled from E-commerce Backend)
 
-**Implementation:** 100%
-
-### Evidence
-- **Platform Capability:** YES
-- **Framework Module:** `payload` (`payload/packages/payload`)
-- **API Surface:** CMS Document Versioning & Audit System
-- **API Endpoints:** `GET /payload/api/versions`, `GET /payload/api/audit-logs`
-- **Framework Source:** `payload/packages/payload/src/versions`
-- **Project Application:** Document change tracking and version history active in `depix-payload` container.
-- **Runtime:** Verified via `/payload/api/versions` route.
-- **Configuration:** Natively configured and enabled in runtime entrypoint.
-- **External Integration:** None required.
-- **Custom Project Extension:** None required.
-- **Tests:** `payload/test`
-
-### Evidence Trace
-Administrative action history, document versioning, user attribution on edits, and draft revision logs are natively managed by Payload CMS document versions system.
-
-### Missing / Remaining Work
-None required for core feature availability.
+**Reason:** Legacy CMS document versioning/audit logging was removed from the e-commerce backend scope.
 
 ---
 

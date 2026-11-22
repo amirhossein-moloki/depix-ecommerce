@@ -1,5 +1,8 @@
-import { validate } from "@medusajs/framework"
-import { authenticate, MiddlewareRoute } from "@medusajs/framework/http"
+import {
+  authenticate,
+  MiddlewareRoute,
+  validateAndTransformBody,
+} from "@medusajs/framework/http"
 import { StoreCreateWishlistItem } from "./validators"
 
 export const storeWishlistRoutesMiddlewares: MiddlewareRoute[] = [
@@ -13,7 +16,7 @@ export const storeWishlistRoutesMiddlewares: MiddlewareRoute[] = [
     matcher: "/store/wishlist/items",
     middlewares: [
       authenticate("customer", ["session", "bearer"]),
-      validate(StoreCreateWishlistItem),
+      validateAndTransformBody(StoreCreateWishlistItem),
     ],
   },
   {

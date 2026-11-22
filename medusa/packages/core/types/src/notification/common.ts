@@ -148,6 +148,10 @@ export interface NotificationProviderDTO {
 export interface FilterableNotificationProps
   extends BaseFilterable<FilterableNotificationProps> {
   /**
+   * Filter based on the notification ID(s).
+   */
+  id?: string | string[] | OperatorMap<string | string[]>
+  /**
    * Search through the notifications' attributes, such as trigger types and recipients, using this search term.
    */
   q?: string

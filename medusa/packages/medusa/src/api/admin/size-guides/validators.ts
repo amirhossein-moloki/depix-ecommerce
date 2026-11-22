@@ -10,7 +10,7 @@ export const SizeGuideColumnSchema = z.object({
 
 export const SizeGuideRowSchema = z.object({
   id: z.string().min(1, "Row ID is required"),
-  cells: z.record(z.string()),
+  cells: z.record(z.string(), z.string()),
   order: z.number().optional(),
 })
 
@@ -38,7 +38,7 @@ export const AdminCreateSizeGuideTemplate = z
     rows: z.array(SizeGuideRowSchema).default([]),
     notes: z.string().nullable().optional(),
     is_active: z.boolean().optional().default(true),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
   .refine(
@@ -68,7 +68,7 @@ export const AdminUpdateSizeGuideTemplate = z
     rows: z.array(SizeGuideRowSchema).optional(),
     notes: z.string().nullable().optional(),
     is_active: z.boolean().optional(),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
   .refine(
@@ -102,7 +102,7 @@ export const AdminUpsertProductSizeGuide = z
     source_template_id: z.string().nullable().optional(),
     image_id: z.string().nullable().optional(),
     image_url: z.string().nullable().optional(),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
   .refine(

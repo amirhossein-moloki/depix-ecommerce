@@ -2,7 +2,7 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { MedusaError } from "@medusajs/framework/utils"
 
 /**
  * Handle PSP gateway callbacks/redirects and perform mandatory server-side verification.
@@ -37,8 +37,8 @@ export const POST = async (
 
       return res.status(200).json({
         success: true,
-        status: session.status,
-        session_id: session.id,
+        status: (session as any)?.status,
+        session_id: session?.id,
         message: "Payment callback processed and verified.",
       })
     }

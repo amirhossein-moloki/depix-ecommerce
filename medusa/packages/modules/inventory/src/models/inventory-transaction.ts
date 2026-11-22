@@ -5,8 +5,6 @@ import InventoryLevel from "./inventory-level"
 const InventoryTransaction = model
   .define("InventoryTransaction", {
     id: model.id({ prefix: "itrx" }).primaryKey(),
-    inventory_item_id: model.text(),
-    inventory_level_id: model.text().nullable(),
     product_id: model.text().nullable(),
     variant_id: model.text().nullable(),
     location_id: model.text().nullable(),
@@ -23,9 +21,11 @@ const InventoryTransaction = model
     inventory_item: model.belongsTo(() => InventoryItem, {
       mappedBy: "transactions",
     }),
-    inventory_level: model.belongsTo(() => InventoryLevel, {
-      mappedBy: "transactions",
-    }),
+    inventory_level: model
+      .belongsTo(() => InventoryLevel, {
+        mappedBy: "transactions",
+      })
+      .nullable(),
   })
   .indexes([
     {

@@ -11,7 +11,7 @@ export const GET = async (
 ) => {
   const reportingService = new MarginReportingService(req.scope)
 
-  const queryParams = req.validatedQuery || {}
+  const queryParams = (req.validatedQuery || {}) as any
   const options = {
     from: queryParams.from,
     to: queryParams.to,

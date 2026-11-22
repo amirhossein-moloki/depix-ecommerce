@@ -9,7 +9,7 @@ import {
   Modules,
 } from "@medusajs/framework/utils"
 import { createCustomerAccountWorkflow } from "@medusajs/core-flows"
-import { normalizePhoneNumber } from "../../../../modules/providers/notification-sms/src/utils/phone-normalizer"
+import { normalizePhoneNumber } from "@medusajs/notification-sms"
 import { generateJwtTokenForAuthIdentity } from "../../utils/generate-jwt-token"
 import { memoryOtpStore } from "../send-otp/route"
 import { VerifyOtpRequestType } from "../validators"

@@ -1,10 +1,10 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"
 import { createPriceAlertWorkflow } from "@medusajs/core-flows"
-import { StoreCreatePriceAlertType } from "../../price-alerts/validators"
+import { StoreCreatePriceAlertType } from "../../../price-alerts/validators"
 
 export const POST = async (
-  req: MedusaRequest<StoreCreatePriceAlertType>,
+  req: AuthenticatedMedusaRequest<StoreCreatePriceAlertType>,
   res: MedusaResponse
 ) => {
   const customerId = req.auth_context?.actor_id

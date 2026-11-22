@@ -13,7 +13,7 @@ export const adminBrandRoutesMiddlewares: MiddlewareRoute[] = [
   {
     method: ["GET"],
     matcher: "/admin/brands",
-    middlewares: [validateAndTransformQuery(AdminGetBrandsParams)],
+    middlewares: [validateAndTransformQuery(AdminGetBrandsParams, {})],
   },
   {
     method: ["POST"],

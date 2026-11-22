@@ -110,7 +110,7 @@ export const PUT = async (
     result = await sizeGuideService.createProductSizeGuides(payload)
   }
 
-  res.json({ size_guide: result })
+  return res.json({ size_guide: result })
 }
 
 export const DELETE = async (
@@ -142,7 +142,7 @@ export const DELETE = async (
     })
   }
 
-  res.json({
+  return res.json({
     id: null,
     object: "product_size_guide",
     deleted: false,

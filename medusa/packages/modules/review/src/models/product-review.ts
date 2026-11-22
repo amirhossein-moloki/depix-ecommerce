@@ -18,9 +18,11 @@ const ProductReview = model
     status: model.enum(ReviewStatus).default(ReviewStatus.PENDING),
     verified_purchase: model.boolean().default(false),
     metadata: model.json().nullable(),
-    reply: model.hasOne(() => ReviewReply, {
-      mappedBy: "review",
-    }),
+    reply: model
+      .hasOne(() => ReviewReply, {
+        mappedBy: "review",
+      })
+      .nullable(),
   })
   .indexes([
     {

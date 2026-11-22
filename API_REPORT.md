@@ -1,23 +1,18 @@
 # گزارش جامع APIهای پروژه (API Specification Report)
 
-این گزارش شامل بررسی کامل، تفکیک‌شده و دقیق تمامی APIهای موجود در معماری **Depix E-commerce** (`depix-ecommerce`) می‌باشد. در این زیرساخت دو سیستم بک‌اند اصلی متصل به یک دیتابیس مشترک PostgreSQL و Redis وجود دارد که مجموعه‌ای از APIهای e-commerce و CMS/مدیریت محتوا را ارائه می‌دهند.
+این گزارش شامل بررسی کامل، تفکیک‌شده و دقیق تمامی APIهای موجود در معماری **Depix E-commerce** (`depix-ecommerce`) می‌باشد. در این زیرساخت سرویس بک‌اند Medusa v2 متصل به دیتابیس PostgreSQL و Redis قرار دارد و مجموعه‌ای کامل از APIهای e-commerce را ارائه می‌دهد.
 
 ---
 
 # ۱. نمای کلی و خلاصه‌ی سرویس‌های API
 
-در این پروژه، سرویس‌ها و APIها به ۲ بخش کلی تقسیم می‌شوند:
+سرویس‌ها و APIهای بک‌اند Medusa v2 شامل گروه‌های زیر هستند:
 
 1. **سرویس Medusa v2 (موتور فروشگاهی / E-Commerce Backend):**
    - **Store API (فروشگاهی):** مخصوص خریداران و storefront (سبد خرید، محصولات، سفارشات، آدرس‌ها، پرداخت).
    - **Admin API (مدیریت):** مخصوص مدیران سیستم (مدیریت محصولات، موجودی، سفارشات، تخفیف‌ها، کاربران، تنظیمات).
    - **Auth API (احراز هویت):** مدیریت نشست‌ها، ثبت‌نام و ورود کاربران و مدیران.
    - **OpenAPI / Swagger UI / ReDoc API:** مستندات استاندارد OpenAPI و رابط‌های کاربری تعاملی Swagger UI و ReDoc برای کلیه APIهای Medusa.
-
-2. **سرویس Payload CMS v4 (مدیریت محتوا و پنل ادمین Central):**
-   - **REST API:** دسترسی CRUD به تمام مجموعه داده‌ها (Collections) و تنظیمات کلی (Globals).
-   - **GraphQL API & GraphQL Playground:** دسترسی کوئری و میوتیشن پیشرفته به داده‌های محتوایی و بلاگ.
-   - **CMS Admin UI & Internal Endpoints:** پنل مدیریت محتوا و مدیریت فایل‌ها/رسانه‌ها.
 
 ---
 
@@ -29,9 +24,6 @@
 | **Medusa v2** | **Admin API** | ~۸۵ | مدیریت e-commerce (محصولات، سفارشات، موجودی، مشتریان، تخفیف‌ها) | `/api/medusa/admin/*` |
 | **Medusa v2** | **Auth API** | ~۱۰ | ورود، ثبت‌نام، احراز هویت خریداران و مدیران | `/api/medusa/auth/*` یا `/api/medusa/store/auth/*` |
 | **Medusa v2** | **OpenAPI / Swagger / ReDoc** | ~۴ | مشخصات OpenAPI v3 و رابط‌های کاربری تعاملی Swagger UI و ReDoc UI | `/api/medusa/openapi.json`, Swagger & ReDoc UIs |
-| **Payload CMS v4** | **REST API** | ~۳۵ | مدیریت و دریافت داده‌های محتوایی، صفحات، مقالات، بنرها و کاربران | `/payload/api/*` |
-| **Payload CMS v4** | **GraphQL API** | ۱ اصلی + Playground | کوئری گراف‌کیوال برای دریافت بهینه محتوا و بلاگ | `/payload/api/graphql` & `/payload/api/graphql-playground` |
-| **Payload CMS v4** | **Admin & Upload API** | ~۱۵ | مدیریت فایل‌ها/رسانه‌ها، نسخه سندها (Versions) و لاگ‌های سیستم | `/payload/admin/*` & `/payload/api/media/*` |
 | **Nginx Proxy** | **Infrastructure Health** | ۱ | بررسی سلامت سرویس‌ها (Health Check) | `/health` |
 
 ---
@@ -253,74 +245,6 @@
 
 ---
 
-## ۵. APIهای مدیریت محتوا Payload CMS (Payload CMS API)
-
-این APIها ساختار محتوایی، وبلاگ، صفحات، بنرها و فایل‌های رسانه‌ای وب‌سایت را پوشش می‌دهند.
-
-### ۵.۱. REST API مجموعه‌ها (Collections)
-- **`GET /payload/api/posts`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست مقالات وبلاگ به همراه صفحه‌بندی، فیلترها و مرتب‌سازی.
-- **`POST /payload/api/posts`**
-  - **روش:** `POST`
-  - **کاربرد:** ایجاد مقاله جدید در وبلاگ (نیاز به دسترسی دست‌اندرکاران).
-- **`GET /payload/api/posts/:id`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت جزییات کامل یک مقاله وبلاگ بر اساس شناسه یا اسلاگ (Slug).
-- **`PATCH /payload/api/posts/:id`**
-  - **روش:** `PATCH`
-  - **کاربرد:** بروزرسانی بخش‌هایی از مقاله.
-- **`DELETE /payload/api/posts/:id`**
-  - **روش:** `DELETE`
-  - **کاربرد:** حذف مقاله.
-- **`GET /payload/api/pages`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت ساختار صفحات پویا و بلک‌های چیدمان (Page Builder).
-- **`GET /payload/api/categories`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت دسته‌بندی‌های وبلاگ.
-- **`GET /payload/api/tags`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت برچسب‌های محتوایی.
-- **`GET /payload/api/users`**
-  - **روش:** `GET`
-  - **کاربرد:** مدیریت نویسندگان و مدیران محتوا.
-
-### ۵.۲. REST API تنظیمات عمومی (Globals)
-- **`GET /payload/api/globals/banners`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت بنرهای تبلیغاتی، اسلایدرها و پیام‌های بالای سایت.
-- **`POST /payload/api/globals/banners`**
-  - **روش:** `POST`
-  - **کاربرد:** به روزرسانی بنرهای اصلی سایت توسط ادمین.
-- **`GET /payload/api/globals/header`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت ساختار منوی بالای سایت (Header Navigation).
-- **`GET /payload/api/globals/footer`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لینک‌ها و اطلاعات فوتر سایت.
-
-### ۵.۳. GraphQL API & Playground
-- **`POST /payload/api/graphql`**
-  - **روش:** `POST`
-  - **کاربرد:** اجرای کوئری‌ها و میوتیشن‌های GraphQL برای دریافت همزمان مقالات، صفحات و بنرها با فیلدهای انتخابی دلخواه.
-- **`GET /payload/api/graphql-playground`**
-  - **روش:** `GET`
-  - **کاربرد:** محیط تعاملی گرافیکی در مرورگر جهت تست و آزمایش کوئری‌های GraphQL.
-
-### ۵.۴. مدیریت رسانه‌ها و نسخه‌ها (Media & Audit Logs)
-- **`POST /payload/api/media`**
-  - **روش:** `POST`
-  - **کاربرد:** آپلود تصویر، ویدئو و فایل‌های رسانه‌ای.
-- **`GET /payload/api/media`**
-  - **روش:** `GET`
-  - **کاربرد:** دریافت لیست فایل‌های آپلود شده.
-- **`GET /payload/api/versions`**
-  - **روش:** `GET`
-  - **کاربرد:** تاریخچه تغییرات و نسخه‌های قبلی سندها (Audit Log).
-
----
-
 # ۴. نمونه نحوه فراخوانی و تعامل APIها
 
 ### مثال ۱: چرخه افزودن به سبد خرید در Medusa Store API
@@ -344,21 +268,10 @@ Content-Type: application/json
 }
 ```
 
-### مثال ۲: کوئری دریافت مقالات جدید در Payload GraphQL API
-```graphql
-POST /payload/api/graphql
-Content-Type: application/json
-
-{
-  "query": "{ Posts(limit: 5, sort: \"-createdAt\") { docs { id title slug publishedAt meta { description } } } }"
-}
-```
-
 ---
 
 # ۵. نتیجه‌گیری
 
 مجموعه APIهای موجود در این پروژه یک زیرساخت کامل e-commerce بدون محدودیت (Headless) را فراهم می‌آورد:
 - تمامی امور مربوط به **خرید، سفارش، کاتالوگ و تسویه حساب** از طریق **Medusa API** پوشش داده می‌شود.
-- تمامی امور مربوط به **محتوا، وبلاگ، صفحات پویا، بنرها و سئو** از طریق **Payload CMS API** پردازش می‌گردد.
 - سرویس Nginx تمامی این اندپوئینت‌ها را تحت یک دامنه واحد بدون مشکلات CORS مدیریت می‌نماید.

@@ -1,6 +1,6 @@
 # گزارش معماری و پیکربندی Nginx (Nginx Infrastructure Report)
 
-این گزارش توضیحی جامع و دقیق درباره پیکربندی فعلی **Nginx** در زیرساخت پروژه **Depix E-commerce** (`depix-ecommerce`) است. این سرویس به عنوان **Reverse Proxy (پروکسی معکوس)** و **Gateway (درگاه ورودی شبکه‌ای)** عمل می‌کند و ترافیک ورود کاربران را بین سرویس‌های بک‌اند Medusa E-commerce و Payload CMS هدایت می‌نماید.
+این گزارش توضیحی جامع و دقیق درباره پیکربندی فعلی **Nginx** در زیرساخت پروژه **Depix E-commerce** (`depix-ecommerce`) است. این سرویس به عنوان **Reverse Proxy (پروکسی معکوس)** و **Gateway (درگاه ورودی شبکه‌ای)** عمل می‌کند و ترافیک ورود کاربران را به سرویس بک‌اند Medusa E-commerce هدایت می‌نماید.
 
 ---
 
@@ -17,22 +17,20 @@
                          │ infrastructure/nginx.conf│
                          └─────────────┬────────────┘
                                        │
-            ┌──────────────────────────┼──────────────────────────┐
-            │                          │                          │
-            ▼                          ▼                          ▼
-    /health                    /api/medusa/                /payload/ & / (Fallback)
-┌──────────────┐          ┌──────────────────┐        ┌──────────────────┐
-│ Response 200 │          │  depix-medusa    │        │  depix-payload   │
-│    'OK'      │          │  (Medusa:9000)   │        │  (Payload:3000)  │
-└──────────────┘          └──────────────────┘        └──────────────────┘
-                                   │                           │
-                                   └─────────────┬─────────────┘
-                                                 │
-                                                 ▼
-                                     ┌───────────────────────┐
-                                     │ depix-postgres (5432) │
-                                     │ depix-redis (6379)    │
-                                     └───────────────────────┘
+                    ┌──────────────────┴──────────────────┐
+                    │                                     │
+                    ▼                                     ▼
+                /health                        /api/medusa/ & / (Fallback)
+           ┌──────────────┐                      ┌──────────────────┐
+           │ Response 200 │                      │  depix-medusa    │
+           │    'OK'      │                      │  (Medusa:9000)   │
+           └──────────────┘                      └────────┬─────────┘
+                                                          │
+                                                          ▼
+                                              ┌───────────────────────┐
+                                              │ depix-postgres (5432) │
+                                              │ depix-redis (6379)    │
+                                              └───────────────────────┘
 ```
 
 ---
@@ -79,14 +77,8 @@ http {
     upstream medusa_backend {
         server medusa:9000;
     }
-
-    # Upstream definition for Payload CMS / Backend
-    upstream payload_backend {
-        server payload:3000;
-    }
 ```
 - **`upstream medusa_backend`**: ارجاع نام مستعار `medusa_backend` به نام کانتینر `medusa` در شبکه داخلی داکر روی پورت `9000` (موتور فروشگاهی Medusa).
-- **`upstream payload_backend`**: ارجاع نام مستعار `payload_backend` to نام کانتینر `payload` در شبکه داخلی داکر روی پورت `3000` (موتور مدیریت محتوا Payload CMS).
 
 ---
 
@@ -116,33 +108,7 @@ http {
 
 ---
 
-#### ب) مسیر مدیریت محتوا (Payload CMS / Admin & API)
-```nginx
-        # Payload CMS / Admin & API routes
-        location /payload/ {
-            proxy_pass http://payload_backend/;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-```
-- **مسیر:** تمامی درخواست‌هایی که با `/payload/` شروع می‌شوند.
-- **`proxy_pass http://payload_backend/;`**: هدایت درخواست به کانتینر Payload CMS (پورت ۳۰۰۰). وجود اسلش `/` در انتهای پورت باعث حذف پیشوند `/payload/` هنگام ارسال به بک‌اند می‌شود.
-- **پشتیبانی از WebSocket (`Upgrade`, `Connection 'upgrade'`):** جهت اتصال زنده و Live Preview پنل ادمین Payload CMS.
-- **هدایت هدرهای امنیتی و هویت مشتری:**
-  - `Host $host`: حفظ دامنه درخواست‌شده اصلی.
-  - `X-Real-IP $remote_addr`: ارسال IP واقعی کاربر به بک‌اند.
-  - `X-Forwarded-For`: ثبت زنجیره پروکسی‌ها جهت تشخیص IP واقعی مشتری.
-  - `X-Forwarded-Proto $scheme`: اعلام پروتکل اصلی (`http` یا `https`).
-
----
-
-#### ج) مسیر APIهای فروشگاهی و مدیریتی Medusa (Medusa E-commerce API)
+#### ب) مسیر APIهای فروشگاهی و مدیریتی Medusa (Medusa E-commerce API)
 ```nginx
         # Medusa E-commerce Backend API & Admin routes
         location /api/medusa/ {
@@ -163,11 +129,11 @@ http {
 
 ---
 
-#### د) مسیر پیش‌فرض / روت اصلی (Default Fallback & Storefront)
+#### ج) مسیر پیش‌فرض / روت اصلی (Default Fallback Route)
 ```nginx
-        # Default fallback route / Storefront route
+        # Default fallback route -> Medusa Backend
         location / {
-            proxy_pass http://payload_backend;
+            proxy_pass http://medusa_backend;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -179,7 +145,7 @@ http {
         }
 ```
 - **مسیر:** هر درخواستی که با روت‌های قبلی تطابق نداشته باشد (`/`).
-- **عملکرد فعلی:** درخواست به `payload_backend` (پورت ۳۰۰۰) هدایت می‌شود تا صفحات عمومی فرانت‌اند و CMS نمایش داده شوند.
+- **عملکرد فعلی:** درخواست به `medusa_backend` (پورت ۹۰۰۰) هدایت می‌شود.
 
 ---
 
@@ -188,18 +154,17 @@ http {
 | مسیر درخواست ورودی (URL Pattern) | سرویس مقصد (Upstream Target) | کانتینر و پورت داکر | هدف / کاربرد |
 |---|---|---|---|
 | `GET http://localhost/health` | پاسخ مستقیم (Direct 200 OK) | Nginx | بررسی سلامت پروکسی معکوس |
-| `http://localhost/payload/*` | `http://payload_backend/*` | `depix-payload:3000` | پنل ادمین Payload CMS و REST/GraphQL API محتوا |
 | `http://localhost/api/medusa/*` | `http://medusa_backend/*` | `depix-medusa:9000` | APIهای کامل فروشگاه، سبد خرید، مشخصات OpenAPI، رابط‌های Swagger UI و ReDoc UI |
-| `http://localhost/*` (روت اصلی) | `http://payload_backend` | `depix-payload:3000` | فرانت‌اند عمومی سایت / Fallback Route |
+| `http://localhost/*` (روت اصلی) | `http://medusa_backend` | `depix-medusa:9000` | مسیر پیش‌فرض هدایت به بک‌اند Medusa |
 
 ---
 
 # ۴. نقش هدرهای سفارشی و تنظیمات پیشرفته (Headers & Protocol Specifics)
 
 1. **حل مشکل CORS (Cross-Origin Resource Sharing):**
-   با متمرکز ساختن تمام سرویس‌ها روی یک دامنه و پورت واحد (`port 80`)، تمامی درخواست‌های فرانت‌اند به بک‌اندها تحت یک Origin مجاز اجرا شده و نیازی به تنظیمات پیچیده Cross-Origin وجود ندارد.
+   با متمرکز ساختن تمام سرویس‌ها روی یک دامنه و پورت واحد (`port 80`)، تمامی درخواست‌های فرانت‌اند به بک‌اند تحت یک Origin مجاز اجرا شده و نیازی به تنظیمات پیچیده Cross-Origin وجود ندارد.
 2. **شفافیت IP خریداران (IP Transparency):**
-   با تنظیم هدرهای `X-Real-IP` و `X-Forwarded-For`، سیستم‌های امنیتی و ماژول‌های تحلیلی Medusa و Payload قادر به شناسایی دقیق IP خریداران برای جلوگیری از حملات و ثبت آدرس صحیح هستند.
+   با تنظیم هدرهای `X-Real-IP` و `X-Forwarded-For`، سیستم‌های امنیتی و ماژول‌های تحلیلی Medusa قادر به شناسایی دقیق IP خریداران برای جلوگیری از حملات و ثبت آدرس صحیح هستند.
 3. **پشتیبانی کامل از WebSocket:**
    وجود تنظیمات `Upgrade` و `Connection 'upgrade'` به سرویس‌های وب‌سوکت اجازه می‌دهد اتصال‌های دائمی بدون قطعی جهت به‌روزرسانی‌های آنی (Real-time) ایجاد کنند.
 
@@ -209,7 +174,7 @@ http {
 
 ### نقاط قوت فعلی:
 - معماری یکپارچه با Docker Compose.
-- جداسازی شفاف اندپوئینت‌های e-commerce و CMS.
+- جداسازی شفاف اندپوئینت‌های e-commerce و healthcheck.
 - عملکرد بالا با استفاده از `sendfile` و `keepalive`.
 
 ### پیشنهادات بهبود برای محیط پروداکشن:
@@ -218,4 +183,4 @@ http {
 2. **فعال‌سازی فشرده‌سازی Gzip/Brotli:**
    افزودن `gzip on;` برای فشرده‌سازی پاسخ‌های JSON و فایل‌های استاتیک و افزایش سرعت لود.
 3. **محدودسازی نرخ درخواست (Rate Limiting):**
-   افزودن `limit_req_zone` روی روت‌های `/api/medusa/store/carts` و `/payload/api/` جهت جلوگیری از حملات Brute Force و DoS.
+   افزودن `limit_req_zone` روی روت‌های `/api/medusa/store/carts` جهت جلوگیری از حملات Brute Force و DoS.

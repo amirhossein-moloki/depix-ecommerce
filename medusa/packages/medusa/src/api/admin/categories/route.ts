@@ -100,7 +100,7 @@ export const POST = async (
   // Validate image_id if provided
   if (image_id) {
     try {
-      const mediaService = req.scope.resolve(Modules.MEDIA)
+      const mediaService = req.scope.resolve<any>(Modules.MEDIA)
       const media = await mediaService.retrieveMedia(image_id).catch(() => null)
       if (!media) {
         throw new MedusaError(

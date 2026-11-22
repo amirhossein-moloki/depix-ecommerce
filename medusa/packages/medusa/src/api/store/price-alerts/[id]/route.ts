@@ -1,8 +1,8 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import { cancelPriceAlertWorkflow } from "@medusajs/core-flows"
 
-export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
+export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const customerId = req.auth_context?.actor_id
   if (!customerId) {
     throw new MedusaError(
@@ -37,7 +37,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   })
 }
 
-export const DELETE = async (req: MedusaRequest, res: MedusaResponse) => {
+export const DELETE = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const customerId = req.auth_context?.actor_id
   if (!customerId) {
     throw new MedusaError(

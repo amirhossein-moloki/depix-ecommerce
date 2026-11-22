@@ -65,8 +65,15 @@ export class MedusaWalletModuleService {
   protected walletService_: WalletServiceContract
 
   constructor(options: { walletService?: WalletServiceContract } = {}) {
-    if (options.walletService) {
-      this.walletService_ = options.walletService
+    let injected: WalletServiceContract | undefined
+    try {
+      injected = options?.walletService
+    } catch {
+      injected = undefined
+    }
+
+    if (injected) {
+      this.walletService_ = injected
     } else {
       // In production runtime, walletService is injected via DI container from @amirhossein-moloki/wallet-core
       try {

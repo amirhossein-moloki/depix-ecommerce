@@ -19,7 +19,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   if (product_id) filters.product_id = product_id
   if (variant_id) filters.variant_id = variant_id
   if (status) filters.status = status
-  if (currency_code) filters.currency_code = currency_code.toLowerCase()
+  if (currency_code) filters.currency_code = String(currency_code).toLowerCase()
 
   const [priceAlerts, count] = await priceAlertService.listAndCountPriceAlerts(
     filters,

@@ -5,7 +5,7 @@
 This report presents an evidence-based **Implementation Priority Plan and Execution Roadmap** for the remaining **10 in-scope features** of the **Depix E-commerce** workspace (`depix-ecommerce`).
 
 The technical audit (`FEATURE_AUDIT.md`) evaluated 96 total features across the workspace. With the frontend/storefront completely removed from project scope, 15 features are classified as **OUT_OF_SCOPE**. Of the **81 total in-scope backend/platform features**:
-- 🟢 **71 features (87.7%) are fully IMPLEMENTED** (or provided natively by Medusa v2 / Payload CMS v4 runtimes, custom Medusa workspace modules, or configured infrastructure).
+- 🟢 **71 features (87.7%) are fully IMPLEMENTED** (or provided natively by Medusa v2 runtimes, custom Medusa workspace modules, or configured infrastructure).
 - 🟡 **1 feature (1.2%) is PARTIAL** (#76 Performance Optimization).
 - 🟠 **6 features (7.4%) are INTEGRATION_REQUIRED** (#24, #26, #27, #42, #63, #78).
 - 🔴 **1 feature (1.2%) is NOT_IMPLEMENTED** (#94 Wallet).
@@ -33,15 +33,15 @@ The technical audit (`FEATURE_AUDIT.md`) evaluated 96 total features across the 
 
 # 2. Remaining Feature Breakdown
 
-Every remaining feature has been audited against Medusa v2 modules, Payload CMS collections, and current repository source code to determine the exact nature of the required work.
+Every remaining feature has been audited against Medusa v2 modules and current repository source code to determine the exact nature of the required work.
 
 ### A. Configuration & Infrastructure
 1. **#76 بهینه‌سازی Performance (Performance Optimization)** — `🟡 PARTIAL`
    - *Platform Capability:* Redis and Nginx containers are running in `docker-compose.yml`.
    - *Work Required:* Configure application-level Redis cache adapter in `medusa-config.ts` and HTTP cache headers in `infrastructure/nginx/nginx.conf`.
 2. **#81 اعلان ایمیلی (Email Notifications)** — `🟠 INTEGRATION_REQUIRED`
-   - *Platform Capability:* Payload CMS natively supports `@payloadcms/email-nodemailer` and `@payloadcms/email-resend`.
-   - *Work Required:* Set environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`) in `.env`.
+   - *Platform Capability:* Medusa Notification Module (`@medusajs/notification`) supports SMTP / email provider adapters (e.g., `@medusajs/notification-sendgrid` or custom SMTP provider).
+   - *Work Required:* Set email provider credentials and environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`) in `.env`.
 
 ### B. External Service Integrations
 3. **#77 پیامک OTP Notification (SMS OTP Notification)** — `🟠 INTEGRATION_REQUIRED`
@@ -324,14 +324,14 @@ Estimated Effort: 1.5 Engineering Days
 
 ### Task 2: Transactional Email SMTP Configuration
 ```text
-Task: Configure SMTP server environment variables in .env and verify Payload email transport.
+Task: Configure SMTP/email provider environment variables in .env and verify Medusa email transport.
 Reason: Fulfills Feature #81 (Email Notifications) and enables transactional emails.
-Evidence: FEATURE_AUDIT.md Feature #81 (Status: INTEGRATION_REQUIRED). Payload email package @payloadcms/email-nodemailer present in workspace.
-Dependencies: Task 1 complete; active SMTP credentials.
-Expected Output: Updated .env.example and .env with SMTP configuration parameters.
+Evidence: FEATURE_AUDIT.md Feature #81 (Status: INTEGRATION_REQUIRED). Medusa notification module (@medusajs/notification) active in workspace.
+Dependencies: Task 1 complete; active SMTP/email provider credentials.
+Expected Output: Updated .env.example and .env with SMTP/email configuration parameters.
 Definition of Done:
-  1. SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS configured in .env.
-  2. Test email dispatched successfully via POST /payload/api/email.
+  1. Email transport environment variables configured in .env.
+  2. Test transactional email dispatched successfully via Medusa notification provider.
 Estimated Effort: 0.5 Engineering Days
 ```
 

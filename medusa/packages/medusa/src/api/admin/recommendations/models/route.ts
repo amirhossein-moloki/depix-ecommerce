@@ -8,7 +8,7 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const recService = req.scope.resolve(Modules.RECOMMENDATION)
+  const recService = req.scope.resolve<any>(Modules.RECOMMENDATION)
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20
   const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0
 

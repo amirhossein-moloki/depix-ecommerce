@@ -8,7 +8,7 @@ export const storeBrandRoutesMiddlewares: MiddlewareRoute[] = [
   {
     method: ["GET"],
     matcher: "/store/brands",
-    middlewares: [validateAndTransformQuery(StoreGetBrandsParams)],
+    middlewares: [validateAndTransformQuery(StoreGetBrandsParams, {})],
   },
   {
     method: ["GET"],

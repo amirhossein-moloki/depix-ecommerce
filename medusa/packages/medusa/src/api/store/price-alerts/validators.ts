@@ -11,7 +11,7 @@ export const StoreCreatePriceAlert = z
     reference_price: z.number().optional(),
     target_price: z.number().optional().nullable(),
     channel: z.enum(["in-app", "email", "sms"]).optional().default("in-app"),
-    metadata: z.record(z.unknown()).optional().nullable(),
+    metadata: z.record(z.string(), z.unknown()).optional().nullable(),
   })
   .strict()
 

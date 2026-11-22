@@ -1,7 +1,7 @@
 import { MedusaError, Modules } from "@medusajs/framework/utils"
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
-export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
+export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const orderId = req.params.id
   const orderService = req.scope.resolve<any>(Modules.ORDER)
   const invoiceService = req.scope.resolve<any>(Modules.INVOICE)

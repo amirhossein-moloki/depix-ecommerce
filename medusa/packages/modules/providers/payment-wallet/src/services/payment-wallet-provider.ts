@@ -1,13 +1,35 @@
 import { WalletServiceContract } from "@medusajs/wallet"
 
 export class MedusaWalletPaymentProvider {
+  public static identifier = "wallet"
   public static readonly PROVIDER_ID = "pp_wallet"
   public readonly identifier = "pp_wallet"
 
   protected readonly walletService_: WalletServiceContract
 
-  constructor(walletService?: WalletServiceContract) {
-    this.walletService_ = walletService as WalletServiceContract
+  constructor(containerOrWalletService?: any) {
+    let directWalletService: WalletServiceContract | undefined
+    try {
+      if (
+        containerOrWalletService &&
+        typeof containerOrWalletService.getCustomerWallet === "function"
+      ) {
+        directWalletService = containerOrWalletService as WalletServiceContract
+      }
+    } catch {
+      directWalletService = undefined
+    }
+
+    if (directWalletService) {
+      this.walletService_ = directWalletService
+    } else {
+      try {
+        this.walletService_ =
+          containerOrWalletService?.walletService as WalletServiceContract
+      } catch {
+        this.walletService_ = undefined as any
+      }
+    }
   }
 
   public async initiatePayment(input: any): Promise<{
