@@ -209,4 +209,107 @@ describe("Phone-Number & OTP Authentication Flow", () => {
       })
     })
   })
+
+  describe("4. SKIP_OTP Development Bypass", () => {
+    const originalEnv = process.env.SKIP_OTP
+
+    afterEach(() => {
+      process.env.SKIP_OTP = originalEnv
+    })
+
+    it("should set code to '00000' and skip SMS sending in send-otp when SKIP_OTP is true", async () => {
+      process.env.SKIP_OTP = "true"
+
+      const req: any = {
+        validatedBody: { phone: "09123456789" },
+        scope: {
+          resolve: jest.fn((key) => {
+            if (key === ContainerRegistrationKeys.LOGGER) return { info: jest.fn() }
+            return null
+          }),
+        },
+      }
+
+      const jsonMock = jest.fn()
+      const statusMock = jest.fn().mockReturnValue({ json: jsonMock })
+      const res: any = { status: statusMock }
+
+      await sendOtpHandler(req, res)
+
+      expect(statusMock).toHaveBeenCalledWith(200)
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          phone: "+989123456789",
+          message: expect.stringContaining("00000"),
+        })
+      )
+
+      // SMS sending should be bypassed
+      expect(SmsNotificationService.sentMessages).toHaveLength(0)
+
+      const stored = memoryOtpStore.get("otp:phone:+989123456789")
+      expect(stored).toBeDefined()
+      expect(stored?.code).toBe("00000")
+    })
+
+    it("should allow login with '00000' directly in verify when SKIP_OTP is true", async () => {
+      process.env.SKIP_OTP = "true"
+
+      const phone = "09123456789"
+      const existingCustomer = {
+        id: "cust_dev_1",
+        email: "dev@depix.local",
+        phone: "+989123456789",
+      }
+
+      const mockQuery = {
+        graph: jest.fn().mockResolvedValue({
+          data: [existingCustomer],
+        }),
+      }
+
+      const mockAuthModule = {
+        listAuthIdentities: jest.fn().mockResolvedValue([
+          {
+            id: "auth_id_dev",
+            app_metadata: { customer_id: "cust_dev_1" },
+          },
+        ]),
+      }
+
+      const mockProjectConfig = {
+        projectConfig: {
+          http: {
+            jwtSecret: "supersecret",
+            jwtExpiresIn: "1d",
+          },
+        },
+      }
+
+      const req: any = {
+        validatedBody: { phone, code: "00000" },
+        scope: {
+          resolve: jest.fn((key) => {
+            if (key === ContainerRegistrationKeys.QUERY) return mockQuery
+            if (key === Modules.AUTH) return mockAuthModule
+            if (key === ContainerRegistrationKeys.CONFIG_MODULE) return mockProjectConfig
+            return null
+          }),
+        },
+      }
+
+      const jsonMock = jest.fn()
+      const statusMock = jest.fn().mockReturnValue({ json: jsonMock })
+      const res: any = { status: statusMock }
+
+      await verifyOtpHandler(req, res)
+
+      expect(statusMock).toHaveBeenCalledWith(200)
+      expect(jsonMock).toHaveBeenCalledWith({
+        token: expect.any(String),
+        customer: existingCustomer,
+      })
+    })
+  })
 })

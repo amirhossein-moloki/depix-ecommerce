@@ -10,6 +10,10 @@ module.exports = defineConfig({
       authCors: process.env.AUTH_CORS || "http://localhost:7000,http://localhost:7001,http://localhost:5173",
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+      authMethodsPerActor: {
+        user: ["emailpass"],
+        customer: ["phone"],
+      },
     },
   },
   admin: {

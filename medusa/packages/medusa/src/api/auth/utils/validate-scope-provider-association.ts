@@ -25,6 +25,15 @@ export const validateScopeProviderAssociation = (actorType?: string) => {
   ) => {
     const { auth_provider } = req.params
     const actor_type = actorType ?? req.params.actor_type
+
+    // Disallow customer emailpass authentication (storefront uses phone OTP)
+    if (actor_type === "customer" && auth_provider === "emailpass") {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "Customer email/password authentication is disabled. Please use phone OTP authentication."
+      )
+    }
+
     const config: ConfigModule = req.scope.resolve(
       ContainerRegistrationKeys.CONFIG_MODULE
     )

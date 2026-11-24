@@ -8,6 +8,14 @@ import { generateJwtTokenWithChecks } from "../../utils/generate-jwt-token"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const { actor_type, auth_provider } = req.params
+
+  if (actor_type === "customer" && auth_provider === "emailpass") {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "Customer email/password authentication is disabled. Please use phone OTP authentication."
+    )
+  }
+
   const service: IAuthModuleService = req.scope.resolve(Modules.AUTH)
 
   const authData = {

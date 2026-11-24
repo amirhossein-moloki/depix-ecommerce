@@ -68,4 +68,14 @@ describe("validateScopeProviderAssociation", () => {
 
     expect(await run(req, "user")).toHaveBeenCalled()
   })
+
+  it("explicitly rejects customer using emailpass provider", async () => {
+    const req = buildRequest(
+      { actor_type: "customer", auth_provider: "emailpass" }
+    )
+
+    await expect(run(req)).rejects.toThrow(
+      "Customer email/password authentication is disabled. Please use phone OTP authentication."
+    )
+  })
 })

@@ -1665,7 +1665,7 @@ paths:
       summary: Send Phone OTP Code
       operationId: sendPhoneOtpCode
       description: Dispatch verification OTP code to customer's Iranian mobile number
-        (`09...` or `+989...`).
+        (`09...` or `+989...`). In development environments with `SKIP_OTP=true`, code '00000' is set and SMS sending is bypassed.
       tags:
       - Authentication
       security: []
@@ -1695,6 +1695,9 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  phone:
+                    type: string
+                    example: "+989123456789"
                   message:
                     type: string
         '400':
@@ -1703,7 +1706,7 @@ paths:
     post:
       summary: Verify Phone OTP Code
       operationId: verifyPhoneOtpCode
-      description: Verify OTP code and issue JWT session token for customer.
+      description: Verify OTP code and issue JWT session token for customer. In dev environments with `SKIP_OTP=true`, entering '00000' is accepted directly. Customer email/password authentication is disabled in favor of phone OTP.
       tags:
       - Authentication
       security: []
@@ -1722,7 +1725,7 @@ paths:
                   example: 09123456789
                 code:
                   type: string
-                  example: '123456'
+                  example: '00000'
       responses:
         '200':
           description: Authentication successful.
@@ -1740,6 +1743,49 @@ paths:
                     type: object
         '400':
           $ref: '#/components/responses/BadRequest'
+  /auth/user/emailpass:
+    post:
+      summary: Admin Email/Password Login
+      operationId: adminEmailPasswordLogin
+      description: Authenticate an administrator/staff user with email and password and issue a JWT admin token.
+      tags:
+      - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@depix.local
+                password:
+                  type: string
+                  format: password
+                  example: SecureAdminPass123!
+      responses:
+        '200':
+          description: Admin login successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - token
+                properties:
+                  token:
+                    type: string
+                    description: Bearer JWT token for admin endpoints.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /store/products:
     get:
       summary: List Products with Filtering and Pagination

@@ -11,7 +11,7 @@ import {
 import { createCustomerAccountWorkflow } from "@medusajs/core-flows"
 import { normalizePhoneNumber } from "@medusajs/notification-sms"
 import { generateJwtTokenForAuthIdentity } from "../../utils/generate-jwt-token"
-import { memoryOtpStore } from "../send-otp/route"
+import { isSkipOtpEnabled, memoryOtpStore } from "../send-otp/route"
 import { VerifyOtpRequestType } from "../validators"
 
 export const POST = async (
@@ -34,6 +34,10 @@ export const POST = async (
       `Invalid phone number format: ${phone}`
     )
   }
+
+  const skipOtp = isSkipOtpEnabled()
+  const cleanCode = code.toString().trim()
+  const isDevBypass = skipOtp && cleanCode === "00000"
 
   const cacheKey = `otp:phone:${normalizedPhone}`
   let storedCode: string | undefined
@@ -60,11 +64,13 @@ export const POST = async (
     }
   }
 
-  if (!storedCode || storedCode !== code.toString().trim()) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      "Invalid or expired OTP code"
-    )
+  if (!isDevBypass) {
+    if (!storedCode || storedCode !== cleanCode) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "Invalid or expired OTP code"
+      )
+    }
   }
 
   // Clear OTP code from cache / store after verification

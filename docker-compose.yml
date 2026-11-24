@@ -53,6 +53,7 @@ services:
       JWT_SECRET: ${MEDUSA_JWT_SECRET:-supersecret}
       COOKIE_SECRET: ${MEDUSA_COOKIE_SECRET:-supersecret}
       DISABLE_MEDUSA_ADMIN: ${DISABLE_MEDUSA_ADMIN:-true}
+      SKIP_OTP: ${SKIP_OTP:-false}
       PORT: 9000
       HOST: 0.0.0.0
     depends_on:

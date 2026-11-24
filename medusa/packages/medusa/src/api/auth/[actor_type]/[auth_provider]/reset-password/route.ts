@@ -11,6 +11,14 @@ export const POST = async (
   res: MedusaResponse
 ) => {
   const { auth_provider, actor_type } = req.params
+
+  if (actor_type === "customer" && auth_provider === "emailpass") {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "Customer email/password reset-password is disabled. Please use phone OTP authentication."
+    )
+  }
+
   const { identifier, metadata } = req.validatedBody
 
   const { http } = req.scope.resolve(
