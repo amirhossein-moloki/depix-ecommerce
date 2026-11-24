@@ -3,7 +3,7 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { ResetPasswordRequestType } from "../../../validators"
 
 export const POST = async (
