@@ -74,7 +74,7 @@ export const adminPromotionRoutesMiddlewares: MiddlewareRoute[] = [
     ],
   },
   {
-    method: ["POST"],
+    method: ["POST", "PATCH"],
     matcher: "/admin/promotions/:id",
     middlewares: [
       validateAndTransformBody(AdminUpdatePromotion),

@@ -5393,6 +5393,768 @@ paths:
                 properties:
                   order:
                     $ref: '#/components/schemas/Order'
+  /admin/promotions:
+    get:
+      summary: List Promotions
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: code
+        in: query
+        schema:
+          type: string
+      - name: campaign_id
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of promotions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminPromotion'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+    post:
+      summary: Create Promotion
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - code
+              - type
+              - application_method
+              properties:
+                code:
+                  type: string
+                is_automatic:
+                  type: boolean
+                  default: false
+                type:
+                  type: string
+                  enum:
+                  - standard
+                  - buyget
+                status:
+                  type: string
+                  enum:
+                  - draft
+                  - active
+                  - inactive
+                  default: draft
+                campaign_id:
+                  type: string
+                  nullable: true
+                application_method:
+                  type: object
+                  required:
+                  - type
+                  - target_type
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - fixed
+                      - percentage
+                    target_type:
+                      type: string
+                      enum:
+                      - items
+                      - shipping_methods
+                      - order
+                    allocation:
+                      type: string
+                      enum:
+                      - each
+                      - across
+                    value:
+                      type: number
+                    currency_code:
+                      type: string
+                      nullable: true
+                    max_quantity:
+                      type: integer
+                      nullable: true
+                    target_rules:
+                      type: array
+                      items:
+                        type: object
+                rules:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Created promotion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotion:
+                    $ref: '#/components/schemas/AdminPromotion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /admin/promotions/{id}:
+    get:
+      summary: Get Promotion Details
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Promotion details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotion:
+                    $ref: '#/components/schemas/AdminPromotion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Promotion
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                is_automatic:
+                  type: boolean
+                type:
+                  type: string
+                  enum:
+                  - standard
+                  - buyget
+                status:
+                  type: string
+                  enum:
+                  - draft
+                  - active
+                  - inactive
+                campaign_id:
+                  type: string
+                  nullable: true
+                application_method:
+                  type: object
+      responses:
+        '200':
+          description: Updated promotion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotion:
+                    $ref: '#/components/schemas/AdminPromotion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Promotion (Medusa Alias)
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated promotion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotion:
+                    $ref: '#/components/schemas/AdminPromotion'
+    delete:
+      summary: Delete Promotion
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Promotion deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: promotion
+                  deleted:
+                    type: boolean
+  /admin/campaigns:
+    get:
+      summary: List Campaigns
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: campaign_identifier
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminCampaign'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+    post:
+      summary: Create Campaign
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - campaign_identifier
+              properties:
+                name:
+                  type: string
+                campaign_identifier:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                budget:
+                  type: object
+                  nullable: true
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - spend
+                      - usage
+                      - use_by_attribute
+                      - spend_by_attribute
+                    limit:
+                      type: number
+                      nullable: true
+                    currency_code:
+                      type: string
+                      nullable: true
+      responses:
+        '200':
+          description: Created campaign
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: '#/components/schemas/AdminCampaign'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /admin/campaigns/{id}:
+    get:
+      summary: Get Campaign Details
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: '#/components/schemas/AdminCampaign'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Campaign
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                campaign_identifier:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                budget:
+                  type: object
+                  properties:
+                    limit:
+                      type: number
+                      nullable: true
+      responses:
+        '200':
+          description: Updated campaign
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: '#/components/schemas/AdminCampaign'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Campaign (Medusa Alias)
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated campaign
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: '#/components/schemas/AdminCampaign'
+    delete:
+      summary: Delete Campaign
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Campaign deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: campaign
+                  deleted:
+                    type: boolean
+  /admin/free-shipping-rules:
+    get:
+      summary: List Free Shipping Rules
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: scope
+        in: query
+        schema:
+          type: string
+          enum:
+          - store
+          - products
+          - categories
+          - campaign
+      - name: is_active
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: List of free shipping rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  free_shipping_rules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminFreeShippingRule'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+    post:
+      summary: Create Free Shipping Rule
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              properties:
+                title:
+                  type: string
+                scope:
+                  type: string
+                  enum:
+                  - store
+                  - products
+                  - categories
+                  - campaign
+                  default: store
+                product_ids:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                category_ids:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                campaign_id:
+                  type: string
+                  nullable: true
+                min_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                is_active:
+                  type: boolean
+                  default: true
+                metadata:
+                  type: object
+                  nullable: true
+      responses:
+        '201':
+          description: Created free shipping rule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  free_shipping_rule:
+                    $ref: '#/components/schemas/AdminFreeShippingRule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /admin/free-shipping-rules/{id}:
+    get:
+      summary: Get Free Shipping Rule Details
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Free shipping rule details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  free_shipping_rule:
+                    $ref: '#/components/schemas/AdminFreeShippingRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Free Shipping Rule
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                scope:
+                  type: string
+                  enum:
+                  - store
+                  - products
+                  - categories
+                  - campaign
+                product_ids:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                category_ids:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                campaign_id:
+                  type: string
+                  nullable: true
+                min_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                is_active:
+                  type: boolean
+                metadata:
+                  type: object
+                  nullable: true
+      responses:
+        '200':
+          description: Updated free shipping rule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  free_shipping_rule:
+                    $ref: '#/components/schemas/AdminFreeShippingRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Free Shipping Rule
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Free shipping rule deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: free_shipping_rule
+                  deleted:
+                    type: boolean
 components:
   securitySchemes:
     bearerAuth:
@@ -6329,5 +7091,167 @@ components:
           type: string
           nullable: true
         created_at:
+          type: string
+          format: date-time
+    AdminPromotion:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        is_automatic:
+          type: boolean
+        type:
+          type: string
+          enum:
+          - standard
+          - buyget
+        status:
+          type: string
+          enum:
+          - draft
+          - active
+          - inactive
+        campaign_id:
+          type: string
+          nullable: true
+        application_method:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+              enum:
+              - fixed
+              - percentage
+            target_type:
+              type: string
+              enum:
+              - items
+              - shipping_methods
+              - order
+            allocation:
+              type: string
+              enum:
+              - each
+              - across
+              nullable: true
+            value:
+              type: number
+              nullable: true
+            currency_code:
+              type: string
+              nullable: true
+            max_quantity:
+              type: integer
+              nullable: true
+        rules:
+          type: array
+          items:
+            type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AdminCampaign:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        campaign_identifier:
+          type: string
+        description:
+          type: string
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        budget:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+              enum:
+              - spend
+              - usage
+              - use_by_attribute
+              - spend_by_attribute
+            limit:
+              type: number
+              nullable: true
+            used:
+              type: number
+            currency_code:
+              type: string
+              nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AdminFreeShippingRule:
+      type: object
+      properties:
+        id:
+          type: string
+          example: fsr_01J...
+        title:
+          type: string
+        scope:
+          type: string
+          enum:
+          - store
+          - products
+          - categories
+          - campaign
+        product_ids:
+          type: array
+          nullable: true
+          items:
+            type: string
+        category_ids:
+          type: array
+          nullable: true
+          items:
+            type: string
+        campaign_id:
+          type: string
+          nullable: true
+        min_purchase_amount:
+          type: number
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
           type: string
           format: date-time

@@ -69,6 +69,8 @@ export const POST = async (
   res.status(200).json({ campaign })
 }
 
+export const PATCH = POST
+
 export const DELETE = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse<HttpTypes.AdminCampaignDeleteResponse>

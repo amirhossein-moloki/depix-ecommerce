@@ -39,6 +39,7 @@ import {
   Campaign,
   CampaignBudget,
   CampaignBudgetUsage,
+  FreeShippingRule,
   Promotion,
   PromotionRule,
   PromotionRuleValue,
@@ -85,6 +86,7 @@ export default class PromotionModuleService
     CampaignBudgetUsage: { dto: PromotionTypes.CampaignBudgetUsageDTO }
     PromotionRule: { dto: PromotionTypes.PromotionRuleDTO }
     PromotionRuleValue: { dto: PromotionTypes.PromotionRuleValueDTO }
+    FreeShippingRule: { dto: any }
   }>({
     Promotion,
     ApplicationMethod,
@@ -93,6 +95,7 @@ export default class PromotionModuleService
     CampaignBudgetUsage,
     PromotionRule,
     PromotionRuleValue,
+    FreeShippingRule,
   })
   implements PromotionTypes.IPromotionModuleService
 {
