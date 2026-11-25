@@ -65,6 +65,7 @@ import { storeCustomerRoutesMiddlewares } from "./store/customers/middlewares"
 import { storeRoutesMiddlewares } from "./store/middlewares"
 import { storeOrderRoutesMiddlewares } from "./store/orders/middlewares"
 import { storePaymentCollectionsMiddlewares } from "./store/payment-collections/middlewares"
+import { storePaymentRoutesMiddlewares } from "./store/payments/middlewares"
 import { storePaymentProvidersMiddlewares } from "./store/payment-providers/middlewares"
 import { storeProductCategoryRoutesMiddlewares } from "./store/product-categories/middlewares"
 import { storeProductOptionRoutesMiddlewares } from "./store/product-options/middlewares"
@@ -136,6 +137,7 @@ export default defineMiddlewares([
   ...storeProductTagRoutesMiddlewares,
   ...storeProductTypeRoutesMiddlewares,
   ...storePaymentProvidersMiddlewares,
+  ...storePaymentRoutesMiddlewares,
   ...storeShippingOptionRoutesMiddlewares,
   ...storePaymentCollectionsMiddlewares,
   ...storeOrderRoutesMiddlewares,

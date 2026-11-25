@@ -31,9 +31,13 @@ export const StoreCreateCart = WithAdditionalData(CreateCart)
 export type StoreAddCartPromotionsType = z.infer<typeof StoreAddCartPromotions>
 export const StoreAddCartPromotions = z
   .object({
-    promo_codes: z.array(z.string()),
+    promo_codes: z.array(z.string()).optional(),
+    code: z.string().min(1).optional(),
   })
   .strict()
+  .refine((data) => Boolean(data.promo_codes?.length || data.code), {
+    message: "کد تخفیف الزامی است.",
+  })
 
 export type StoreRemoveCartPromotionsType = z.infer<
   typeof StoreRemoveCartPromotions
@@ -57,6 +61,7 @@ export const UpdateCart = z
   .object({
     region_id: z.string().optional(),
     email: z.string().email().nullish(),
+    phone: z.string().nullish(),
     billing_address: StoreCartUpsertAddress.optional(),
     shipping_address: StoreCartUpsertAddress.optional(),
     sales_channel_id: z.string().nullish(),

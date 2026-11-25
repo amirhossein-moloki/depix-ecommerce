@@ -33,6 +33,8 @@ export const POST = async (
   res.status(200).json({ cart: updatedCart })
 }
 
+export const PATCH = POST
+
 export const DELETE = async (
   req: MedusaRequest<{}, HttpTypes.SelectParams>,
   res: MedusaResponse<HttpTypes.StoreLineItemDeleteResponse>

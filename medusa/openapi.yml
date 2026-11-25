@@ -2363,6 +2363,92 @@ paths:
       responses:
         '200':
           description: Cart details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+    post:
+      summary: Update Cart (Addresses & Customer Info)
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shipping_address:
+                  type: object
+                billing_address:
+                  type: object
+                email:
+                  type: string
+                  format: email
+                  nullable: true
+                phone:
+                  type: string
+                  nullable: true
+                metadata:
+                  type: object
+                  nullable: true
+      responses:
+        '200':
+          description: Updated cart with recalculated totals (IRR)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+    patch:
+      summary: Update Cart (PATCH Alias)
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shipping_address:
+                  type: object
+                billing_address:
+                  type: object
+                email:
+                  type: string
+                  format: email
+                  nullable: true
+                phone:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Updated cart with recalculated totals (IRR)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
   /store/carts/{id}/line-items:
     post:
       summary: Add Item to Cart
@@ -2392,6 +2478,375 @@ paths:
       responses:
         '200':
           description: Item added to cart
+  /store/carts/{id}/line-items/{line_id}:
+    post:
+      summary: Update Cart Line Item Quantity
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: line_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+    patch:
+      summary: Update Cart Line Item Quantity (PATCH Alias)
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: line_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+    delete:
+      summary: Delete Cart Line Item
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: line_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Line item deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: line-item
+                  deleted:
+                    type: boolean
+                  parent:
+                    $ref: '#/components/schemas/Cart'
+  /store/shipping-options:
+    get:
+      summary: List Shipping Options for Cart
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: cart_id
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Eligible shipping options with IRR amounts and free-shipping flags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shipping_options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        amount:
+                          type: number
+                          description: Shipping cost in IRR
+                        estimated_days:
+                          type: string
+                          nullable: true
+                        provider_id:
+                          type: string
+                        is_free:
+                          type: boolean
+  /store/carts/{id}/shipping-methods:
+    post:
+      summary: Add Shipping Method to Cart
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - option_id
+              properties:
+                option_id:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Updated cart with shipping_total and total (IRR)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+  /store/carts/{id}/promotions:
+    post:
+      summary: Apply Promotion / Discount Code to Cart
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                promo_codes:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Updated cart with discount_total (IRR)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /store/carts/{id}/promotions/{code}:
+    delete:
+      summary: Remove Promotion Code from Cart
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Updated cart after removing promotion code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+  /store/carts/{id}/payment-sessions:
+    post:
+      summary: Initiate Payment Gateway Session for Cart
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - callback_url
+              properties:
+                provider:
+                  type: string
+                  default: zarinpal
+                callback_url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Payment gateway redirect URL and authority
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_id:
+                    type: string
+                  redirect_url:
+                    type: string
+                  authority:
+                    type: string
+                  amount_irr:
+                    type: number
+                  provider:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /store/payments/initiate:
+    post:
+      summary: Initiate Online Payment Gateway Session
+      tags:
+      - Carts & Checkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - cart_id
+              - callback_url
+              properties:
+                cart_id:
+                  type: string
+                provider:
+                  type: string
+                  default: zarinpal
+                callback_url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Payment gateway redirect URL and authority
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_id:
+                    type: string
+                  redirect_url:
+                    type: string
+                  authority:
+                    type: string
+                  amount_irr:
+                    type: number
+                  provider:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /store/payments/verify:
+    post:
+      summary: Verify Payment Gateway Callback and Complete Order
+      tags:
+      - Carts & Checkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - cart_id
+              properties:
+                cart_id:
+                  type: string
+                authority:
+                  type: string
+                ref_id:
+                  type: string
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Payment verified and order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified:
+                    type: boolean
+                    example: true
+                  order:
+                    $ref: '#/components/schemas/Order'
+                  tracking_ref:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
   /store/carts/{id}/complete:
     post:
       summary: Complete Cart / Place Order

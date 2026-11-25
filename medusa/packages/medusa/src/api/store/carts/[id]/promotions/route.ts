@@ -1,27 +1,38 @@
 import { updateCartPromotionsWorkflowId } from "@medusajs/core-flows"
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { HttpTypes } from "@medusajs/framework/types"
-import { Modules, PromotionActions } from "@medusajs/framework/utils"
+import { MedusaError, Modules, PromotionActions } from "@medusajs/framework/utils"
 import { refetchCart } from "../../helpers"
 
 export const POST = async (
-  req: MedusaRequest<HttpTypes.StoreCartAddPromotion, HttpTypes.SelectParams>,
+  req: MedusaRequest<
+    HttpTypes.StoreCartAddPromotion & { code?: string },
+    HttpTypes.SelectParams
+  >,
   res: MedusaResponse<HttpTypes.StoreCartResponse>
 ) => {
   const we = req.scope.resolve(Modules.WORKFLOW_ENGINE)
   const payload = req.validatedBody
+  const promoCodes = payload.promo_codes ?? (payload.code ? [payload.code] : [])
 
-  await we.run(updateCartPromotionsWorkflowId, {
-    input: {
-      promo_codes: payload.promo_codes,
-      cart_id: req.params.id,
-      action:
-        payload.promo_codes.length > 0
-          ? PromotionActions.ADD
-          : PromotionActions.REPLACE,
-      force_refresh_payment_collection: true,
-    },
-  })
+  try {
+    await we.run(updateCartPromotionsWorkflowId, {
+      input: {
+        promo_codes: promoCodes,
+        cart_id: req.params.id,
+        action:
+          promoCodes.length > 0
+            ? PromotionActions.ADD
+            : PromotionActions.REPLACE,
+        force_refresh_payment_collection: true,
+      },
+    })
+  } catch (err: any) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      err?.message || "کد تخفیف نامعتبر یا منقضی شده است."
+    )
+  }
 
   const cart = await refetchCart(
     req.params.id,

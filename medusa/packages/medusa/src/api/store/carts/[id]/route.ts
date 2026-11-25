@@ -20,7 +20,7 @@ export const GET = async (
 
 export const POST = async (
   req: MedusaRequest<
-    HttpTypes.StoreUpdateCart & AdditionalData,
+    HttpTypes.StoreUpdateCart & AdditionalData & { phone?: string | null },
     HttpTypes.SelectParams
   >,
   res: MedusaResponse<{
@@ -28,10 +28,25 @@ export const POST = async (
   }>
 ) => {
   const we = req.scope.resolve(Modules.WORKFLOW_ENGINE)
+  const { phone, ...rest } = req.validatedBody
+  const inputBody: Record<string, any> = { ...rest }
+
+  if (phone !== undefined) {
+    inputBody.metadata = {
+      ...(inputBody.metadata ?? {}),
+      phone,
+    }
+    if (inputBody.shipping_address && !inputBody.shipping_address.phone) {
+      inputBody.shipping_address = {
+        ...inputBody.shipping_address,
+        phone,
+      }
+    }
+  }
 
   await we.run(updateCartWorkflowId, {
     input: {
-      ...req.validatedBody,
+      ...inputBody,
       id: req.params.id,
       additional_data: req.validatedBody.additional_data,
     },
@@ -45,3 +60,5 @@ export const POST = async (
 
   res.status(200).json({ cart })
 }
+
+export const PATCH = POST

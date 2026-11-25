@@ -46,7 +46,7 @@ export const storeCartRoutesMiddlewares: MiddlewareRoute[] = [
     ],
   },
   {
-    method: ["POST"],
+    method: ["POST", "PATCH"],
     matcher: "/store/carts/:id",
     middlewares: [
       validateAndTransformBody(StoreUpdateCart),
@@ -80,7 +80,7 @@ export const storeCartRoutesMiddlewares: MiddlewareRoute[] = [
     ],
   },
   {
-    method: ["POST"],
+    method: ["POST", "PATCH"],
     matcher: "/store/carts/:id/line-items/:line_id",
     middlewares: [
       validateAndTransformBody(StoreUpdateCartLineItem),
@@ -105,6 +105,16 @@ export const storeCartRoutesMiddlewares: MiddlewareRoute[] = [
     matcher: "/store/carts/:id/promotions",
     middlewares: [
       validateAndTransformBody(StoreAddCartPromotions),
+      validateAndTransformQuery(
+        StoreGetCartsCart,
+        QueryConfig.retrieveTransformQueryConfig
+      ),
+    ],
+  },
+  {
+    method: ["DELETE"],
+    matcher: "/store/carts/:id/promotions/:code",
+    middlewares: [
       validateAndTransformQuery(
         StoreGetCartsCart,
         QueryConfig.retrieveTransformQueryConfig
