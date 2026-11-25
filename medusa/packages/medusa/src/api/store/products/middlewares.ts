@@ -9,6 +9,7 @@ import {
   MedusaRequest,
   MedusaResponse,
   MiddlewareRoute,
+  refetchEntities,
 } from "@medusajs/framework/http"
 import {
   ContainerRegistrationKeys,
@@ -31,10 +32,22 @@ async function applyMaybeLinkFilterIfNecessary(
   res: MedusaResponse,
   next: MedusaNextFunction
 ) {
-  const canUseIndex = !(
-    isPresent(req.filterableFields.tags) ||
-    isPresent(req.filterableFields.categories)
-  )
+  const f = req.filterableFields ?? {}
+  const hasCustomCatalogFilter =
+    isPresent(f.brand_id) ||
+    isPresent(f.brand_slug) ||
+    f.min_price !== undefined ||
+    f.max_price !== undefined ||
+    f.in_stock !== undefined ||
+    f.has_discount !== undefined ||
+    (f.sort !== undefined && f.sort !== "newest")
+
+  const canUseIndex =
+    !hasCustomCatalogFilter &&
+    !(
+      isPresent(req.filterableFields.tags) ||
+      isPresent(req.filterableFields.categories)
+    )
   if (FeatureFlag.isFeatureEnabled(IndexEngineFeatureFlag.key) && canUseIndex) {
     return next()
   }
@@ -60,6 +73,55 @@ async function applyMaybeLinkFilterIfNecessary(
     resourceId: "product_id",
     filterableField: "sales_channel_id",
   })(req, res, next)
+}
+
+async function prepareCatalogFilterFields(
+  req: MedusaRequest,
+  res: MedusaResponse,
+  next: MedusaNextFunction
+) {
+  const f = req.filterableFields ?? {}
+  const needsPricing =
+    f.min_price !== undefined ||
+    f.max_price !== undefined ||
+    f.has_discount !== undefined ||
+    f.sort === "price_asc" ||
+    f.sort === "price_desc"
+
+  if (!needsPricing) {
+    return next()
+  }
+
+  const hasCalculatedPrice = req.queryConfig.fields.some(
+    (field) =>
+      field === "variants.calculated_price" ||
+      field.startsWith("variants.calculated_price.")
+  )
+
+  if (hasCalculatedPrice) {
+    return next()
+  }
+
+  let hasPricingContext = Boolean(f.region_id || f.country_code || f.cart_id)
+  if (!hasPricingContext) {
+    try {
+      const { data: stores } = await refetchEntities({
+        entity: "store",
+        scope: req.scope,
+        fields: ["id", "default_region_id"],
+        options: { cache: { enable: true } },
+      })
+      hasPricingContext = Boolean(stores?.[0]?.default_region_id)
+    } catch {
+      hasPricingContext = false
+    }
+  }
+
+  if (hasPricingContext) {
+    req.queryConfig.fields.push("variants.calculated_price.*")
+  }
+
+  return next()
 }
 
 export const storeProductRoutesMiddlewares: MiddlewareRoute[] = [
@@ -90,6 +152,7 @@ export const storeProductRoutesMiddlewares: MiddlewareRoute[] = [
           return { id: categoryIds, is_internal: false, is_active: true }
         },
       }),
+      prepareCatalogFilterFields,
       normalizeDataForContext(),
       setPricingContext(),
       setTaxContext(),

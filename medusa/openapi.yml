@@ -1817,6 +1817,53 @@ paths:
         schema:
           type: string
           example: -created_at
+      - name: brand_id
+        in: query
+        description: Filter products by brand ID(s)
+        schema:
+          type: array
+          items:
+            type: string
+      - name: brand_slug
+        in: query
+        description: Filter products by brand slug(s)
+        schema:
+          type: array
+          items:
+            type: string
+      - name: min_price
+        in: query
+        description: Minimum variant price in Rials (IRR)
+        schema:
+          type: number
+          minimum: 0
+      - name: max_price
+        in: query
+        description: Maximum variant price in Rials (IRR)
+        schema:
+          type: number
+          minimum: 0
+      - name: in_stock
+        in: query
+        description: Filter products by stock availability
+        schema:
+          type: boolean
+      - name: has_discount
+        in: query
+        description: Filter products that have an active discount
+        schema:
+          type: boolean
+      - name: sort
+        in: query
+        description: Sort products by preset order
+        schema:
+          type: string
+          enum:
+          - newest
+          - bestselling
+          - price_asc
+          - price_desc
+          - popular
       responses:
         '200':
           description: List of products

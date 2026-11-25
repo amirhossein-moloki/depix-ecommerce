@@ -10,28 +10,46 @@ import IndexEngineFeatureFlag from "../../../feature-flags/index-engine"
 import {
   prepareInventoryQuantityFields,
   wrapVariantsWithInventoryQuantityForSalesChannel,
+  wrapVariantsWithTotalInventoryQuantity,
 } from "../../utils/middlewares"
+import {
+  buildCandidateFields,
+  CatalogFilterParams,
+  extractCatalogFilterParams,
+  filterCatalogProducts,
+  sortCatalogProducts,
+} from "./catalog-filters"
 import { RequestWithContext, wrapProductsWithTaxPrices } from "./helpers"
 
 export const GET = async (
   req: RequestWithContext<HttpTypes.StoreProductListParams>,
   res: MedusaResponse<HttpTypes.StoreProductListResponse>
 ) => {
+  const { catalogFilters, hasCustomFilters } = extractCatalogFilterParams(
+    req.filterableFields ?? {}
+  )
+
+  if (catalogFilters.sort === "newest" && !hasCustomFilters) {
+    req.queryConfig.pagination ??= {}
+    req.queryConfig.pagination.order = { created_at: "DESC" }
+  }
+
   if (FeatureFlag.isFeatureEnabled(IndexEngineFeatureFlag.key)) {
     // TODO: These filters are not supported by the index engine yet
     if (
+      hasCustomFilters ||
       isPresent(req.filterableFields.tags) ||
       isPresent(req.filterableFields.categories) ||
       isPresent(req.filterableFields.option_value_id) ||
       isPresent(req.filterableFields.options)
     ) {
-      return await getProducts(req, res)
+      return await getProducts(req, res, catalogFilters, hasCustomFilters)
     }
 
     return await getProductsWithIndexEngine(req, res)
   }
 
-  return await getProducts(req, res)
+  return await getProducts(req, res, catalogFilters, hasCustomFilters)
 }
 
 async function getProductsWithIndexEngine(
@@ -103,14 +121,49 @@ async function getProductsWithIndexEngine(
   })
 }
 
+async function populateInventoryQuantity(
+  req: RequestWithContext<HttpTypes.StoreProductListParams>,
+  products: any[],
+  useTotalFallback = false
+) {
+  const variants = products.flatMap((product) => product.variants ?? [])
+  if (!variants.length) {
+    return
+  }
+
+  if (!useTotalFallback) {
+    await wrapVariantsWithInventoryQuantityForSalesChannel(req, variants)
+    return
+  }
+
+  const pkChannels = req.publishable_key_context?.sales_channel_ids ?? []
+  const filterChannels = req.filterableFields?.sales_channel_id
+  const hasSingleFilterChannel =
+    (typeof filterChannels === "string" && Boolean(filterChannels)) ||
+    (Array.isArray(filterChannels) && filterChannels.length === 1)
+
+  if (pkChannels.length === 1 || hasSingleFilterChannel) {
+    await wrapVariantsWithInventoryQuantityForSalesChannel(req, variants)
+  } else {
+    await wrapVariantsWithTotalInventoryQuantity(req, variants)
+  }
+}
+
 async function getProducts(
   req: RequestWithContext<HttpTypes.StoreProductListParams>,
-  res: MedusaResponse<HttpTypes.StoreProductListResponse>
+  res: MedusaResponse<HttpTypes.StoreProductListResponse>,
+  catalogFilters: CatalogFilterParams = {},
+  hasCustomFilters = false
 ) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const context: object = {}
+
+  const requestedFields = hasCustomFilters
+    ? buildCandidateFields(req.queryConfig.fields, catalogFilters)
+    : req.queryConfig.fields
+
   const { fields, withInventoryQuantity } = prepareInventoryQuantityFields(
-    req.queryConfig.fields,
+    requestedFields,
     { relation: "variants" }
   )
   req.queryConfig.fields = fields
@@ -122,12 +175,47 @@ async function getProducts(
     )
   }
 
-  const { data: products = [], metadata } = await query.graph(
+  if (!hasCustomFilters) {
+    const { data: products = [], metadata } = await query.graph(
+      {
+        entity: "product",
+        fields: req.queryConfig.fields,
+        filters: req.filterableFields,
+        pagination: req.queryConfig.pagination,
+        context,
+      },
+      {
+        cache: {
+          enable: true,
+        },
+        locale: req.locale,
+      }
+    )
+
+    if (withInventoryQuantity) {
+      await populateInventoryQuantity(req, products, false)
+    }
+
+    await wrapProductsWithTaxPrices(req, products)
+
+    return res.json({
+      products,
+      count: metadata!.count,
+      offset: metadata!.skip,
+      limit: metadata!.take,
+    })
+  }
+
+  // Fetch all candidates matching base DB filters so custom filters, sorting,
+  // and pagination operate accurately across the entire catalog.
+  const { data: candidateProducts = [] } = await query.graph(
     {
       entity: "product",
       fields: req.queryConfig.fields,
       filters: req.filterableFields,
-      pagination: req.queryConfig.pagination,
+      pagination: req.queryConfig.pagination?.order
+        ? { order: req.queryConfig.pagination.order }
+        : undefined,
       context,
     },
     {
@@ -139,18 +227,30 @@ async function getProducts(
   )
 
   if (withInventoryQuantity) {
-    await wrapVariantsWithInventoryQuantityForSalesChannel(
-      req,
-      products.flatMap((product) => product.variants ?? [])
-    )
+    await populateInventoryQuantity(req, candidateProducts, true)
   }
 
-  await wrapProductsWithTaxPrices(req, products)
+  const filteredProducts = await filterCatalogProducts(
+    candidateProducts,
+    catalogFilters,
+    req.scope
+  )
+  const sortedProducts = await sortCatalogProducts(
+    filteredProducts,
+    catalogFilters.sort,
+    req.scope
+  )
 
-  res.json({
-    products,
-    count: metadata!.count,
-    offset: metadata!.skip,
-    limit: metadata!.take,
+  const skip = req.queryConfig.pagination?.skip ?? 0
+  const take = req.queryConfig.pagination?.take ?? 50
+  const pagedProducts = sortedProducts.slice(skip, skip + take)
+
+  await wrapProductsWithTaxPrices(req, pagedProducts)
+
+  return res.json({
+    products: pagedProducts,
+    count: sortedProducts.length,
+    offset: skip,
+    limit: take,
   })
 }

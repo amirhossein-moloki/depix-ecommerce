@@ -1,4 +1,5 @@
 import { z } from "@medusajs/framework/zod"
+import { booleanString } from "../../utils/common-validators/common"
 import {
   applyAndAndOrOperators,
   GetProductsParams,
@@ -41,12 +42,28 @@ export const StoreGetProductVariantsParamsFields = z.object({
   deleted_at: createOperatorMap().optional(),
 })
 
+const optionalNonNegativeNumber = () =>
+  z.preprocess(
+    (val) =>
+      val === "" || val === undefined || val === null ? undefined : Number(val),
+    z.number().nonnegative().optional()
+  )
+
 export const StoreGetProductsParamsFields = z
   .object({
     region_id: z.string().optional(),
     country_code: z.string().optional(),
     province: z.string().optional(),
     cart_id: z.string().optional(),
+    brand_id: z.union([z.string(), z.array(z.string())]).optional(),
+    brand_slug: z.union([z.string(), z.array(z.string())]).optional(),
+    min_price: optionalNonNegativeNumber(),
+    max_price: optionalNonNegativeNumber(),
+    in_stock: booleanString().optional(),
+    has_discount: booleanString().optional(),
+    sort: z
+      .enum(["newest", "bestselling", "price_asc", "price_desc", "popular"])
+      .optional(),
   })
   .merge(GetProductsParams)
   .strict()
