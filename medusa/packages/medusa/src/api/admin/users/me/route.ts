@@ -8,16 +8,20 @@ import {
   MedusaError,
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
+import { formatAdminUser } from "../rbac"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.AdminUserParams>,
   res: MedusaResponse<HttpTypes.AdminUserResponse>
 ) => {
-  const id = req.auth_context.actor_id
+  const id = req.auth_context?.actor_id
   const remoteQuery = req.scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
 
   if (!id) {
-    throw new MedusaError(MedusaError.Types.NOT_FOUND, `User ID not found`)
+    return res.status(401).json({
+      type: "unauthorized",
+      message: "Authentication required",
+    } as any)
   }
 
   const query = remoteQueryObjectFromString({
@@ -35,5 +39,13 @@ export const GET = async (
     )
   }
 
-  res.status(200).json({ user })
+  const formatted = formatAdminUser(user)
+  if (!formatted.is_active) {
+    return res.status(403).json({
+      type: "forbidden",
+      message: "Admin account is deactivated.",
+    } as any)
+  }
+
+  res.status(200).json({ user: formatted })
 }

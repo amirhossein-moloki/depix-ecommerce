@@ -6155,6 +6155,374 @@ paths:
                     example: free_shipping_rule
                   deleted:
                     type: boolean
+  /admin/auth/login:
+    post:
+      summary: Admin Login (Email or Username)
+      tags:
+      - Admin Authentication & Users
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Admin login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - token
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/AdminUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/auth/logout:
+    post:
+      summary: Admin Logout
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Admin session invalidated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+  /admin/users/me:
+    get:
+      summary: Get Current Admin User Session
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Current authenticated admin user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AdminUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/users:
+    get:
+      summary: List Admin Users
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: role
+        in: query
+        schema:
+          type: string
+          enum:
+          - super_admin
+          - admin
+          - orders
+          - inventory
+          - support
+      - name: is_active
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: List of admin users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminUser'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Create Admin User
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              properties:
+                name:
+                  type: string
+                  nullable: true
+                username:
+                  type: string
+                  nullable: true
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  nullable: true
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                role:
+                  type: string
+                  enum:
+                  - super_admin
+                  - admin
+                  - orders
+                  - inventory
+                  - support
+                  default: admin
+                is_active:
+                  type: boolean
+                  default: true
+                first_name:
+                  type: string
+                  nullable: true
+                last_name:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Created admin user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AdminUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/users/{id}:
+    get:
+      summary: Get Admin User Details
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Admin user details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AdminUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Admin User
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  nullable: true
+                username:
+                  type: string
+                  nullable: true
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  nullable: true
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                role:
+                  type: string
+                  enum:
+                  - super_admin
+                  - admin
+                  - orders
+                  - inventory
+                  - support
+                is_active:
+                  type: boolean
+                first_name:
+                  type: string
+                  nullable: true
+                last_name:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Updated admin user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AdminUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Admin User (Medusa Alias)
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated admin user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AdminUser'
+    delete:
+      summary: Delete Admin User
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Admin user deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: user
+                  deleted:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
   securitySchemes:
     bearerAuth:
@@ -7244,6 +7612,53 @@ components:
           type: string
           format: date-time
           nullable: true
+        is_active:
+          type: boolean
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum:
+          - super_admin
+          - admin
+          - orders
+          - inventory
+          - support
+        permissions:
+          type: array
+          items:
+            type: string
         is_active:
           type: boolean
         metadata:

@@ -8,6 +8,7 @@ import * as QueryConfig from "./query-config"
 import { Entities } from "./query-config"
 import {
   AdminAssignUserRoles,
+  AdminCreateUser,
   AdminGetUserParams,
   AdminGetUserRolesParams,
   AdminGetUsersParams,
@@ -29,6 +30,23 @@ export const adminUserRoutesMiddlewares: MiddlewareRoute[] = [
       {
         resource: Entities.user,
         operation: PolicyOperation.read,
+      },
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/users",
+    middlewares: [
+      validateAndTransformBody(AdminCreateUser),
+      validateAndTransformQuery(
+        AdminGetUserParams,
+        QueryConfig.retrieveTransformQueryConfig
+      ),
+    ],
+    policies: [
+      {
+        resource: Entities.user,
+        operation: PolicyOperation.create,
       },
     ],
   },
@@ -59,7 +77,7 @@ export const adminUserRoutesMiddlewares: MiddlewareRoute[] = [
     ],
   },
   {
-    method: ["POST"],
+    method: ["POST", "PATCH"],
     matcher: "/admin/users/:id",
     middlewares: [
       validateAndTransformBody(AdminUpdateUser),

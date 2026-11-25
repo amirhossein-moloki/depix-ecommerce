@@ -102,6 +102,8 @@ import { adminCategoryRoutesMiddlewares } from "./admin/categories/middlewares"
 import { storeCategoryRoutesMiddlewares } from "./store/categories/middlewares"
 import { adminMediaRoutesMiddlewares } from "./admin/media/middlewares"
 import { storeReviewMediaRoutesMiddlewares } from "./store/reviews/media/middlewares"
+import { adminAuthRoutesMiddlewares } from "./admin/auth/middlewares"
+import { enforceAdminRbac } from "./admin/users/rbac"
 import { adminSettingsRoutesMiddlewares } from "./admin/settings/middlewares"
 
 export default defineMiddlewares([
@@ -116,8 +118,9 @@ export default defineMiddlewares([
   ...storeRoutesMiddlewares,
   {
     matcher: "/admin*",
-    middlewares: [setSecretApiKeyContext],
+    middlewares: [setSecretApiKeyContext, enforceAdminRbac],
   },
+  ...adminAuthRoutesMiddlewares,
   ...adminCustomerGroupRoutesMiddlewares,
   ...adminCustomerRoutesMiddlewares,
   ...adminPropertyLabelsMiddlewares,
