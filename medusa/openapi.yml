@@ -7863,6 +7863,20 @@ components:
           type: string
         thumbnail:
           type: string
+        realPrice:
+          type: number
+          nullable: true
+          description: Original / compare-at price in IRR
+        finalPrice:
+          type: number
+          nullable: true
+          description: Effective selling price in IRR
+        discount:
+          type: number
+          description: Discount percentage (0 if no discount)
+        stock:
+          type: boolean
+          description: Whether at least one variant is in stock
         variants:
           type: array
           items:

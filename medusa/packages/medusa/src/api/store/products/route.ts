@@ -19,7 +19,11 @@ import {
   filterCatalogProducts,
   sortCatalogProducts,
 } from "./catalog-filters"
-import { RequestWithContext, wrapProductsWithTaxPrices } from "./helpers"
+import {
+  enrichProductsWithStoreSummary,
+  RequestWithContext,
+  wrapProductsWithTaxPrices,
+} from "./helpers"
 
 export const GET = async (
   req: RequestWithContext<HttpTypes.StoreProductListParams>,
@@ -111,6 +115,7 @@ async function getProductsWithIndexEngine(
   }
 
   await wrapProductsWithTaxPrices(req, products)
+  enrichProductsWithStoreSummary(products)
 
   res.json({
     products,
@@ -197,6 +202,7 @@ async function getProducts(
     }
 
     await wrapProductsWithTaxPrices(req, products)
+    enrichProductsWithStoreSummary(products)
 
     return res.json({
       products,
@@ -246,6 +252,7 @@ async function getProducts(
   const pagedProducts = sortedProducts.slice(skip, skip + take)
 
   await wrapProductsWithTaxPrices(req, pagedProducts)
+  enrichProductsWithStoreSummary(pagedProducts)
 
   return res.json({
     products: pagedProducts,

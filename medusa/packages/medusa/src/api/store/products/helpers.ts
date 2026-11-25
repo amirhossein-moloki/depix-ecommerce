@@ -138,3 +138,116 @@ const asTaxItem = (product: HttpTypes.StoreProduct): TaxableItemDTO[] => {
     })
     .filter((v) => !!v) as unknown as TaxableItemDTO[]
 }
+
+const getVariantFinalPrice = (variant: any): number | null => {
+  const calcAmount = variant?.calculated_price?.calculated_amount
+  if (
+    calcAmount !== undefined &&
+    calcAmount !== null &&
+    Number.isFinite(Number(calcAmount))
+  ) {
+    return Number(calcAmount)
+  }
+
+  if (Array.isArray(variant?.prices) && variant.prices.length > 0) {
+    const irrPrice = variant.prices.find(
+      (p: any) =>
+        typeof p?.currency_code === "string" &&
+        p.currency_code.toLowerCase() === "irr"
+    )
+    const chosen = irrPrice ?? variant.prices[0]
+    if (
+      chosen?.amount !== undefined &&
+      chosen?.amount !== null &&
+      Number.isFinite(Number(chosen.amount))
+    ) {
+      return Number(chosen.amount)
+    }
+  }
+
+  return null
+}
+
+const getVariantRealPrice = (
+  variant: any,
+  finalPrice: number | null
+): number | null => {
+  const origAmount = variant?.calculated_price?.original_amount
+  if (
+    origAmount !== undefined &&
+    origAmount !== null &&
+    Number.isFinite(Number(origAmount)) &&
+    (finalPrice === null || Number(origAmount) > finalPrice)
+  ) {
+    return Number(origAmount)
+  }
+
+  const compareAt = variant?.metadata?.compare_at_price
+  if (
+    compareAt !== undefined &&
+    compareAt !== null &&
+    Number.isFinite(Number(compareAt)) &&
+    Number(compareAt) > 0
+  ) {
+    return Number(compareAt)
+  }
+
+  return finalPrice
+}
+
+/**
+ * Enriches store product responses with computed `realPrice`, `finalPrice`,
+ * `discount` (percentage), and `stock` (boolean) fields.
+ */
+export const enrichProductsWithStoreSummary = (products: any[]) => {
+  for (const product of products ?? []) {
+    const variants = Array.isArray(product?.variants) ? product.variants : []
+
+    let bestVariant: any = null
+    let bestFinalPrice: number | null = null
+
+    for (const variant of variants) {
+      const price = getVariantFinalPrice(variant)
+      if (price !== null && (bestFinalPrice === null || price < bestFinalPrice)) {
+        bestFinalPrice = price
+        bestVariant = variant
+      }
+    }
+
+    if (!bestVariant && variants.length > 0) {
+      bestVariant = variants[0]
+    }
+
+    const finalPrice = bestFinalPrice
+    const realPrice = bestVariant
+      ? getVariantRealPrice(bestVariant, finalPrice)
+      : null
+
+    let discount = 0
+    if (
+      realPrice !== null &&
+      finalPrice !== null &&
+      realPrice > finalPrice &&
+      realPrice > 0
+    ) {
+      discount = Math.round(((realPrice - finalPrice) / realPrice) * 100)
+    } else if (Number(product?.metadata?.discount_percentage ?? 0) > 0) {
+      discount = Number(product.metadata.discount_percentage)
+    }
+
+    const stock = variants.some((variant: any) => {
+      if (variant?.manage_inventory === false || variant?.allow_backorder === true) {
+        return true
+      }
+      if (variant?.inventory_quantity !== undefined && variant?.inventory_quantity !== null) {
+        return Number(variant.inventory_quantity) > 0
+      }
+      return Number(variant?.metadata?.initial_stock ?? 0) > 0
+    })
+
+    product.realPrice = realPrice
+    product.finalPrice = finalPrice
+    product.discount = discount
+    product.stock = stock
+  }
+}
