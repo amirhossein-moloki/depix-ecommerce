@@ -136,6 +136,13 @@ export const POST = async (
     })
 
     customer = newCustomer
+    authIdentity = {
+      ...authIdentity,
+      app_metadata: {
+        ...(authIdentity.app_metadata || {}),
+        customer_id: newCustomer.id,
+      },
+    }
   } else {
     // Customer exists: Ensure Auth Identity exists and customer_id is set in app_metadata
     if (!authIdentity) {

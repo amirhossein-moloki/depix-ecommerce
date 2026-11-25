@@ -1,6 +1,8 @@
 import {
   createRegionsWorkflow,
   createSalesChannelsWorkflow,
+  createStockLocationsWorkflow,
+  linkSalesChannelsToStockLocationWorkflow,
   updateStoresWorkflow,
 } from "@medusajs/core-flows"
 import { MedusaModule } from "@medusajs/framework/modules-sdk"
@@ -111,13 +113,53 @@ export default async function ensureIranStoreDefaults({
     logger.info(`Created default Iran (IRR) region: ${defaultRegionId}`)
   }
 
-  // 4. Link default_region_id and default_sales_channel_id on store if missing
+  // 4. Ensure default stock location exists and is linked to default sales channel
+  let defaultLocationId = store.default_location_id as string | null
+  if (MedusaModule.isInstalled(Modules.STOCK_LOCATION)) {
+    const stockLocationService = container.resolve<any>(Modules.STOCK_LOCATION)
+    const locations = await stockLocationService.listStockLocations({})
+    if (locations?.length > 0) {
+      defaultLocationId ??= locations[0].id
+    } else {
+      const { result } = await createStockLocationsWorkflow(container).run({
+        input: {
+          locations: [
+            {
+              name: "Main Warehouse",
+              address: {
+                address_1: "Tehran",
+                country_code: "ir",
+              },
+            },
+          ],
+        },
+      })
+      defaultLocationId = result?.[0]?.id ?? null
+      logger.info(`Created default stock location: ${defaultLocationId}`)
+    }
+
+    if (defaultLocationId && defaultSalesChannelId) {
+      await linkSalesChannelsToStockLocationWorkflow(container)
+        .run({
+          input: {
+            id: defaultLocationId,
+            add: [defaultSalesChannelId],
+          },
+        })
+        .catch(() => null)
+    }
+  }
+
+  // 5. Link default_region_id, default_sales_channel_id, and default_location_id on store if missing
   const storeUpdate: Record<string, any> = {}
   if (!store.default_region_id && defaultRegionId) {
     storeUpdate.default_region_id = defaultRegionId
   }
   if (!store.default_sales_channel_id && defaultSalesChannelId) {
     storeUpdate.default_sales_channel_id = defaultSalesChannelId
+  }
+  if (!store.default_location_id && defaultLocationId) {
+    storeUpdate.default_location_id = defaultLocationId
   }
 
   if (Object.keys(storeUpdate).length > 0) {
