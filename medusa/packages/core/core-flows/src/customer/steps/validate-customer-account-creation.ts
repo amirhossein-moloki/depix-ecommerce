@@ -61,7 +61,9 @@ export const validateCustomerAccountCreation = createStep(
         }
       }
     } else if (phone) {
-      const existingByPhone = await customerService.listCustomers({ phone })
+      const existingByPhone = await customerService.listCustomers({
+        phone,
+      } as any)
       if (existingByPhone?.some((customer) => customer.has_account)) {
         throw new MedusaError(
           MedusaError.Types.DUPLICATE_ERROR,
