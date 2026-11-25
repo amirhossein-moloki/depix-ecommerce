@@ -6523,6 +6523,486 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /store/returns:
+    get:
+      summary: List Customer Return Requests
+      tags:
+      - Store Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of customer return requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  returns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReturnRequest'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create Return Request
+      tags:
+      - Store Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - order_id
+              - items
+              properties:
+                order_id:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - quantity
+                    properties:
+                      line_item_id:
+                        type: string
+                      id:
+                        type: string
+                      quantity:
+                        type: integer
+                        minimum: 1
+                reason:
+                  type: string
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+                evidence_urls:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Created return request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /store/returns/{id}:
+    get:
+      summary: Get Customer Return Request Details
+      tags:
+      - Store Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Return request details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/returns/{id}/shipment:
+    post:
+      summary: Submit Return Shipment Tracking Code
+      tags:
+      - Store Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - method
+              - tracking_code
+              properties:
+                method:
+                  type: string
+                  enum:
+                  - post
+                  - tipax
+                  - other
+                tracking_code:
+                  type: string
+      responses:
+        '200':
+          description: Updated return request with shipment details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/returns/{id}/cancel:
+    post:
+      summary: Cancel Customer Return Request
+      tags:
+      - Store Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Canceled return request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/returns:
+    get:
+      summary: List All Return Requests (Admin)
+      tags:
+      - Admin Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 15
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: reason
+        in: query
+        schema:
+          type: string
+      - name: q
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of return requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  returns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReturnRequest'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+  /admin/returns/{id}:
+    get:
+      summary: Get Return Request Details (Admin)
+      tags:
+      - Admin Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Return request details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/returns/{id}/approve:
+    post:
+      summary: Approve Return Request
+      tags:
+      - Admin Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                admin_note:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Approved return request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/returns/{id}/reject:
+    post:
+      summary: Reject Return Request
+      tags:
+      - Admin Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reject_reason:
+                  type: string
+                  nullable: true
+                admin_note:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Rejected return request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/returns/{id}/receive:
+    post:
+      summary: Mark Return Package Received at Warehouse
+      tags:
+      - Admin Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                received_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '200':
+          description: Return marked as received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/returns/{id}/inspect:
+    post:
+      summary: Inspect Returned Items (Auto-Restores Inventory if Sellable)
+      tags:
+      - Admin Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - result
+              properties:
+                result:
+                  type: string
+                  enum:
+                  - sellable
+                  - damaged
+                  - unsellable
+                note:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Inspection recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/returns/{id}/refund:
+    post:
+      summary: Record Return Refund to Customer
+      tags:
+      - Admin Returns (RMA)
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - amount_irr
+              - reference_id
+              properties:
+                amount_irr:
+                  type: number
+                  minimum: 0
+                reference_id:
+                  type: string
+                note:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Refund recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  return_request:
+                    $ref: '#/components/schemas/ReturnRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     bearerAuth:
@@ -7663,6 +8143,117 @@ components:
           type: boolean
         metadata:
           type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ReturnRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          example: return_01J...
+        order_id:
+          type: string
+        customer_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - requested
+          - approved
+          - rejected
+          - shipped
+          - received
+          - inspected
+          - refunded
+          - canceled
+          - open
+        reason:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        evidence_urls:
+          type: array
+          items:
+            type: string
+        shipment:
+          type: object
+          nullable: true
+          properties:
+            method:
+              type: string
+              enum:
+              - post
+              - tipax
+              - other
+            tracking_code:
+              type: string
+            shipped_at:
+              type: string
+              format: date-time
+        admin_note:
+          type: string
+          nullable: true
+        reject_reason:
+          type: string
+          nullable: true
+        inspection:
+          type: object
+          nullable: true
+          properties:
+            result:
+              type: string
+              enum:
+              - sellable
+              - damaged
+              - unsellable
+            note:
+              type: string
+              nullable: true
+            inspected_at:
+              type: string
+              format: date-time
+            inventory_restored:
+              type: boolean
+        refund:
+          type: object
+          nullable: true
+          properties:
+            amount_irr:
+              type: number
+            reference_id:
+              type: string
+            note:
+              type: string
+              nullable: true
+            refunded_at:
+              type: string
+              format: date-time
+        refund_amount:
+          type: number
+          nullable: true
+        items:
+          type: array
+          items:
+            type: object
+        requested_at:
+          type: string
+          format: date-time
+          nullable: true
+        received_at:
+          type: string
+          format: date-time
+          nullable: true
+        canceled_at:
+          type: string
+          format: date-time
           nullable: true
         created_at:
           type: string

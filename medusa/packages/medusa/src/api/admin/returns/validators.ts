@@ -9,6 +9,8 @@ export const AdminGetOrdersOrderParams = createSelectParams().merge(
   z.object({
     id: z.union([z.string(), z.array(z.string())]).optional(),
     status: z.union([z.string(), z.array(z.string())]).optional(),
+    reason: z.string().optional(),
+    q: z.string().optional(),
     created_at: createOperatorMap().optional(),
     updated_at: createOperatorMap().optional(),
     deleted_at: createOperatorMap().optional(),
@@ -31,6 +33,8 @@ export const AdminGetOrdersParams = createFindParams({
     id: z.union([z.string(), z.array(z.string())]).optional(),
     order_id: z.union([z.string(), z.array(z.string())]).optional(),
     status: z.union([z.string(), z.array(z.string())]).optional(),
+    reason: z.string().optional(),
+    q: z.string().optional(),
     created_at: createOperatorMap().optional(),
     updated_at: createOperatorMap().optional(),
     deleted_at: createOperatorMap().optional(),
@@ -38,6 +42,30 @@ export const AdminGetOrdersParams = createFindParams({
 )
 
 export type AdminGetOrdersParamsType = z.infer<typeof AdminGetOrdersParams>
+
+export const AdminApproveReturn = z.object({
+  admin_note: z.string().nullish(),
+})
+export type AdminApproveReturnType = z.infer<typeof AdminApproveReturn>
+
+export const AdminRejectReturn = z.object({
+  reject_reason: z.string().nullish(),
+  admin_note: z.string().nullish(),
+})
+export type AdminRejectReturnType = z.infer<typeof AdminRejectReturn>
+
+export const AdminInspectReturn = z.object({
+  result: z.enum(["sellable", "damaged", "unsellable"]),
+  note: z.string().nullish(),
+})
+export type AdminInspectReturnType = z.infer<typeof AdminInspectReturn>
+
+export const AdminRefundReturn = z.object({
+  amount_irr: z.number().nonnegative(),
+  reference_id: z.string().min(1),
+  note: z.string().nullish(),
+})
+export type AdminRefundReturnType = z.infer<typeof AdminRefundReturn>
 
 export const AdminPostReturnsReqSchema = z.object({
   order_id: z.string(),

@@ -37,6 +37,7 @@ import { adminRefundReasonsRoutesMiddlewares } from "./admin/refund-reasons/midd
 import { adminRegionRoutesMiddlewares } from "./admin/regions/middlewares"
 import { adminReservationRoutesMiddlewares } from "./admin/reservations/middlewares"
 import { adminReturnReasonRoutesMiddlewares } from "./admin/return-reasons/middlewares"
+import { storeReturnsRoutesMiddlewares } from "./store/returns/middlewares"
 import { adminReturnRoutesMiddlewares } from "./admin/returns/middlewares"
 import { adminSalesChannelRoutesMiddlewares } from "./admin/sales-channels/middlewares"
 import { adminShippingOptionRoutesMiddlewares } from "./admin/shipping-options/middlewares"
@@ -141,6 +142,7 @@ export default defineMiddlewares([
   ...authRoutesMiddlewares,
   ...adminWorkflowsExecutionsMiddlewares,
   ...adminReturnRoutesMiddlewares,
+  ...storeReturnsRoutesMiddlewares,
   ...storeRegionRoutesMiddlewares,
   ...adminRegionRoutesMiddlewares,
   ...adminRbacRoutesMiddlewares,

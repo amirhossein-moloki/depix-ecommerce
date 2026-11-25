@@ -7,9 +7,11 @@ import { PolicyOperation } from "@medusajs/framework/utils"
 import * as QueryConfig from "./query-config"
 import { Entities } from "./query-config"
 import {
+  AdminApproveReturn,
   AdminGetOrdersOrderParams,
   AdminGetOrdersParams,
   AdminGetReturnParams,
+  AdminInspectReturn,
   AdminPostCancelReturnReqSchema,
   AdminPostReceiveReturnItemsReqSchema,
   AdminPostReceiveReturnsReqSchema,
@@ -20,6 +22,8 @@ import {
   AdminPostReturnsReturnReqSchema,
   AdminPostReturnsShippingActionReqSchema,
   AdminPostReturnsShippingReqSchema,
+  AdminRefundReturn,
+  AdminRejectReturn,
 } from "./validators"
 
 export const adminReturnRoutesMiddlewares: MiddlewareRoute[] = [
@@ -247,6 +251,50 @@ export const adminReturnRoutesMiddlewares: MiddlewareRoute[] = [
         QueryConfig.retrieveTransformQueryConfig
       ),
     ],
+    policies: [
+      {
+        resource: Entities.return,
+        operation: PolicyOperation.update,
+      },
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/returns/:id/approve",
+    middlewares: [validateAndTransformBody(AdminApproveReturn)],
+    policies: [
+      {
+        resource: Entities.return,
+        operation: PolicyOperation.update,
+      },
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/returns/:id/reject",
+    middlewares: [validateAndTransformBody(AdminRejectReturn)],
+    policies: [
+      {
+        resource: Entities.return,
+        operation: PolicyOperation.update,
+      },
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/returns/:id/inspect",
+    middlewares: [validateAndTransformBody(AdminInspectReturn)],
+    policies: [
+      {
+        resource: Entities.return,
+        operation: PolicyOperation.update,
+      },
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/returns/:id/refund",
+    middlewares: [validateAndTransformBody(AdminRefundReturn)],
     policies: [
       {
         resource: Entities.return,
