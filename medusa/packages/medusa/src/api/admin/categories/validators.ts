@@ -24,7 +24,10 @@ export const AdminCreateCategory = z
     slug: z
       .string()
       .min(1)
-      .regex(/^[a-z0-9-]+$/i, "Slug must contain only alphanumeric characters and hyphens")
+      .regex(
+        /^[\p{L}\p{N}\u200c-]+$/u,
+        "Slug must contain only letters, numbers, and hyphens"
+      )
       .optional(),
     description: z.string().optional(),
     image_id: z.string().nullable().optional(),
@@ -44,7 +47,7 @@ export const AdminUpdateCategory = z
     slug: z
       .string()
       .min(1)
-      .regex(/^[a-z0-9-]+$/i)
+      .regex(/^[\p{L}\p{N}\u200c-]+$/u)
       .optional(),
     description: z.string().optional(),
     image_id: z.string().nullable().optional(),

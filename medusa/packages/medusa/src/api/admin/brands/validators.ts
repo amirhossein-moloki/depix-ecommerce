@@ -22,8 +22,8 @@ export const AdminCreateBrand = z
       .string()
       .min(1, "Slug is required")
       .regex(
-        /^[a-z0-9-]+$/i,
-        "Slug must contain only alphanumeric characters and hyphens"
+        /^[\p{L}\p{N}\u200c-]+$/u,
+        "Slug must contain only letters, numbers, and hyphens"
       ),
     description: z.string().nullable().optional(),
     logo_id: z.string().nullable().optional(),
@@ -40,7 +40,7 @@ export const AdminUpdateBrand = z
     slug: z
       .string()
       .min(1)
-      .regex(/^[a-z0-9-]+$/i)
+      .regex(/^[\p{L}\p{N}\u200c-]+$/u)
       .optional(),
     description: z.string().nullable().optional(),
     logo_id: z.string().nullable().optional(),

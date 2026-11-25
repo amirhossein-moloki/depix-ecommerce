@@ -2,7 +2,7 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { MedusaError, Modules, kebabCase } from "@medusajs/framework/utils"
+import { MedusaError, Modules, toHandle } from "@medusajs/framework/utils"
 import {
   AdminCreateCategoryType,
   AdminGetCategoriesParamsType,
@@ -13,7 +13,7 @@ export function formatCategory(cat: any) {
   const metadata = cat.metadata || {}
   return {
     ...cat,
-    slug: cat.handle || metadata.slug || cat.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    slug: cat.handle || metadata.slug || (cat.name ? toHandle(cat.name) : null),
     image_id: metadata.image_id || cat.image || null,
     display_order: cat.rank ?? 0,
   }
@@ -73,7 +73,7 @@ export const POST = async (
     metadata,
   } = req.validatedBody
 
-  const handle = (slug || kebabCase(name)).toLowerCase()
+  const handle = (slug || toHandle(name)).toLowerCase()
 
   // Enforce slug uniqueness
   const [existingHandle] = await productService.listProductCategories({ handle })
