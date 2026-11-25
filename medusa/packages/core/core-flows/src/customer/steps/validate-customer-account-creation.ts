@@ -28,34 +28,44 @@ export const validateCustomerAccountCreation = createStep(
   async (input: CreateCustomerAccountWorkflowInput, { container }) => {
     const customerService = container.resolve(Modules.CUSTOMER)
 
-    const { email } = input.customerData
+    const { email, phone } = input.customerData
 
-    if (!email) {
+    if (!email && !phone) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        "Email is required to create a customer"
+        "Email or phone is required to create a customer"
       )
     }
 
-    // Check if customer with email already exists
-    const existingCustomers = await customerService.listCustomers({ email })
+    if (email) {
+      // Check if customer with email already exists
+      const existingCustomers = await customerService.listCustomers({ email })
 
-    if (existingCustomers?.length) {
-      const hasExistingAccount = existingCustomers.some(
-        (customer) => customer.has_account
-      )
-
-      if (hasExistingAccount && input.authIdentityId) {
-        throw new MedusaError(
-          MedusaError.Types.DUPLICATE_ERROR,
-          "Customer with this email already has an account"
+      if (existingCustomers?.length) {
+        const hasExistingAccount = existingCustomers.some(
+          (customer) => customer.has_account
         )
-      }
 
-      if (!hasExistingAccount && !input.authIdentityId) {
+        if (hasExistingAccount && input.authIdentityId) {
+          throw new MedusaError(
+            MedusaError.Types.DUPLICATE_ERROR,
+            "Customer with this email already has an account"
+          )
+        }
+
+        if (!hasExistingAccount && !input.authIdentityId) {
+          throw new MedusaError(
+            MedusaError.Types.DUPLICATE_ERROR,
+            "Guest customer with this email already exists"
+          )
+        }
+      }
+    } else if (phone) {
+      const existingByPhone = await customerService.listCustomers({ phone })
+      if (existingByPhone?.some((customer) => customer.has_account)) {
         throw new MedusaError(
           MedusaError.Types.DUPLICATE_ERROR,
-          "Guest customer with this email already exists"
+          "Customer with this phone number already has an account"
         )
       }
     }
