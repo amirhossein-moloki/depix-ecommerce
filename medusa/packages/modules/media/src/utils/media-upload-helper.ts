@@ -8,6 +8,7 @@ export const ALLOWED_MIME_TYPES = [
   "image/jpg",
   "image/png",
   "image/webp",
+  "image/avif",
   "image/gif",
   "image/svg+xml",
   "application/pdf",
@@ -61,6 +62,20 @@ export function detectMimeType(buffer: Buffer): string | null {
     buffer[11] === 0x50
   ) {
     return "image/webp"
+  }
+
+  // AVIF: ISOBMFF "ftyp" at 4-7 with "avif" or "avis" brand in ftyp box
+  if (
+    buffer.length >= 12 &&
+    buffer[4] === 0x66 &&
+    buffer[5] === 0x74 &&
+    buffer[6] === 0x79 &&
+    buffer[7] === 0x70
+  ) {
+    const ftypSlice = buffer.subarray(8, Math.min(buffer.length, 32)).toString("ascii")
+    if (ftypSlice.includes("avif") || ftypSlice.includes("avis")) {
+      return "image/avif"
+    }
   }
 
   // PDF: %PDF (25 50 44 46)
@@ -145,7 +160,7 @@ export function getImageDimensions(
  */
 export function getSafeExtension(originalFilename: string, mimeType: string): string {
   const extFromFilename = path.extname(originalFilename).toLowerCase().replace(/[^a-z0-9]/g, "")
-  if (extFromFilename && ["jpg", "jpeg", "png", "webp", "gif", "svg", "pdf"].includes(extFromFilename)) {
+  if (extFromFilename && ["jpg", "jpeg", "png", "webp", "avif", "gif", "svg", "pdf"].includes(extFromFilename)) {
     return extFromFilename === "jpg" ? "jpeg" : extFromFilename
   }
 
@@ -156,6 +171,8 @@ export function getSafeExtension(originalFilename: string, mimeType: string): st
       return "png"
     case "image/webp":
       return "webp"
+    case "image/avif":
+      return "avif"
     case "image/gif":
       return "gif"
     case "image/svg+xml":

@@ -46,6 +46,7 @@ services:
       - "${MEDUSA_PORT:-9000}:9000"
     volumes:
       - medusa_uploads:/app/static
+      - medusa_media_uploads:/app/uploads
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       DATABASE_URL: ${MEDUSA_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/depix_db?sslmode=disable}
@@ -84,3 +85,4 @@ volumes:
   postgres_data:
   redis_data:
   medusa_uploads:
+  medusa_media_uploads:

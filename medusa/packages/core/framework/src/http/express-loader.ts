@@ -202,6 +202,7 @@ export async function expressLoader({
 
   // Currently we don't allow configuration of static files, but this can be revisited as needed.
   app.use("/static", express.static(path.join(baseDir, "static")))
+  app.use("/uploads", express.static(path.join(baseDir, "uploads")))
 
   const shutdown = async () => {
     redisClient?.disconnect()
