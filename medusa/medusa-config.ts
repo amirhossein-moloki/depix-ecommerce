@@ -25,6 +25,26 @@ module.exports = defineConfig({
       resolve: "@medusajs/wallet",
     },
     {
+      key: "brand",
+      resolve: "@medusajs/brand",
+    },
+    {
+      key: "invoice",
+      resolve: "@medusajs/invoice",
+    },
+    {
+      key: "price_alert",
+      resolve: "@medusajs/price-alert",
+    },
+    {
+      key: "media",
+      resolve: "@medusajs/media",
+    },
+    {
+      key: "size_guide",
+      resolve: "@medusajs/size-guide",
+    },
+    {
       key: "payment",
       resolve: "@medusajs/payment",
       options: {
