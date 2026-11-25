@@ -86,7 +86,7 @@ export const POST = async (
     remoteQuery(queryObject),
   ])
 
-  res.json({
+  return res.json({
     order,
     return: orderReturn[0],
   })

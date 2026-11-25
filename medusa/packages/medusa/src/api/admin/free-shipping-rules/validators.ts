@@ -39,7 +39,7 @@ export const AdminCreateFreeShippingRule = z
     starts_at: z.coerce.date().nullish(),
     ends_at: z.coerce.date().nullish(),
     is_active: z.boolean().default(true),
-    metadata: z.record(z.unknown()).nullish(),
+    metadata: z.record(z.string(), z.unknown()).nullish(),
   })
   .strict()
 
@@ -57,6 +57,6 @@ export const AdminUpdateFreeShippingRule = z
     starts_at: z.coerce.date().nullish(),
     ends_at: z.coerce.date().nullish(),
     is_active: z.boolean().optional(),
-    metadata: z.record(z.unknown()).nullish(),
+    metadata: z.record(z.string(), z.unknown()).nullish(),
   })
   .strict()

@@ -47,5 +47,5 @@ export const GET = async (
     } as any)
   }
 
-  res.status(200).json({ user: formatted })
+  return res.status(200).json({ user: formatted })
 }

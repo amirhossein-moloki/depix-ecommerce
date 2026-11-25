@@ -39,7 +39,7 @@ const toStringArray = (value?: string | string[]): string[] => {
     return []
   }
   return (Array.isArray(value) ? value : [value])
-    .map((v) => v.trim())
+    .map((v) => String(v ?? "").trim())
     .filter(Boolean)
 }
 

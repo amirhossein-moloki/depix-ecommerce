@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { initiateGatewayPayment } from "../../payments/gateway"
+import { initiateGatewayPayment } from "../../../payments/gateway"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   const { provider, callback_url } = req.validatedBody as {

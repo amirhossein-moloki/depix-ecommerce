@@ -30,7 +30,7 @@ export const GET = async (
   )
 
   if (catalogFilters.sort === "newest" && !hasCustomFilters) {
-    req.queryConfig.pagination ??= {}
+    req.queryConfig.pagination ??= { skip: 0 }
     req.queryConfig.pagination.order = { created_at: "DESC" }
   }
 
