@@ -20,7 +20,6 @@ export const GET = async (
     { id: ticketId },
     {
       relations: ["category", "messages", "messages.attachments"],
-      order: { "messages.created_at": "ASC" },
     }
   )
 
@@ -31,9 +30,13 @@ export const GET = async (
     )
   }
 
-  // Filter out internal notes completely for customer view
+  // Filter out internal notes completely for customer view and sort chronologically
   const safeMessages = (ticket.messages || [])
     .filter((msg: any) => !msg.is_internal_note)
+    .sort(
+      (a: any, b: any) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )
     .map((msg: any) => ({
       id: msg.id,
       ticket_id: msg.ticket_id,

@@ -17,10 +17,6 @@ export const GET = async (
         "messages.attachments",
         "history",
       ],
-      order: {
-        "messages.created_at": "ASC",
-        "history.created_at": "ASC",
-      },
     }
   )
 
@@ -30,6 +26,11 @@ export const GET = async (
       `Ticket with id ${ticketId} was not found`
     )
   }
+
+  const byCreatedAtAsc = (a: any, b: any) =>
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  const sortedMessages = [...(ticket.messages || [])].sort(byCreatedAtAsc)
+  const sortedHistory = [...(ticket.history || [])].sort(byCreatedAtAsc)
 
   // Fetch optional order info
   let orderInfo = null
@@ -50,6 +51,8 @@ export const GET = async (
   res.json({
     ticket: {
       ...ticket,
+      messages: sortedMessages,
+      history: sortedHistory,
       order: orderInfo,
     },
   })
