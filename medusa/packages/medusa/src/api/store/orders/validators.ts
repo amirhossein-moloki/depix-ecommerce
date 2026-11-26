@@ -40,3 +40,12 @@ export type StoreDeclineOrderTransferRequestType = z.infer<
 export const StoreDeclineOrderTransferRequest = z.object({
   token: z.string().min(1),
 })
+
+export const StoreCancelOrder = z
+  .object({
+    reason: z.string().max(500).optional(),
+  })
+  .optional()
+  .default({})
+
+export type StoreCancelOrderType = z.infer<typeof StoreCancelOrder>

@@ -7,6 +7,7 @@ import { authenticate } from "../../../utils/middlewares/authenticate-middleware
 import * as QueryConfig from "./query-config"
 import {
   StoreAcceptOrderTransfer,
+  StoreCancelOrder,
   StoreGetOrderParams,
   StoreGetOrdersParams,
   StoreRequestOrderTransfer,
@@ -47,6 +48,18 @@ export const storeOrderRoutesMiddlewares: MiddlewareRoute[] = [
     method: ["GET"],
     matcher: "/store/orders/:id",
     middlewares: [
+      validateAndTransformQuery(
+        StoreGetOrderParams,
+        QueryConfig.retrieveTransformQueryConfig
+      ),
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/store/orders/:id/cancel",
+    middlewares: [
+      authenticate("customer", ["session", "bearer"]),
+      validateAndTransformBody(StoreCancelOrder),
       validateAndTransformQuery(
         StoreGetOrderParams,
         QueryConfig.retrieveTransformQueryConfig

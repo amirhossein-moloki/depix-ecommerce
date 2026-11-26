@@ -1,6 +1,10 @@
 import { z } from "@medusajs/framework/zod"
 import { AddressPayload, safeHttpUrl } from "../../utils/common-validators"
 import {
+  ADMIN_ORDER_STATUSES,
+  ORDER_FULFILLMENT_STATUSES,
+} from "../../utils/order-status"
+import {
   createFindParams,
   createOperatorMap,
   createSelectParams,
@@ -189,3 +193,13 @@ export const AdminCreateOrderCreditLines = z.object({
   reference_id: z.string(),
   metadata: z.record(z.string(), z.unknown()).nullish(),
 })
+
+export const AdminUpdateOrderStatus = z.object({
+  status: z.enum(ADMIN_ORDER_STATUSES),
+  fulfillment_status: z.enum(ORDER_FULFILLMENT_STATUSES).optional(),
+  tracking_number: z.string().max(255).optional(),
+  note: z.string().max(1000).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+})
+
+export type AdminUpdateOrderStatusType = z.infer<typeof AdminUpdateOrderStatus>

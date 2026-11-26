@@ -1,4 +1,8 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import {
+  AuthenticatedMedusaRequest,
+  MedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework/http"
 import { verifyGatewayPayment } from "../gateway"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
@@ -21,6 +25,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     refId: ref_id,
     status,
     provider,
+    customerId: (req as AuthenticatedMedusaRequest).auth_context?.actor_id,
   })
 
   return res.status(200).json(result)

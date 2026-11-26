@@ -2372,6 +2372,7 @@ paths:
                     $ref: '#/components/schemas/Cart'
     post:
       summary: Update Cart (Addresses & Customer Info)
+      description: Updates cart addresses and customer info. Iranian addresses validate 10-digit postal_code and 11-digit mobile phone; national_code in metadata is optional (validated only when provided). When called with a valid customer Bearer token on a guest cart, customer_id is automatically attached.
       tags:
       - Carts & Checkout
       parameters:
@@ -2413,6 +2414,7 @@ paths:
                     $ref: '#/components/schemas/Cart'
     patch:
       summary: Update Cart (PATCH Alias)
+      description: Updates cart addresses and customer info. Automatically attaches customer_id when called with a valid customer Bearer token on a guest cart.
       tags:
       - Carts & Checkout
       parameters:
@@ -2439,6 +2441,9 @@ paths:
                 phone:
                   type: string
                   nullable: true
+                metadata:
+                  type: object
+                  nullable: true
       responses:
         '200':
           description: Updated cart with recalculated totals (IRR)
@@ -2449,6 +2454,37 @@ paths:
                 properties:
                   cart:
                     $ref: '#/components/schemas/Cart'
+  /store/carts/{id}/customer:
+    post:
+      summary: Transfer Guest Cart to Authenticated Customer
+      operationId: transferStoreCartCustomer
+      tags:
+      - Carts & Checkout
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Cart linked to the authenticated customer
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - cart
+                properties:
+                  cart:
+                    $ref: '#/components/schemas/Cart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /store/carts/{id}/line-items:
     post:
       summary: Add Item to Cart
@@ -2722,6 +2758,7 @@ paths:
   /store/carts/{id}/payment-sessions:
     post:
       summary: Initiate Payment Gateway Session for Cart
+      description: Initiates a payment gateway session for the cart. When called with a valid customer Bearer token on a guest cart, customer_id is automatically attached before creating the payment session.
       tags:
       - Carts & Checkout
       parameters:
@@ -2776,6 +2813,7 @@ paths:
   /store/payments/initiate:
     post:
       summary: Initiate Online Payment Gateway Session
+      description: Initiates a payment gateway session. When called with a valid customer Bearer token on a guest cart, customer_id is automatically attached before creating the payment session.
       tags:
       - Carts & Checkout
       requestBody:
@@ -2828,6 +2866,7 @@ paths:
   /store/payments/verify:
     post:
       summary: Verify Payment Gateway Callback and Complete Order
+      description: "Verifies the gateway transaction server-side, attaches authenticated customer to guest carts if applicable, completes the order idempotently, and marks its payment collection as captured (`payment_status: captured`, `summary.paid_total` updated). Returns sanitized gateway error details on verification failure."
       tags:
       - Carts & Checkout
       requestBody:
@@ -2855,7 +2894,7 @@ paths:
                   type: string
       responses:
         '200':
-          description: Payment verified and order created (idempotent)
+          description: Payment verified, order created, and payment captured (idempotent)
           content:
             application/json:
               schema:
@@ -2889,7 +2928,7 @@ paths:
           type: string
       responses:
         '200':
-          description: Latest gateway inquiry status
+          description: Latest gateway inquiry status (includes sanitized failure metadata when a payment previously failed verification)
           content:
             application/json:
               schema:
@@ -2905,6 +2944,14 @@ paths:
                     type: string
                   track_id:
                     type: string
+                  failure_reason:
+                    type: string
+                  failure_detail:
+                    type: string
+                  gateway_code:
+                    oneOf:
+                    - type: string
+                    - type: integer
         '400':
           $ref: '#/components/responses/BadRequest'
   /payment/callback:
@@ -2999,17 +3046,80 @@ paths:
   /store/orders/{id}:
     get:
       summary: Get Order Details
+      operationId: getStoreOrder
+      description: Retrieves order details by ID, including `metadata`, `customer_id`, `payment_status`, `fulfillment_status`, and `payment_collections` by default.
       tags:
       - Orders & Fulfillments
+      - Store Orders
       parameters:
       - name: id
         in: path
         required: true
         schema:
           type: string
+      - name: fields
+        in: query
+        description: Comma-separated fields to select or include (e.g. `+metadata`).
+        schema:
+          type: string
       responses:
         '200':
           description: Order details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - order
+                properties:
+                  order:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /store/orders/{id}/cancel:
+    post:
+      summary: Cancel Customer Order
+      operationId: cancelStoreOrder
+      description: Allows an authenticated customer to cancel their own order when it is in a cancellable status (`pending`, `confirmed`, or `processing`) and not shipped/fulfilled/completed/canceled.
+      tags:
+      - Store Orders
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: Canceled order details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - order
+                properties:
+                  order:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/invoices:
     get:
       summary: List Invoices
@@ -5973,6 +6083,80 @@ paths:
                 properties:
                   order:
                     $ref: '#/components/schemas/Order'
+  /admin/orders/{id}/status:
+    post:
+      summary: Update Order Status & Fulfillment Metadata (Admin)
+      operationId: updateAdminOrderStatus
+      description: Transitions an order's operational status (`pending`, `confirmed`, `processing`, `shipped`, `delivered`, `completed`, `canceled`, `archived`, `requires_action`) and syncs core status plus `metadata.order_status`, `metadata.fulfillment_status`, and `status_history`.
+      tags:
+      - Admin Orders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - pending
+                  - confirmed
+                  - processing
+                  - shipped
+                  - delivered
+                  - completed
+                  - canceled
+                  - cancelled
+                  - archived
+                  - requires_action
+                fulfillment_status:
+                  type: string
+                  enum:
+                  - not_fulfilled
+                  - partially_fulfilled
+                  - fulfilled
+                  - partially_shipped
+                  - shipped
+                  - partially_delivered
+                  - delivered
+                  - canceled
+                tracking_number:
+                  type: string
+                  maxLength: 255
+                note:
+                  type: string
+                  maxLength: 1000
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Order with updated status and metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - order
+                properties:
+                  order:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/promotions:
     get:
       summary: List Promotions
@@ -8066,19 +8250,77 @@ components:
       properties:
         id:
           type: string
+        customer_id:
+          type: string
+          nullable: true
         email:
+          type: string
+          nullable: true
+        currency_code:
           type: string
         total:
           type: number
+        metadata:
+          type: object
+          nullable: true
     Order:
       type: object
       properties:
         id:
           type: string
+        display_id:
+          type: integer
+        customer_id:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        currency_code:
+          type: string
         status:
+          type: string
+        payment_status:
+          type: string
+        fulfillment_status:
           type: string
         total:
           type: number
+        summary:
+          type: object
+          properties:
+            paid_total:
+              type: number
+            refunded_total:
+              type: number
+            pending_difference:
+              type: number
+            current_order_total:
+              type: number
+        payment_collections:
+          type: array
+          items:
+            type: object
+        items:
+          type: array
+          items:
+            type: object
+        shipping_address:
+          type: object
+          nullable: true
+        billing_address:
+          type: object
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          description: Custom metadata including order_status, fulfillment_status, tracking_number, status_history, and cancel_reason
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Wallet:
       type: object
       properties:

@@ -5,6 +5,7 @@ import { buildAllowedFields } from "../utils/allowed-fields"
 export const defaultStoreOrderFields = [
   "id",
   "status",
+  "customer_id",
   "summary",
   "display_id",
   "custom_display_id",
@@ -18,12 +19,14 @@ export const defaultStoreOrderFields = [
 export const defaultStoreRetrieveOrderFields = [
   "id",
   "status",
+  "customer_id",
   "summary",
   "currency_code",
   "display_id",
   "custom_display_id",
   "region_id",
   "email",
+  "metadata",
   "total",
   "subtotal",
   "tax_total",
@@ -68,6 +71,7 @@ export const defaultStoreRetrieveOrderFields = [
 export const allowedStoreOrderExtraFields = [
   "customer_id",
   "sales_channel_id",
+  "metadata",
   "payment_status",
   "fulfillment_status",
   "item_discount_total",

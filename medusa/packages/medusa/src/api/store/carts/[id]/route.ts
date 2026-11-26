@@ -1,9 +1,13 @@
 import { updateCartWorkflowId } from "@medusajs/core-flows"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import {
+  AuthenticatedMedusaRequest,
+  MedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
-import { refetchCart } from "../helpers"
+import { attachAuthenticatedCustomerToCart, refetchCart } from "../helpers"
 
 export const GET = async (
   req: MedusaRequest<HttpTypes.StoreGetCartsCart>,
@@ -27,6 +31,11 @@ export const POST = async (
     cart: HttpTypes.StoreCart
   }>
 ) => {
+  const actorId = (req as AuthenticatedMedusaRequest).auth_context?.actor_id
+  if (actorId) {
+    await attachAuthenticatedCustomerToCart(req.scope, req.params.id, actorId)
+  }
+
   const we = req.scope.resolve(Modules.WORKFLOW_ENGINE)
   const { phone, ...rest } = req.validatedBody
   const inputBody: Record<string, any> = { ...rest }

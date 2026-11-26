@@ -4,6 +4,7 @@ import {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { HttpTypes, OrderDTO } from "@medusajs/framework/types"
+import { applyOrderStatusMetadata } from "../../utils/order-status"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.StoreOrderFilters>,
@@ -32,7 +33,9 @@ export const GET = async (
   }
 
   res.json({
-    orders: rows as unknown as HttpTypes.StoreOrder[],
+    orders: rows.map((o) =>
+      applyOrderStatusMetadata(o)
+    ) as unknown as HttpTypes.StoreOrder[],
     count: metadata.count,
     offset: metadata.skip,
     limit: metadata.take,

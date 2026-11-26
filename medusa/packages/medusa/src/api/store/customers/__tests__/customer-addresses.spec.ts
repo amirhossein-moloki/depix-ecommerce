@@ -184,7 +184,24 @@ describe("Store Customer Address Management", () => {
       }
     })
 
-    it("rejects an Iranian address with missing or invalid national_code in metadata", () => {
+    it("accepts an Iranian address without national_code in metadata", () => {
+      const validWithoutNationalCode = {
+        first_name: "علی",
+        last_name: "رضایی",
+        phone: "09123456789",
+        address_1: "خیابان آزادی، پلاک ۱۰",
+        city: "تهران",
+        province: "تهران",
+        country_code: "ir",
+        postal_code: "1234567890",
+      }
+
+      expect(
+        StoreCreateCustomerAddress.safeParse(validWithoutNationalCode).success
+      ).toBe(true)
+    })
+
+    it("rejects an Iranian address with invalid national_code when provided in metadata", () => {
       const invalidAddress = {
         phone: "09123456789",
         country_code: "ir",

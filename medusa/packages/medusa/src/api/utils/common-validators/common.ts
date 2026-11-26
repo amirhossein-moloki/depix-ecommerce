@@ -49,13 +49,15 @@ export function refineIranianAddress<T extends z.ZodTypeAny>(schema: T) {
       }
       const nationalCode = data.metadata?.national_code
       if (
-        !nationalCode ||
-        !isValidIranianNationalCode(String(nationalCode))
+        nationalCode !== undefined &&
+        nationalCode !== null &&
+        String(nationalCode).trim() !== "" &&
+        !isValidIranianNationalCode(String(nationalCode).trim())
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            "A valid Iranian national_code is required in metadata for Iranian addresses",
+            "Iranian national_code in metadata must be a valid 10-digit code when provided",
           path: ["metadata", "national_code"],
         })
       }

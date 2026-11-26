@@ -6,6 +6,9 @@ import {
 import { toZibalRialAmount } from "@amirhossein-moloki/payment-zibal"
 import {
   completeCartWorkflowId,
+  createOrderPaymentCollectionWorkflowId,
+  getOrderDetailWorkflow,
+  markPaymentCollectionAsPaidId,
   updateCartWorkflowId,
 } from "@medusajs/core-flows"
 import { MedusaContainer } from "@medusajs/framework/types"
@@ -15,6 +18,9 @@ import {
   Modules,
 } from "@medusajs/framework/utils"
 import crypto from "crypto"
+import { applyOrderStatusMetadata } from "../../utils/order-status"
+import { attachAuthenticatedCustomerToCart } from "../carts/helpers"
+import { defaultStoreRetrieveOrderFields } from "../orders/query-config"
 import {
   buildFailedRedirectUrl,
   buildSuccessRedirectUrl,
@@ -26,6 +32,7 @@ export interface InitiatePaymentInput {
   provider?: string
   callbackUrl?: string
   idempotencyKey?: string
+  customerId?: string
 }
 
 export interface VerifyPaymentInput {
@@ -36,6 +43,7 @@ export interface VerifyPaymentInput {
   refId?: string
   status?: string
   provider?: string
+  customerId?: string
 }
 
 export interface CallbackRequestInput {
@@ -53,6 +61,8 @@ export interface CallbackRedirectResult {
   trackId?: string
   refId?: string
   reason?: string
+  errorDetail?: string
+  gatewayCode?: string | number
 }
 
 const inFlightCompletions = new Map<string, Promise<any>>()
@@ -105,14 +115,138 @@ async function resolveExistingOrder(
   orderId: string
 ): Promise<any> {
   try {
+    const workflow = getOrderDetailWorkflow(scope)
+    const { result } = await workflow.run({
+      input: {
+        order_id: orderId,
+        fields: defaultStoreRetrieveOrderFields,
+        filters: { is_draft_order: false },
+      },
+    })
+    if (result) {
+      return applyOrderStatusMetadata(result)
+    }
+  } catch {
+    // Fall back to direct Order module lookup when query graph / workflow engine isn't wired (e.g. unit tests)
+  }
+
+  try {
     const orderService = scope.resolve<any>(Modules.ORDER)
     if (orderService?.retrieveOrder) {
-      return await orderService.retrieveOrder(orderId)
+      const order = await orderService.retrieveOrder(orderId)
+      if (order) {
+        return applyOrderStatusMetadata(order)
+      }
     }
   } catch {
     // Return minimal order reference when order module is unavailable in unit tests
   }
   return { id: orderId }
+}
+
+async function ensureOrderPaymentCaptured(
+  scope: MedusaContainer,
+  params: {
+    orderId: string
+    amount?: number
+  }
+): Promise<void> {
+  if (!params.orderId) {
+    return
+  }
+
+  let queriedOrder: any = null
+  try {
+    const query = scope.resolve<any>(ContainerRegistrationKeys.QUERY)
+    if (query?.graph) {
+      const { data } = await query.graph({
+        entity: "order",
+        filters: { id: params.orderId },
+        fields: [
+          "id",
+          "total",
+          "currency_code",
+          "payment_collections.id",
+          "payment_collections.status",
+          "payment_collections.amount",
+          "payment_collections.captured_amount",
+        ],
+      })
+      queriedOrder = Array.isArray(data) ? data[0] : data
+    }
+  } catch {
+    queriedOrder = null
+  }
+
+  const captureAmount =
+    Number(queriedOrder?.total) > 0
+      ? Number(queriedOrder.total)
+      : Number(params.amount ?? 0)
+
+  if (!Number.isFinite(captureAmount) || captureAmount <= 0) {
+    return
+  }
+
+  const existingCollections: any[] = Array.isArray(
+    queriedOrder?.payment_collections
+  )
+    ? queriedOrder.payment_collections
+    : []
+
+  const alreadyCaptured = existingCollections.some(
+    (pc) =>
+      pc?.status === "completed" ||
+      Number(pc?.captured_amount ?? 0) >= captureAmount
+  )
+  if (alreadyCaptured) {
+    return
+  }
+
+  let we: any = null
+  try {
+    we = scope.resolve<any>(Modules.WORKFLOW_ENGINE)
+  } catch {
+    return
+  }
+  if (!we?.run) {
+    return
+  }
+
+  try {
+    let paymentCollectionId = existingCollections.find(
+      (pc) => pc?.status === "not_paid"
+    )?.id as string | undefined
+
+    if (!paymentCollectionId) {
+      const pcRes = await we.run(createOrderPaymentCollectionWorkflowId, {
+        input: {
+          order_id: params.orderId,
+          amount: captureAmount,
+        },
+      })
+      paymentCollectionId = Array.isArray(pcRes?.result)
+        ? pcRes.result[0]?.id
+        : pcRes?.result?.id
+    }
+
+    if (paymentCollectionId) {
+      await we.run(markPaymentCollectionAsPaidId, {
+        input: {
+          order_id: params.orderId,
+          payment_collection_id: paymentCollectionId,
+        },
+      })
+    }
+  } catch (err) {
+    console.error(
+      "[Zibal] Failed to capture Medusa order payment collection:",
+      {
+        order_id: params.orderId,
+        amount: captureAmount,
+        detail: sanitizeGatewayErrorMessage(err),
+      }
+    )
+  }
 }
 
 async function persistPaymentTerminalState(
@@ -213,6 +347,8 @@ async function createOrderFromCartFallback(
     paymentId?: string
     trackId?: string
     refId?: string
+    amount?: number
+    customerId?: string
   }
 ): Promise<any> {
   const orderService = scope.resolve<any>(Modules.ORDER)
@@ -250,7 +386,7 @@ async function createOrderFromCartFallback(
 
   const orderInput = {
     region_id: cart.region_id ?? undefined,
-    customer_id: cart.customer_id ?? undefined,
+    customer_id: cart.customer_id ?? params.customerId ?? undefined,
     sales_channel_id: cart.sales_channel_id ?? undefined,
     status: "pending",
     email: cart.email ?? undefined,
@@ -298,6 +434,8 @@ async function completeCartIdempotently(
     paymentId?: string
     trackId?: string
     refId?: string
+    amount?: number
+    customerId?: string
     platform?: PaymentPlatformRuntime
   }
 ): Promise<{ order: any; orderId?: string; alreadyFulfilled: boolean }> {
@@ -337,6 +475,12 @@ async function completeCartIdempotently(
 
     const existingOrderId = sessionOrderId || paymentOrderId
     if (existingOrderId || cart.completed_at) {
+      if (existingOrderId) {
+        await ensureOrderPaymentCaptured(scope, {
+          orderId: existingOrderId,
+          amount: params.amount ?? Number(cart.total ?? 0),
+        })
+      }
       const order = existingOrderId
         ? await resolveExistingOrder(scope, existingOrderId)
         : { id: existingOrderId }
@@ -404,6 +548,17 @@ async function completeCartIdempotently(
       }).catch(() => undefined)
     }
 
+    if (orderId) {
+      await ensureOrderPaymentCaptured(scope, {
+        orderId,
+        amount: params.amount ?? Number(order?.total ?? cart.total ?? 0),
+      })
+      const hydratedOrder = await resolveExistingOrder(scope, orderId)
+      if (hydratedOrder && Object.keys(hydratedOrder).length > 1) {
+        order = hydratedOrder
+      }
+    }
+
     return {
       order,
       orderId,
@@ -448,6 +603,24 @@ function sanitizeGatewayErrorMessage(err: unknown, secret?: string): string {
   return raw
 }
 
+function extractGatewayErrorDetail(
+  err: unknown,
+  secret?: string
+): { detail: string; gatewayCode?: string | number } {
+  const detail = sanitizeGatewayErrorMessage(err, secret)
+  const gatewayCode =
+    (err as any)?.details?.result ??
+    (err as any)?.gatewayCode ??
+    (err as any)?.code
+  return {
+    detail,
+    gatewayCode:
+      gatewayCode !== undefined && gatewayCode !== null
+        ? gatewayCode
+        : undefined,
+  }
+}
+
 export const initiateGatewayPayment = async (
   scope: MedusaContainer,
   {
@@ -455,16 +628,28 @@ export const initiateGatewayPayment = async (
     provider = "zarinpal",
     callbackUrl,
     idempotencyKey,
+    customerId,
   }: InitiatePaymentInput
 ) => {
   const cartService = scope.resolve<any>(Modules.CART)
-  const cart = await cartService.retrieveCart(cartId).catch(() => null)
+  let cart = await cartService.retrieveCart(cartId).catch(() => null)
 
   if (!cart) {
     throw new MedusaError(
       MedusaError.Types.NOT_FOUND,
       `سبد خرید با شناسه '${cartId}' یافت نشد.`
     )
+  }
+
+  if (customerId && !cart.customer_id) {
+    const attached = await attachAuthenticatedCustomerToCart(
+      scope,
+      cartId,
+      customerId
+    )
+    if (attached) {
+      cart = (await cartService.retrieveCart(cartId).catch(() => null)) ?? cart
+    }
   }
 
   const amountValue = Number(cart.total ?? 0)
@@ -507,7 +692,7 @@ export const initiateGatewayPayment = async (
         idempotencyKey,
         metadata: {
           cart_id: cart.id,
-          customer_id: cart.customer_id ?? undefined,
+          customer_id: cart.customer_id ?? customerId ?? undefined,
           currency_original: cart.currency_code ?? "irr",
         },
         options: {
@@ -626,6 +811,7 @@ export const verifyGatewayPayment = async (
     refId,
     status,
     provider,
+    customerId,
   }: VerifyPaymentInput
 ) => {
   const isFailureStatus = Boolean(
@@ -704,6 +890,12 @@ export const verifyGatewayPayment = async (
 
     const effectiveCartId =
       cart?.id || (payment.metadata?.cart_id as string | undefined)
+    const resolvedCustomerId =
+      (payment.metadata?.customer_id as string | undefined) ?? customerId
+
+    if (customerId && effectiveCartId) {
+      await attachAuthenticatedCustomerToCart(scope, effectiveCartId, customerId)
+    }
 
     if (payment.status === PaymentStatus.SUCCESS) {
       const verifyTxs = await platform.transactionRepo.findByType(
@@ -721,6 +913,8 @@ export const verifyGatewayPayment = async (
           paymentId: payment.id,
           trackId: initialTrackId,
           refId: verifiedRef,
+          amount: Number(payment.amount ?? cart?.total ?? 0),
+          customerId: resolvedCustomerId,
           platform,
         })
         order = fulfilled.order
@@ -762,29 +956,66 @@ export const verifyGatewayPayment = async (
       })
     } catch (err) {
       const reason = classifyFailureReason(err)
+      const { detail, gatewayCode } = extractGatewayErrorDetail(
+        err,
+        platform.config.merchant
+      )
+      console.error("[Zibal] Verify payment failed:", {
+        payment_id: payment.id,
+        track_id: effectiveTrackId,
+        reason,
+        gateway_code: gatewayCode,
+        error_detail: detail,
+      })
+      const metadataPatch: Record<string, unknown> = {
+        failure_reason: reason,
+        failure_detail: detail,
+        ...(gatewayCode !== undefined ? { gateway_code: gatewayCode } : {}),
+      }
       if (reason === "timeout") {
-        await attachOrderMetadataToPayment(platform, payment.id, {
-          failure_reason: reason,
-        }).catch(() => undefined)
+        await attachOrderMetadataToPayment(
+          platform,
+          payment.id,
+          metadataPatch
+        ).catch(() => undefined)
       } else {
         await persistPaymentTerminalState(
           platform,
           payment.id,
           PaymentStatus.FAILED,
-          { failure_reason: reason }
+          metadataPatch
         ).catch(() => undefined)
       }
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        sanitizeGatewayErrorMessage(err, platform.config.merchant)
+        gatewayCode !== undefined && !detail.includes(String(gatewayCode))
+          ? `${detail} (code: ${gatewayCode})`
+          : detail
       )
     }
 
     if (verifyResult.status !== PaymentStatus.SUCCESS) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        "تایید تراکنش از سمت درگاه زیبال ناموفق بود."
+      const detail = sanitizeGatewayErrorMessage(
+        (verifyResult as any)?.rawResponse?.message ||
+          "تایید تراکنش از سمت درگاه زیبال ناموفق بود.",
+        platform.config.merchant
       )
+      console.error("[Zibal] Verify payment did not reach SUCCESS status:", {
+        payment_id: payment.id,
+        track_id: effectiveTrackId,
+        reason: "verification_failed",
+        error_detail: detail,
+      })
+      await persistPaymentTerminalState(
+        platform,
+        payment.id,
+        PaymentStatus.FAILED,
+        {
+          failure_reason: "verification_failed",
+          failure_detail: detail,
+        }
+      ).catch(() => undefined)
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, detail)
     }
 
     const verifiedRef = verifyResult.reference || String(effectiveTrackId)
@@ -795,6 +1026,8 @@ export const verifyGatewayPayment = async (
         paymentId: payment.id,
         trackId: String(effectiveTrackId),
         refId: verifiedRef,
+        amount: Number(payment.amount ?? cart?.total ?? 0),
+        customerId: resolvedCustomerId,
         platform,
       })
       order = fulfilled.order
@@ -866,6 +1099,10 @@ export const verifyGatewayPayment = async (
     }
 
     verifiedRefId = String(payload.data.ref_id ?? verifiedRefId)
+  }
+
+  if (customerId && cart.id) {
+    await attachAuthenticatedCustomerToCart(scope, cart.id, customerId)
   }
 
   const we = scope.resolve<any>(Modules.WORKFLOW_ENGINE)
@@ -981,6 +1218,8 @@ export const handleZibalCallback = async (
           paymentId: latestPayment.id,
           trackId,
           refId,
+          amount: Number(latestPayment.amount ?? 0),
+          customerId: latestPayment.metadata?.customer_id as string | undefined,
           platform,
         }).catch(() => null)
         orderId = fulfilled?.orderId || orderId
@@ -1066,21 +1305,35 @@ export const handleZibalCallback = async (
       })
     } catch (err) {
       const reason = classifyFailureReason(err)
-      console.warn(
-        "[Zibal] Callback verification failed:",
-        sanitizeGatewayErrorMessage(err, platform.config.merchant)
+      const { detail, gatewayCode } = extractGatewayErrorDetail(
+        err,
+        platform.config.merchant
       )
+      console.error("[Zibal] Callback verification failed:", {
+        payment_id: latestPayment.id,
+        track_id: trackId,
+        reason,
+        gateway_code: gatewayCode,
+        error_detail: detail,
+      })
+      const metadataPatch: Record<string, unknown> = {
+        failure_reason: reason,
+        failure_detail: detail,
+        ...(gatewayCode !== undefined ? { gateway_code: gatewayCode } : {}),
+      }
       if (reason === "timeout") {
         // Keep non-terminal state on transient timeout so inquiry/retry can still settle it
-        await attachOrderMetadataToPayment(platform, latestPayment.id, {
-          failure_reason: reason,
-        }).catch(() => undefined)
+        await attachOrderMetadataToPayment(
+          platform,
+          latestPayment.id,
+          metadataPatch
+        ).catch(() => undefined)
       } else {
         await persistPaymentTerminalState(
           platform,
           latestPayment.id,
           PaymentStatus.FAILED,
-          { failure_reason: reason }
+          metadataPatch
         ).catch(() => undefined)
       }
 
@@ -1090,6 +1343,8 @@ export const handleZibalCallback = async (
         paymentId: latestPayment.id,
         trackId,
         reason,
+        errorDetail: detail,
+        gatewayCode,
         redirectUrl: buildFailedRedirectUrl(appUrl, environment, {
           payment_id: latestPayment.id,
           track_id: trackId,
@@ -1099,11 +1354,25 @@ export const handleZibalCallback = async (
     }
 
     if (verifyResult.status !== PaymentStatus.SUCCESS) {
+      const detail = sanitizeGatewayErrorMessage(
+        (verifyResult as any)?.rawResponse?.message ||
+          "تایید تراکنش از سمت درگاه زیبال ناموفق بود.",
+        platform.config.merchant
+      )
+      console.error("[Zibal] Callback verification did not reach SUCCESS status:", {
+        payment_id: latestPayment.id,
+        track_id: trackId,
+        reason: "verification_failed",
+        error_detail: detail,
+      })
       await persistPaymentTerminalState(
         platform,
         latestPayment.id,
         PaymentStatus.FAILED,
-        { failure_reason: "verification_failed" }
+        {
+          failure_reason: "verification_failed",
+          failure_detail: detail,
+        }
       )
       return {
         statusCode: 302,
@@ -1111,6 +1380,7 @@ export const handleZibalCallback = async (
         paymentId: latestPayment.id,
         trackId,
         reason: "verification_failed",
+        errorDetail: detail,
         redirectUrl: buildFailedRedirectUrl(appUrl, environment, {
           payment_id: latestPayment.id,
           track_id: trackId,
@@ -1130,6 +1400,8 @@ export const handleZibalCallback = async (
           paymentId: latestPayment.id,
           trackId,
           refId,
+          amount: Number(latestPayment.amount ?? 0),
+          customerId: latestPayment.metadata?.customer_id as string | undefined,
           platform,
         })
         orderId = fulfilled.orderId || orderId
@@ -1183,11 +1455,25 @@ export const inquireGatewayPayment = async (
     throw new MedusaError(MedusaError.Types.INVALID_DATA, message)
   }
 
+  const includeFailureInfo = result.status !== PaymentStatus.SUCCESS
+  const failureReason = includeFailureInfo
+    ? (result.payment.metadata?.failure_reason as string | undefined)
+    : undefined
+  const failureDetail = includeFailureInfo
+    ? (result.payment.metadata?.failure_detail as string | undefined)
+    : undefined
+  const gatewayCode = includeFailureInfo
+    ? (result.payment.metadata?.gateway_code as string | number | undefined)
+    : undefined
+
   return {
     payment_id: result.payment.id,
     status: result.status,
     amount: result.amount,
     reference: result.reference,
     track_id: result.gatewayTransactionId,
+    ...(failureReason ? { failure_reason: failureReason } : {}),
+    ...(failureDetail ? { failure_detail: failureDetail } : {}),
+    ...(gatewayCode !== undefined ? { gateway_code: gatewayCode } : {}),
   }
 }

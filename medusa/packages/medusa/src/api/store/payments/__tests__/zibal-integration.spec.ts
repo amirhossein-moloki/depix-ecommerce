@@ -10,7 +10,14 @@ import {
   sanitizeContext,
 } from "@amirhossein-moloki/payment-service"
 import { HttpTransport } from "@amirhossein-moloki/payment-zibal"
-import { Modules } from "@medusajs/framework/utils"
+import {
+  completeCartWorkflowId,
+  createOrderPaymentCollectionWorkflowId,
+  markPaymentCollectionAsPaidId,
+  transferCartCustomerWorkflowId,
+  updateCartWorkflowId,
+} from "@medusajs/core-flows"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { GET as gatewayCallbackGet, POST as gatewayCallbackPost } from "../../../payment/callback/[gateway]/route"
 import { GET as callbackGet, POST as callbackPost } from "../../../payment/callback/route"
 import { POST as cartPaymentSession } from "../../carts/[id]/payment-sessions/route"
@@ -63,46 +70,124 @@ describe("Zibal Payment Platform Integration & Redirect Flow", () => {
 
   const createMockScope = (cart: any, initialOrderCount = 0) => {
     let orderSeq = initialOrderCount
+    const createdOrders = new Map<string, any>()
     const cartService = {
       retrieveCart: jest
         .fn()
         .mockImplementation(() => Promise.resolve(cart)),
+      updateCarts: jest.fn().mockImplementation((_id: string, data: any) => {
+        Object.assign(cart, data)
+        return Promise.resolve(cart)
+      }),
+    }
+    const customerService = {
+      retrieveCustomer: jest.fn().mockImplementation((id: string) =>
+        Promise.resolve({ id, email: `${id}@example.com` })
+      ),
     }
     const completeCalls: any[] = []
+    const createPaymentCollectionCalls: any[] = []
+    const markPaidCalls: any[] = []
     const we = {
       run: jest.fn().mockImplementation((wfId: string, opts: any) => {
-        if (opts?.input?.metadata?.payment_session) {
+        if (wfId === updateCartWorkflowId || opts?.input?.metadata?.payment_session) {
           cart.metadata = {
             ...(cart.metadata || {}),
-            payment_session: opts.input.metadata.payment_session,
+            ...(opts?.input?.metadata || {}),
           }
           return Promise.resolve({})
         }
-        orderSeq += 1
-        const order = {
-          id: `order_${orderSeq}`,
-          display_id: 2000 + orderSeq,
-          total: cart.total,
+        if (wfId === transferCartCustomerWorkflowId) {
+          cart.customer_id = opts.input.customer_id
+          cart.email = cart.email || `${opts.input.customer_id}@example.com`
+          return Promise.resolve({})
         }
-        cart.completed_at = new Date().toISOString()
-        completeCalls.push({ wfId, opts, order })
-        return Promise.resolve({ result: order })
+        if (wfId === completeCartWorkflowId) {
+          orderSeq += 1
+          const order = {
+            id: `order_${orderSeq}`,
+            display_id: 2000 + orderSeq,
+            customer_id: cart.customer_id ?? null,
+            total: cart.total,
+            payment_status: "not_paid",
+            payment_collections: [],
+            summary: { paid_total: 0, pending_difference: cart.total },
+          }
+          createdOrders.set(order.id, order)
+          cart.completed_at = new Date().toISOString()
+          completeCalls.push({ wfId, opts, order })
+          return Promise.resolve({ result: order })
+        }
+        if (wfId === createOrderPaymentCollectionWorkflowId) {
+          const pc = {
+            id: `paycol_${createPaymentCollectionCalls.length + 1}`,
+            order_id: opts.input.order_id,
+            amount: opts.input.amount,
+            status: "not_paid",
+            captured_amount: 0,
+          }
+          createPaymentCollectionCalls.push(opts.input)
+          const ord = createdOrders.get(opts.input.order_id)
+          if (ord) {
+            ord.payment_collections = [...(ord.payment_collections || []), pc]
+          }
+          return Promise.resolve({ result: [pc] })
+        }
+        if (wfId === markPaymentCollectionAsPaidId) {
+          markPaidCalls.push(opts.input)
+          const ord = createdOrders.get(opts.input.order_id)
+          if (ord) {
+            ord.payment_status = "captured"
+            ord.payment_collections = (ord.payment_collections || []).map((pc: any) =>
+              pc.id === opts.input.payment_collection_id
+                ? { ...pc, status: "completed", captured_amount: pc.amount }
+                : pc
+            )
+            ord.summary = {
+              paid_total: ord.total,
+              pending_difference: 0,
+            }
+          }
+          return Promise.resolve({ result: { id: `pay_${opts.input.payment_collection_id}` } })
+        }
+        throw new Error(`Unexpected workflow ID: ${wfId}`)
       }),
     }
     const orderService = {
       retrieveOrder: jest.fn().mockImplementation((id: string) =>
-        Promise.resolve({ id, display_id: 2001, total: cart.total })
+        Promise.resolve(
+          createdOrders.get(id) || { id, display_id: 2001, total: cart.total }
+        )
       ),
+    }
+    const query = {
+      graph: jest.fn().mockImplementation(({ entity, filters }: any) => {
+        if (entity === "order") {
+          const ord = createdOrders.get(filters?.id)
+          return Promise.resolve({ data: ord ? [ord] : [] })
+        }
+        return Promise.resolve({ data: [] })
+      }),
     }
 
     const resolve = jest.fn((key: string) => {
       if (key === Modules.CART) return cartService
+      if (key === Modules.CUSTOMER) return customerService
       if (key === Modules.WORKFLOW_ENGINE) return we
       if (key === Modules.ORDER) return orderService
+      if (key === ContainerRegistrationKeys.QUERY) return query
       throw new Error(`Unexpected resolve key: ${key}`)
     })
 
-    return { scope: { resolve } as any, we, completeCalls, cartService }
+    return {
+      scope: { resolve } as any,
+      we,
+      completeCalls,
+      createPaymentCollectionCalls,
+      markPaidCalls,
+      createdOrders,
+      cartService,
+    }
   }
 
   const setupTestPlatform = async (options?: {
@@ -790,6 +875,244 @@ describe("Zibal Payment Platform Integration & Redirect Flow", () => {
         `https://shop.example.com/payment/success?payment_id=${payment_id}&order_id=order_fallback_1&track_id=${track_id}`
       )
       expect(orderService.createOrders).toHaveBeenCalledTimes(1)
+    })
+
+    it("captures order payment collection idempotently on both callback and /store/payments/verify", async () => {
+      const { transport } = await setupTestPlatform({
+        appUrl: "https://shop.example.com/",
+        environment: "sandbox",
+      })
+
+      let seq = 100
+      transport.handlers.set("/v1/request", () => {
+        seq += 1
+        return { trackId: 600000 + seq, result: 100, message: "success" }
+      })
+      transport.handlers.set("/v1/verify", () => ({
+        amount: 420000,
+        result: 100,
+        status: 1,
+        refNumber: 332211,
+        message: "success",
+      }))
+
+      // 1) Callback flow
+      const cartCb: any = { id: "cart_cap_cb", total: 420000, currency_code: "irr", metadata: {} }
+      const {
+        scope: cbScope,
+        createPaymentCollectionCalls: cbPcCalls,
+        markPaidCalls: cbPaidCalls,
+      } = createMockScope(cartCb)
+
+      const { res: initCbRes, json: initCbJson } = makeRes()
+      await initiatePayment(
+        { validatedBody: { cart_id: "cart_cap_cb", provider: "zibal" }, scope: cbScope } as any,
+        initCbRes
+      )
+      const { payment_id: pCbId, track_id: tCbId } = initCbJson.mock.calls[0][0]
+
+      const { res: cbRes, redirect } = makeRes()
+      await callbackGet(
+        {
+          query: { trackId: tCbId, success: "1", status: "2", orderId: pCbId },
+          body: {},
+          headers: {},
+          scope: cbScope,
+        } as any,
+        cbRes
+      )
+      expect(redirect).toHaveBeenCalledWith(
+        302,
+        `https://shop.example.com/payment/success?payment_id=${pCbId}&order_id=order_1&track_id=${tCbId}&ref_id=332211`
+      )
+      expect(cbPcCalls).toEqual([{ order_id: "order_1", amount: 420000 }])
+      expect(cbPaidCalls).toEqual([{ order_id: "order_1", payment_collection_id: "paycol_1" }])
+
+      // Duplicate verify must NOT create/capture another payment collection
+      const { res: verDupRes, json: verDupJson } = makeRes()
+      await verifyPayment(
+        { validatedBody: { cart_id: "cart_cap_cb", track_id: tCbId }, scope: cbScope } as any,
+        verDupRes
+      )
+      expect(cbPcCalls).toHaveLength(1)
+      expect(cbPaidCalls).toHaveLength(1)
+      expect(verDupJson.mock.calls[0][0].order).toMatchObject({
+        id: "order_1",
+        payment_status: "captured",
+        summary: { paid_total: 420000, pending_difference: 0 },
+      })
+
+      // 2) Direct /store/payments/verify flow
+      const cartVer: any = { id: "cart_cap_ver", total: 420000, currency_code: "irr", metadata: {} }
+      const {
+        scope: verScope,
+        createPaymentCollectionCalls: verPcCalls,
+        markPaidCalls: verPaidCalls,
+      } = createMockScope(cartVer)
+
+      const { res: initVerRes, json: initVerJson } = makeRes()
+      await initiatePayment(
+        { validatedBody: { cart_id: "cart_cap_ver", provider: "zibal" }, scope: verScope } as any,
+        initVerRes
+      )
+      const { track_id: tVerId } = initVerJson.mock.calls[0][0]
+
+      const { res: verRes, status: verStatus, json: verJson } = makeRes()
+      await verifyPayment(
+        { validatedBody: { cart_id: "cart_cap_ver", track_id: tVerId }, scope: verScope } as any,
+        verRes
+      )
+      expect(verStatus).toHaveBeenCalledWith(200)
+      expect(verPcCalls).toEqual([{ order_id: "order_1", amount: 420000 }])
+      expect(verPaidCalls).toEqual([{ order_id: "order_1", payment_collection_id: "paycol_1" }])
+      expect(verJson.mock.calls[0][0].order).toMatchObject({
+        id: "order_1",
+        payment_status: "captured",
+        summary: { paid_total: 420000, pending_difference: 0 },
+      })
+    })
+
+    it("auto-attaches guest cart to authenticated customer on initiate and verify", async () => {
+      const { runtime, transport } = await setupTestPlatform()
+      transport.handlers.set("/v1/request", () => ({
+        trackId: 71717171,
+        result: 100,
+        message: "success",
+      }))
+      transport.handlers.set("/v1/verify", () => ({
+        amount: 250000,
+        result: 100,
+        status: 1,
+        refNumber: 9091,
+        message: "success",
+      }))
+
+      // Initiate with customer token attaches guest cart immediately
+      const guestCart1: any = {
+        id: "cart_guest_init",
+        customer_id: null,
+        total: 250000,
+        currency_code: "irr",
+        metadata: {},
+      }
+      const { scope: scope1 } = createMockScope(guestCart1)
+      const { res: initRes1, json: initJson1 } = makeRes()
+      await initiatePayment(
+        {
+          validatedBody: { cart_id: "cart_guest_init", provider: "zibal" },
+          auth_context: { actor_id: "cus_auth_1" },
+          scope: scope1,
+        } as any,
+        initRes1
+      )
+      expect(guestCart1.customer_id).toBe("cus_auth_1")
+      const pay1 = await runtime.paymentRepo.findById(initJson1.mock.calls[0][0].payment_id)
+      expect(pay1?.metadata?.customer_id).toBe("cus_auth_1")
+
+      // Initiate as guest, then verify with customer token attaches cart before order creation
+      const guestCart2: any = {
+        id: "cart_guest_verify",
+        customer_id: null,
+        total: 250000,
+        currency_code: "irr",
+        metadata: {},
+      }
+      const { scope: scope2 } = createMockScope(guestCart2)
+      const { res: initRes2, json: initJson2 } = makeRes()
+      await initiatePayment(
+        {
+          validatedBody: { cart_id: "cart_guest_verify", provider: "zibal" },
+          scope: scope2,
+        } as any,
+        initRes2
+      )
+      expect(guestCart2.customer_id).toBeNull()
+
+      const { res: verRes2, json: verJson2 } = makeRes()
+      await verifyPayment(
+        {
+          validatedBody: {
+            cart_id: "cart_guest_verify",
+            track_id: initJson2.mock.calls[0][0].track_id,
+          },
+          auth_context: { actor_id: "cus_auth_2" },
+          scope: scope2,
+        } as any,
+        verRes2
+      )
+      expect(guestCart2.customer_id).toBe("cus_auth_2")
+      expect(verJson2.mock.calls[0][0].order.customer_id).toBe("cus_auth_2")
+    })
+
+    it("logs and surfaces sanitized Zibal error detail and gateway code without leaking merchant credentials", async () => {
+      const secretMerchant = "zibal_secret_merchant_key_xyz"
+      const { runtime, transport } = await setupTestPlatform({
+        appUrl: "https://shop.example.com/",
+        environment: "production",
+        merchant: secretMerchant,
+      })
+
+      transport.handlers.set("/v1/request", () => ({
+        trackId: 65656565,
+        result: 100,
+        message: "success",
+      }))
+      transport.handlers.set("/v1/verify", () => ({
+        result: 202,
+        message: `Zibal verify failed for merchant ${secretMerchant}`,
+      }))
+
+      const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {})
+      const cart: any = { id: "cart_err_detail", total: 120000, currency_code: "irr", metadata: {} }
+      const { scope } = createMockScope(cart)
+
+      const { res: initRes, json: initJson } = makeRes()
+      await initiatePayment(
+        { validatedBody: { cart_id: "cart_err_detail", provider: "zibal" }, scope } as any,
+        initRes
+      )
+      const { payment_id, track_id } = initJson.mock.calls[0][0]
+
+      await expect(
+        verifyPayment(
+          { validatedBody: { cart_id: "cart_err_detail", track_id }, scope } as any,
+          makeRes().res
+        )
+      ).rejects.toThrow("code: 202")
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[Zibal] Verify payment failed:",
+        expect.objectContaining({
+          payment_id,
+          track_id: String(track_id),
+          reason: "verification_failed",
+          gateway_code: 202,
+        })
+      )
+      const loggedStr = JSON.stringify(errorSpy.mock.calls)
+      expect(loggedStr).not.toContain(secretMerchant)
+
+      const stored = await runtime.paymentRepo.findById(payment_id)
+      expect(stored?.metadata?.failure_reason).toBe("verification_failed")
+      expect(stored?.metadata?.gateway_code).toBe(202)
+      expect(stored?.metadata?.failure_detail).toBeTruthy()
+      expect(String(stored?.metadata?.failure_detail)).not.toContain(secretMerchant)
+
+      transport.handlers.set("/v1/inquiry", () => ({
+        result: 100,
+        status: -2,
+        amount: 120000,
+        trackId: Number(track_id),
+        message: "ok",
+      }))
+      const { res: inqRes, json: inqJson } = makeRes()
+      await inquirePayment({ params: { id: payment_id }, scope } as any, inqRes)
+      expect(inqJson.mock.calls[0][0]).toMatchObject({
+        payment_id,
+        failure_reason: "verification_failed",
+        gateway_code: 202,
+      })
+      errorSpy.mockRestore()
     })
   })
 })

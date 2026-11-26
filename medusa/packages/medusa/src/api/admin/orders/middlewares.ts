@@ -22,6 +22,7 @@ import {
   AdminTransferOrder,
   AdminTransferOrderToGuest,
   AdminUpdateOrder,
+  AdminUpdateOrderStatus,
 } from "./validators"
 
 export const adminOrderRoutesMiddlewares: MiddlewareRoute[] = [
@@ -81,6 +82,23 @@ export const adminOrderRoutesMiddlewares: MiddlewareRoute[] = [
     matcher: "/admin/orders/:id",
     middlewares: [
       validateAndTransformBody(AdminUpdateOrder),
+      validateAndTransformQuery(
+        AdminGetOrdersOrderParams,
+        QueryConfig.retrieveTransformQueryConfig
+      ),
+    ],
+    policies: [
+      {
+        resource: Entities.order,
+        operation: PolicyOperation.update,
+      },
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/orders/:id/status",
+    middlewares: [
+      validateAndTransformBody(AdminUpdateOrderStatus),
       validateAndTransformQuery(
         AdminGetOrdersOrderParams,
         QueryConfig.retrieveTransformQueryConfig

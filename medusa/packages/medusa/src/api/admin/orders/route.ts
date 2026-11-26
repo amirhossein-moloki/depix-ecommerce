@@ -4,6 +4,7 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
+import { applyOrderStatusMetadata } from "../../utils/order-status"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.AdminOrderFilters>,
@@ -30,7 +31,9 @@ export const GET = async (
     metadata: any
   }
   res.json({
-    orders: rows as unknown as HttpTypes.AdminOrder[],
+    orders: rows.map((o) =>
+      applyOrderStatusMetadata(o)
+    ) as unknown as HttpTypes.AdminOrder[],
     count: metadata.count,
     offset: metadata.skip,
     limit: metadata.take,

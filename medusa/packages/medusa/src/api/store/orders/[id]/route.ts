@@ -1,6 +1,7 @@
 import { getOrderDetailWorkflow } from "@medusajs/core-flows"
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { HttpTypes } from "@medusajs/framework/types"
+import { applyOrderStatusMetadata } from "../../../utils/order-status"
 
 /**
  * This API route is intentionally unauthenticated as the order ID is a UUID that requires brute forcing to
@@ -23,5 +24,7 @@ export const GET = async (
     },
   })
 
-  res.status(200).json({ order: result as HttpTypes.StoreOrder })
+  res
+    .status(200)
+    .json({ order: applyOrderStatusMetadata(result) as HttpTypes.StoreOrder })
 }

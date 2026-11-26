@@ -3,6 +3,7 @@ import { buildAllowedFields } from "../utils/allowed-fields"
 // TODO: Global todo, review all default fields to prevent over fetching by default
 export const defaultStoreCartFields = [
   "id",
+  "customer_id",
   "currency_code",
   "email",
   "locale",

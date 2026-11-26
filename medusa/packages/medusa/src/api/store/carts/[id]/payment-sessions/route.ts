@@ -1,4 +1,8 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import {
+  AuthenticatedMedusaRequest,
+  MedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework/http"
 import { initiateGatewayPayment } from "../../../payments/gateway"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
@@ -13,6 +17,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     provider,
     callbackUrl: callback_url,
     idempotencyKey: idempotency_key,
+    customerId: (req as AuthenticatedMedusaRequest).auth_context?.actor_id,
   })
 
   return res.status(200).json(result)
