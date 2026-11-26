@@ -63,10 +63,10 @@ export function setPaymentPlatformOverride(
 }
 
 function resolvePostgresMigrationsDir(): string {
-  const pkgPath = require.resolve(
-    "@amirhossein-moloki/payment-persistence-postgres/package.json"
+  const entryPath = require.resolve(
+    "@amirhossein-moloki/payment-persistence-postgres"
   )
-  return path.join(path.dirname(pkgPath), "migrations")
+  return path.resolve(path.dirname(entryPath), "../migrations")
 }
 
 export async function createPaymentPlatform(
