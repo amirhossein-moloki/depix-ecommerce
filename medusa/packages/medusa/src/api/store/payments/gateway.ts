@@ -9,7 +9,11 @@ import {
   updateCartWorkflowId,
 } from "@medusajs/core-flows"
 import { MedusaContainer } from "@medusajs/framework/types"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  MedusaError,
+  Modules,
+} from "@medusajs/framework/utils"
 import crypto from "crypto"
 import {
   buildFailedRedirectUrl,
@@ -187,6 +191,106 @@ async function attachOrderMetadataToPayment(
   await platform.paymentRepo.update(updatedEntity, latest.version)
 }
 
+function stripAddressIds(addr: any): Record<string, unknown> | undefined {
+  if (!addr || typeof addr !== "object") {
+    return undefined
+  }
+  const {
+    id: _id,
+    created_at: _createdAt,
+    updated_at: _updatedAt,
+    deleted_at: _deletedAt,
+    ...rest
+  } = addr
+  return rest
+}
+
+async function createOrderFromCartFallback(
+  scope: MedusaContainer,
+  cart: any,
+  params: {
+    cartId: string
+    paymentId?: string
+    trackId?: string
+    refId?: string
+  }
+): Promise<any> {
+  const orderService = scope.resolve<any>(Modules.ORDER)
+  const items = (cart.items ?? []).map((item: any) => ({
+    title: item.title || "Item",
+    subtitle: item.subtitle ?? undefined,
+    thumbnail: item.thumbnail ?? undefined,
+    quantity: Number(item.quantity ?? 1),
+    variant_id: item.variant_id ?? undefined,
+    variant_sku: item.variant_sku ?? undefined,
+    variant_barcode: item.variant_barcode ?? undefined,
+    variant_title: item.variant_title ?? undefined,
+    product_id: item.product_id ?? undefined,
+    product_title: item.product_title ?? undefined,
+    product_description: item.product_description ?? undefined,
+    product_subtitle: item.product_subtitle ?? undefined,
+    product_handle: item.product_handle ?? undefined,
+    requires_shipping: item.requires_shipping ?? true,
+    is_discountable: item.is_discountable ?? true,
+    is_tax_inclusive: item.is_tax_inclusive ?? false,
+    unit_price: Number(item.unit_price ?? 0),
+    compare_at_unit_price: item.compare_at_unit_price ?? undefined,
+    metadata: item.metadata ?? undefined,
+  }))
+
+  const shippingMethods = (cart.shipping_methods ?? []).map((sm: any) => ({
+    name: sm.name || "Standard Shipping",
+    description: sm.description ?? undefined,
+    amount: Number(sm.raw_amount ?? sm.amount ?? 0),
+    is_tax_inclusive: sm.is_tax_inclusive ?? false,
+    shipping_option_id: sm.shipping_option_id ?? undefined,
+    data: sm.data ?? undefined,
+    metadata: sm.metadata ?? undefined,
+  }))
+
+  const orderInput = {
+    region_id: cart.region_id ?? undefined,
+    customer_id: cart.customer_id ?? undefined,
+    sales_channel_id: cart.sales_channel_id ?? undefined,
+    status: "pending",
+    email: cart.email ?? undefined,
+    currency_code: cart.currency_code || "irr",
+    locale: cart.locale ?? undefined,
+    shipping_address: stripAddressIds(cart.shipping_address),
+    billing_address: stripAddressIds(cart.billing_address),
+    shipping_methods: shippingMethods,
+    items,
+    metadata: {
+      ...(cart.metadata ?? {}),
+      cart_id: cart.id,
+      payment_provider: "zibal",
+      payment_id: params.paymentId,
+      track_id: params.trackId,
+      ref_id: params.refId,
+      payment_status: "paid",
+    },
+  }
+
+  const created = await orderService.createOrders([orderInput])
+  const order = Array.isArray(created) ? created[0] : created
+
+  if (order?.id) {
+    try {
+      const link = scope.resolve<any>(ContainerRegistrationKeys.LINK)
+      if (link?.create) {
+        await link.create({
+          [Modules.CART]: { cart_id: cart.id },
+          [Modules.ORDER]: { order_id: order.id },
+        })
+      }
+    } catch {
+      // Optional link creation in custom checkout or unit-test scopes
+    }
+  }
+
+  return order
+}
+
 async function completeCartIdempotently(
   scope: MedusaContainer,
   params: {
@@ -204,7 +308,17 @@ async function completeCartIdempotently(
 
   const task = (async () => {
     const cartService = scope.resolve<any>(Modules.CART)
-    const cart = await cartService.retrieveCart(params.cartId).catch(() => null)
+    const cart = await cartService
+      .retrieveCart(params.cartId, {
+        relations: [
+          "items",
+          "shipping_address",
+          "billing_address",
+          "shipping_methods",
+        ],
+      })
+      .catch(() => cartService.retrieveCart(params.cartId).catch(() => null))
+
     if (!cart) {
       throw new MedusaError(
         MedusaError.Types.NOT_FOUND,
@@ -233,10 +347,22 @@ async function completeCartIdempotently(
       }
     }
 
-    const we = scope.resolve<any>(Modules.WORKFLOW_ENGINE)
-    const { result: order } = await we.run(completeCartWorkflowId, {
-      input: { id: cart.id },
-    })
+    let order: any
+    let usedFallback = false
+    try {
+      const we = scope.resolve<any>(Modules.WORKFLOW_ENGINE)
+      const wfRes = await we.run(completeCartWorkflowId, {
+        input: { id: cart.id },
+      })
+      order = wfRes?.result
+    } catch (wfErr) {
+      console.warn(
+        "[Zibal] completeCartWorkflow failed, falling back to direct order creation:",
+        sanitizeGatewayErrorMessage(wfErr, params.platform?.config?.merchant)
+      )
+      order = await createOrderFromCartFallback(scope, cart, params)
+      usedFallback = true
+    }
 
     const orderId = order?.id ? String(order.id) : undefined
     const nextSession = {
@@ -250,10 +376,24 @@ async function completeCartIdempotently(
       verified_at: new Date().toISOString(),
     }
 
-    try {
-      await updateCartMetadata(scope, cart, nextSession)
-    } catch {
-      // Completed cart updates may fail in some adapters; payment metadata still records order_id
+    if (usedFallback && cartService?.updateCarts) {
+      try {
+        await cartService.updateCarts(cart.id, {
+          completed_at: new Date(),
+          metadata: {
+            ...(cart.metadata ?? {}),
+            payment_session: nextSession,
+          },
+        })
+      } catch {
+        // Fallback cart update failed; order_id is still persisted on payment metadata
+      }
+    } else {
+      try {
+        await updateCartMetadata(scope, cart, nextSession)
+      } catch {
+        // Completed cart updates may fail in some adapters; payment metadata still records order_id
+      }
     }
 
     if (params.platform && params.paymentId && orderId) {
@@ -916,64 +1056,20 @@ export const handleZibalCallback = async (
       }
     }
 
+    let verifyResult
     try {
       // Never trust browser callback status=1/success=1 alone: verify server-side with Zibal
-      const verifyResult = await platform.service.verifyPayment({
+      verifyResult = await platform.service.verifyPayment({
         paymentId: latestPayment.id,
         gatewayTransactionId: trackId,
         callbackData: parsed.rawData,
       })
-
-      if (verifyResult.status !== PaymentStatus.SUCCESS) {
-        await persistPaymentTerminalState(
-          platform,
-          latestPayment.id,
-          PaymentStatus.FAILED,
-          { failure_reason: "verification_failed" }
-        )
-        return {
-          statusCode: 302,
-          status: "failed",
-          paymentId: latestPayment.id,
-          trackId,
-          reason: "verification_failed",
-          redirectUrl: buildFailedRedirectUrl(appUrl, environment, {
-            payment_id: latestPayment.id,
-            track_id: trackId,
-            reason: "verification_failed",
-          }),
-        }
-      }
-
-      const refId = verifyResult.reference
-      let orderId: string | undefined
-      if (cartId) {
-        const fulfilled = await completeCartIdempotently(scope, {
-          cartId,
-          paymentId: latestPayment.id,
-          trackId,
-          refId,
-          platform,
-        })
-        orderId = fulfilled.orderId
-      }
-
-      return {
-        statusCode: 302,
-        status: "success",
-        paymentId: latestPayment.id,
-        orderId,
-        trackId,
-        refId,
-        redirectUrl: buildSuccessRedirectUrl(appUrl, environment, {
-          payment_id: latestPayment.id,
-          order_id: orderId,
-          track_id: trackId,
-          ref_id: refId,
-        }),
-      }
     } catch (err) {
       const reason = classifyFailureReason(err)
+      console.warn(
+        "[Zibal] Callback verification failed:",
+        sanitizeGatewayErrorMessage(err, platform.config.merchant)
+      )
       if (reason === "timeout") {
         // Keep non-terminal state on transient timeout so inquiry/retry can still settle it
         await attachOrderMetadataToPayment(platform, latestPayment.id, {
@@ -1000,6 +1096,64 @@ export const handleZibalCallback = async (
           reason,
         }),
       }
+    }
+
+    if (verifyResult.status !== PaymentStatus.SUCCESS) {
+      await persistPaymentTerminalState(
+        platform,
+        latestPayment.id,
+        PaymentStatus.FAILED,
+        { failure_reason: "verification_failed" }
+      )
+      return {
+        statusCode: 302,
+        status: "failed",
+        paymentId: latestPayment.id,
+        trackId,
+        reason: "verification_failed",
+        redirectUrl: buildFailedRedirectUrl(appUrl, environment, {
+          payment_id: latestPayment.id,
+          track_id: trackId,
+          reason: "verification_failed",
+        }),
+      }
+    }
+
+    // Zibal verification succeeded: fulfill order in its own try/catch so a cart completion
+    // edge case never redirects an already-paid transaction to /payment/failed.
+    const refId = verifyResult.reference
+    let orderId = latestPayment.metadata?.order_id as string | undefined
+    if (cartId) {
+      try {
+        const fulfilled = await completeCartIdempotently(scope, {
+          cartId,
+          paymentId: latestPayment.id,
+          trackId,
+          refId,
+          platform,
+        })
+        orderId = fulfilled.orderId || orderId
+      } catch (fulfillErr) {
+        console.warn(
+          "[Zibal] Payment verified cleanly, but cart completion failed:",
+          sanitizeGatewayErrorMessage(fulfillErr, platform.config.merchant)
+        )
+      }
+    }
+
+    return {
+      statusCode: 302,
+      status: "success",
+      paymentId: latestPayment.id,
+      orderId,
+      trackId,
+      refId,
+      redirectUrl: buildSuccessRedirectUrl(appUrl, environment, {
+        payment_id: latestPayment.id,
+        order_id: orderId,
+        track_id: trackId,
+        ref_id: refId,
+      }),
     }
   })()
 

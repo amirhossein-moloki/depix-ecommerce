@@ -637,5 +637,159 @@ describe("Zibal Payment Platform Integration & Redirect Flow", () => {
         track_id: "88112233",
       })
     })
+
+    it("falls back to direct order creation and redirects to /payment/success when completeCartWorkflow throws", async () => {
+      const { runtime, transport } = await setupTestPlatform({
+        appUrl: "https://shop.example.com/",
+        environment: "sandbox",
+      })
+
+      transport.handlers.set("/v1/request", () => ({
+        trackId: 90908080,
+        result: 100,
+        message: "success",
+      }))
+      transport.handlers.set("/v1/verify", () => ({
+        amount: 55000000,
+        result: 100,
+        status: 1,
+        orderId: "ignored",
+        message: "success",
+      }))
+
+      const cart: any = {
+        id: "cart_no_pc",
+        total: 55000000,
+        currency_code: "irr",
+        region_id: "reg_1",
+        items: [
+          {
+            title: "Safety Boots",
+            quantity: 1,
+            variant_id: "var_1",
+            unit_price: 55000000,
+          },
+        ],
+        metadata: {},
+      }
+
+      const cartService = {
+        retrieveCart: jest.fn().mockImplementation(() => Promise.resolve(cart)),
+        updateCarts: jest.fn().mockImplementation((_id: string, data: any) => {
+          if (data.completed_at) cart.completed_at = data.completed_at
+          if (data.metadata) cart.metadata = data.metadata
+          return Promise.resolve(cart)
+        }),
+      }
+      const we = {
+        run: jest.fn().mockImplementation((_wfId: string, opts: any) => {
+          if (opts?.input?.metadata?.payment_session) {
+            cart.metadata = {
+              ...(cart.metadata || {}),
+              payment_session: opts.input.metadata.payment_session,
+            }
+            return Promise.resolve({})
+          }
+          return Promise.reject(
+            new Error("Payment collection has not been initiated for cart")
+          )
+        }),
+      }
+      const createdOrders: any[] = []
+      const orderService = {
+        createOrders: jest.fn().mockImplementation((inputs: any[]) => {
+          const ord = { id: "order_fallback_1", ...inputs[0] }
+          createdOrders.push(ord)
+          return Promise.resolve([ord])
+        }),
+        retrieveOrder: jest
+          .fn()
+          .mockImplementation((id: string) =>
+            Promise.resolve(createdOrders.find((o) => o.id === id) || { id })
+          ),
+      }
+      const linkService = {
+        create: jest.fn().mockResolvedValue({}),
+      }
+
+      const fallbackScope = {
+        resolve: jest.fn((key: string) => {
+          if (key === Modules.CART) return cartService
+          if (key === Modules.WORKFLOW_ENGINE) return we
+          if (key === Modules.ORDER) return orderService
+          if (key === "remoteLink") return linkService
+          throw new Error(`Unexpected ${key}`)
+        }),
+      } as any
+
+      const { res: initRes, json: initJson } = makeRes()
+      await initiatePayment(
+        {
+          validatedBody: { cart_id: "cart_no_pc", provider: "zibal" },
+          scope: fallbackScope,
+        } as any,
+        initRes
+      )
+      const { payment_id, track_id } = initJson.mock.calls[0][0]
+
+      const { res: cbRes1, redirect: redirect1 } = makeRes()
+      await callbackGet(
+        {
+          query: {
+            trackId: track_id,
+            success: "1",
+            status: "2",
+            orderId: payment_id,
+          },
+          body: {},
+          headers: {},
+          scope: fallbackScope,
+        } as any,
+        cbRes1
+      )
+
+      expect(redirect1).toHaveBeenCalledWith(
+        302,
+        `https://shop.example.com/payment/success?payment_id=${payment_id}&order_id=order_fallback_1&track_id=${track_id}`
+      )
+      expect(orderService.createOrders).toHaveBeenCalledTimes(1)
+      expect(orderService.createOrders.mock.calls[0][0][0]).toMatchObject({
+        region_id: "reg_1",
+        currency_code: "irr",
+        metadata: expect.objectContaining({
+          cart_id: "cart_no_pc",
+          payment_provider: "zibal",
+          payment_id,
+          track_id,
+          payment_status: "paid",
+        }),
+      })
+      expect(cart.completed_at).toBeTruthy()
+      expect((await runtime.paymentRepo.findById(payment_id))?.status).toBe(
+        PaymentStatus.SUCCESS
+      )
+
+      // Duplicate callback returns same order_id without creating another order
+      const { res: cbRes2, redirect: redirect2 } = makeRes()
+      await callbackGet(
+        {
+          query: {
+            trackId: track_id,
+            success: "1",
+            status: "1",
+            orderId: payment_id,
+          },
+          body: {},
+          headers: {},
+          scope: fallbackScope,
+        } as any,
+        cbRes2
+      )
+      expect(redirect2).toHaveBeenCalledWith(
+        302,
+        `https://shop.example.com/payment/success?payment_id=${payment_id}&order_id=order_fallback_1&track_id=${track_id}`
+      )
+      expect(orderService.createOrders).toHaveBeenCalledTimes(1)
+    })
   })
 })
