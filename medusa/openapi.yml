@@ -2736,18 +2736,22 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-              - callback_url
               properties:
                 provider:
                   type: string
+                  enum:
+                  - zarinpal
+                  - zibal
                   default: zarinpal
                 callback_url:
                   type: string
                   format: uri
+                  description: Optional override callback URL (defaults to ZIBAL_CALLBACK_URL when provider is zibal)
+                idempotency_key:
+                  type: string
       responses:
         '200':
-          description: Payment gateway redirect URL and authority
+          description: Payment gateway redirect URL and tracking identifier
           content:
             application/json:
               schema:
@@ -2757,11 +2761,15 @@ paths:
                     type: string
                   redirect_url:
                     type: string
+                  track_id:
+                    type: string
                   authority:
                     type: string
                   amount_irr:
                     type: number
                   provider:
+                    type: string
+                  status:
                     type: string
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -2778,19 +2786,24 @@ paths:
               type: object
               required:
               - cart_id
-              - callback_url
               properties:
                 cart_id:
                   type: string
                 provider:
                   type: string
+                  enum:
+                  - zarinpal
+                  - zibal
                   default: zarinpal
                 callback_url:
                   type: string
                   format: uri
+                  description: Optional override callback URL (defaults to ZIBAL_CALLBACK_URL when provider is zibal)
+                idempotency_key:
+                  type: string
       responses:
         '200':
-          description: Payment gateway redirect URL and authority
+          description: Payment gateway redirect URL and tracking identifier
           content:
             application/json:
               schema:
@@ -2800,11 +2813,15 @@ paths:
                     type: string
                   redirect_url:
                     type: string
+                  track_id:
+                    type: string
                   authority:
                     type: string
                   amount_irr:
                     type: number
                   provider:
+                    type: string
+                  status:
                     type: string
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -2819,20 +2836,26 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-              - cart_id
               properties:
                 cart_id:
                   type: string
+                payment_id:
+                  type: string
                 authority:
                   type: string
+                track_id:
+                  oneOf:
+                  - type: string
+                  - type: integer
                 ref_id:
                   type: string
                 status:
                   type: string
+                provider:
+                  type: string
       responses:
         '200':
-          description: Payment verified and order created
+          description: Payment verified and order created (idempotent)
           content:
             application/json:
               schema:
@@ -2841,12 +2864,114 @@ paths:
                   verified:
                     type: boolean
                     example: true
+                  already_verified:
+                    type: boolean
+                  payment_id:
+                    type: string
+                  track_id:
+                    type: string
                   order:
                     $ref: '#/components/schemas/Order'
                   tracking_ref:
                     type: string
         '400':
           $ref: '#/components/responses/BadRequest'
+  /store/payments/{id}/inquiry:
+    get:
+      summary: Inquire Payment Status from Zibal Gateway
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Latest gateway inquiry status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_id:
+                    type: string
+                  status:
+                    type: string
+                  amount:
+                    type: number
+                  reference:
+                    type: string
+                  track_id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /payment/callback:
+    get:
+      summary: Zibal Payment Gateway Callback Redirect (GET)
+      tags:
+      - Carts & Checkout
+      description: Verifies transaction server-side with Zibal and redirects browser to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`.
+      parameters:
+      - name: trackId
+        in: query
+        schema:
+          type: string
+      - name: success
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: orderId
+        in: query
+        schema:
+          type: string
+      responses:
+        '302':
+          description: Redirect to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`
+    post:
+      summary: Zibal Payment Gateway Callback Redirect (POST)
+      tags:
+      - Carts & Checkout
+      description: Verifies transaction server-side with Zibal and redirects browser to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`.
+      responses:
+        '302':
+          description: Redirect to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`
+  /payment/callback/{gateway}:
+    get:
+      summary: Gateway-Specific Payment Callback Redirect (GET)
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: gateway
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - zibal
+      responses:
+        '302':
+          description: Redirect to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`
+    post:
+      summary: Gateway-Specific Payment Callback Redirect (POST)
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: gateway
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - zibal
+      responses:
+        '302':
+          description: Redirect to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`
   /store/carts/{id}/complete:
     post:
       summary: Complete Cart / Place Order

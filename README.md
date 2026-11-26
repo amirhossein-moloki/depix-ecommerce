@@ -180,13 +180,15 @@ All environment configurations are loaded from `.env` in the root workspace dire
 | `NOTIFICATION_RETRY_LIMIT` | Maximum retry attempts for dispatches | Optional | `3` |
 | `SMS_ORDER_NOTIFICATIONS_ENABLED` | Enable order state SMS notifications | Optional | `true` |
 | `SMS_ENABLE_OTP` | Enable OTP SMS verification dispatches | Optional | `true` |
-| `PAYMENT_ENV` | Payment gateway environment (`development`, `production`) | Optional | `development` |
+| `PAYMENT_ENV` | Payment gateway environment (`sandbox`, `development`, `production`) | Conditional | `sandbox` |
+| `APP_URL` | Frontend application origin for `/payment/success` and `/payment/failed` redirects (`https://` required in production) | Required when Zibal/production enabled | - |
+| `PAYMENT_TIMEOUT_MS` | External payment gateway HTTP timeout (ms) | Optional | `15000` |
 | `MELLAT_TERMINAL_ID` | Terminal ID for Mellat payment gateway | Optional | - |
 | `MELLAT_USERNAME` | Username for Mellat payment gateway | Optional | - |
 | `MELLAT_PASSWORD` | Password for Mellat payment gateway | Optional | - |
 | `MELLAT_CALLBACK_URL` | Callback URL for Mellat payment gateway | Optional | - |
-| `ZIBAL_MERCHANT` | Merchant key for Zibal payment gateway | Optional | - |
-| `ZIBAL_CALLBACK_URL` | Callback URL for Zibal payment gateway | Optional | - |
+| `ZIBAL_MERCHANT` | Merchant key for Zibal payment gateway (test `'zibal'` is blocked in `production`) | Conditional | - |
+| `ZIBAL_CALLBACK_URL` | Backend callback URL Zibal calls (`/payment/callback`) | Conditional | - |
 | `ZARINPAL_ACCESS_TOKEN` | Access token for Zarinpal payment gateway | Optional | - |
 | `ZARINPAL_MERCHANT_ID` | Merchant ID for Zarinpal payment gateway | Optional | - |
 | `ZARINPAL_CALLBACK_URL` | Callback URL for Zarinpal payment gateway | Optional | - |
@@ -252,10 +254,55 @@ The platform provides standard OpenAPI v3 spec generation alongside two compleme
   - `GET /store/products/:id` - Get product details
   - `GET /store/products/:id/json-ld` - Get Schema.org Product & VideoObject JSON-LD
   - `GET /store/products/:id/videos` - List product video attachments
-- **Carts & Checkout**:
+- **Carts & Checkout & Zibal Payment Flow**:
   - `POST /store/carts` - Create cart
   - `POST /store/carts/:id/line-items` - Add line item to cart
-  - `POST /store/carts/:id/payment-sessions` - Initialize payment session
+  - `POST /store/carts/:id/payment-sessions` - Initialize payment session (`provider: "zibal" | "zarinpal"`)
+  - `POST /store/payments/initiate` - Initiate gateway payment and return `redirect_url` + `track_id`
+  - `GET` / `POST /payment/callback` (and `/payment/callback/:gateway`) - Receive Zibal browser/gateway callback, verify transaction server-side with Zibal, complete cart idempotently once, and `302` redirect to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`
+  - `POST /store/payments/verify` - Verify payment server-side and complete order idempotently
+  - `GET /store/payments/:id/inquiry` - Inquire payment status directly from Zibal
+
+### Zibal Payment Platform Setup (`@amirhossein-moloki/payment-*`)
+
+The backend integrates `@amirhossein-moloki/payment-core`, `@amirhossein-moloki/payment-zibal`, `@amirhossein-moloki/payment-service`, and `@amirhossein-moloki/payment-persistence-postgres` as workspace packages inside `medusa/packages/`.
+
+#### 1. Configure Environment Variables
+
+**Sandbox (Local Development):**
+```env
+APP_URL=http://localhost:3000
+PAYMENT_ENV=sandbox
+ZIBAL_MERCHANT=zibal
+ZIBAL_CALLBACK_URL=http://localhost/api/medusa/payment/callback
+```
+
+**Production (Separate Frontend & API Domains Supported):**
+```env
+APP_URL=https://example.com
+PAYMENT_ENV=production
+ZIBAL_MERCHANT=your_production_merchant
+ZIBAL_CALLBACK_URL=https://api.example.com/payment/callback
+```
+
+> At startup, Medusa validates `APP_URL`, `ZIBAL_MERCHANT`, `ZIBAL_CALLBACK_URL`, and `PAYMENT_ENV`. Using merchant `'zibal'` or non-HTTPS `APP_URL` in `production` fails startup with `ConfigurationError`.
+
+#### 2. Payment Initiation & Server-Side Callback Redirect Flow
+
+```ts
+// Frontend initiates checkout payment:
+const res = await fetch('/api/medusa/store/payments/initiate', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'x-publishable-api-key': PUBLISHABLE_KEY },
+  body: JSON.stringify({ cart_id: cartId, provider: 'zibal' }),
+});
+const { redirect_url } = await res.json();
+window.location.href = redirect_url; // -> https://gateway.zibal.ir/start/{trackId}
+```
+
+After payment, Zibal sends the user back to `ZIBAL_CALLBACK_URL` (`/payment/callback` on Medusa). Medusa parses `trackId` and `success`, verifies directly with Zibal `/v1/verify` (including amount matching and idempotency against `payments` / `transactions` / `idempotency_records`), fulfills the order **at most once**, and redirects (`302`) to:
+- `${APP_URL}/payment/success?payment_id=...&order_id=...&track_id=...&ref_id=...`
+- `${APP_URL}/payment/failed?payment_id=...&track_id=...&reason=...`
 - **Customer Features**:
   - `GET /store/wishlist` - View customer wishlist
   - `POST /store/wishlist/items` - Add product variant to wishlist

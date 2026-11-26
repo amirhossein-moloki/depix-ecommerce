@@ -55,6 +55,11 @@ services:
       COOKIE_SECRET: ${MEDUSA_COOKIE_SECRET:-supersecret}
       DISABLE_MEDUSA_ADMIN: ${DISABLE_MEDUSA_ADMIN:-true}
       SKIP_OTP: ${SKIP_OTP:-false}
+      PAYMENT_ENV: ${PAYMENT_ENV:-sandbox}
+      APP_URL: ${APP_URL:-}
+      ZIBAL_MERCHANT: ${ZIBAL_MERCHANT:-}
+      ZIBAL_CALLBACK_URL: ${ZIBAL_CALLBACK_URL:-}
+      PAYMENT_TIMEOUT_MS: ${PAYMENT_TIMEOUT_MS:-15000}
       PORT: 9000
       HOST: 0.0.0.0
     depends_on:

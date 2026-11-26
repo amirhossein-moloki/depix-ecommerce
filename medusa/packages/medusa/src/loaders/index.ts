@@ -27,6 +27,7 @@ import { Express, NextFunction, Request, Response } from "express"
 import { join } from "path"
 import requestIp from "request-ip"
 import { v4 } from "uuid"
+import { validatePaymentPlatformStartupConfig } from "../api/store/payments/config"
 import adminLoader from "./admin"
 import apiLoader from "./api"
 import { loadSearchIndexes } from "./search"
@@ -94,6 +95,10 @@ async function loadEntrypoints(
 
   if (isWorkerMode(configModule)) {
     return async () => {}
+  }
+
+  if (process.env.NODE_ENV !== "test") {
+    validatePaymentPlatformStartupConfig(process.env)
   }
 
   /**
