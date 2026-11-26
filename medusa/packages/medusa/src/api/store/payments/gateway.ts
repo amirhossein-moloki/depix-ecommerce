@@ -621,14 +621,19 @@ export const verifyGatewayPayment = async (
         gatewayTransactionId: String(effectiveTrackId).trim(),
       })
     } catch (err) {
-      await persistPaymentTerminalState(
-        platform,
-        payment.id,
-        PaymentStatus.FAILED,
-        {
-          failure_reason: classifyFailureReason(err),
-        }
-      )
+      const reason = classifyFailureReason(err)
+      if (reason === "timeout") {
+        await attachOrderMetadataToPayment(platform, payment.id, {
+          failure_reason: reason,
+        }).catch(() => undefined)
+      } else {
+        await persistPaymentTerminalState(
+          platform,
+          payment.id,
+          PaymentStatus.FAILED,
+          { failure_reason: reason }
+        ).catch(() => undefined)
+      }
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
         sanitizeGatewayErrorMessage(err, platform.config.merchant)
@@ -969,12 +974,19 @@ export const handleZibalCallback = async (
       }
     } catch (err) {
       const reason = classifyFailureReason(err)
-      await persistPaymentTerminalState(
-        platform,
-        latestPayment.id,
-        PaymentStatus.FAILED,
-        { failure_reason: reason }
-      ).catch(() => undefined)
+      if (reason === "timeout") {
+        // Keep non-terminal state on transient timeout so inquiry/retry can still settle it
+        await attachOrderMetadataToPayment(platform, latestPayment.id, {
+          failure_reason: reason,
+        }).catch(() => undefined)
+      } else {
+        await persistPaymentTerminalState(
+          platform,
+          latestPayment.id,
+          PaymentStatus.FAILED,
+          { failure_reason: reason }
+        ).catch(() => undefined)
+      }
 
       return {
         statusCode: 302,

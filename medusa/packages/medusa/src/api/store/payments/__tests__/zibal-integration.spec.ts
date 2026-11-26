@@ -317,7 +317,7 @@ describe("Zibal Payment Platform Integration & Redirect Flow", () => {
       ).rejects.toThrow()
 
       expect(completeCalls).toHaveLength(0)
-      const stored = await runtime.paymentRepo.findMany({})
+      const stored = await runtime.paymentRepo.list({})
       expect(stored[0]?.status).toBe(PaymentStatus.FAILED)
     })
 
@@ -478,13 +478,24 @@ describe("Zibal Payment Platform Integration & Redirect Flow", () => {
         message: "success",
       }))
 
-      // 1. Invalid callback data
+      // 1. Invalid callback data & unsupported gateway redirect
       const emptyScope = createMockScope({ id: "cart_x", total: 10000, currency_code: "irr" }).scope
       const { res: badCbRes, redirect: badCbRedirect } = makeRes()
       await callbackGet({ query: { success: "1" }, body: {}, headers: {}, scope: emptyScope } as any, badCbRes)
       expect(badCbRedirect).toHaveBeenCalledWith(
         302,
         "https://shop.example.com/payment/failed?reason=invalid_callback"
+      )
+
+      process.env.APP_URL = "https://shop.example.com/"
+      const { res: unsupRes, redirect: unsupRedirect } = makeRes()
+      await gatewayCallbackGet(
+        { params: { gateway: "unknown" }, query: {}, body: {}, headers: {}, scope: emptyScope } as any,
+        unsupRes
+      )
+      expect(unsupRedirect).toHaveBeenCalledWith(
+        302,
+        "https://shop.example.com/payment/failed?reason=unsupported_gateway"
       )
 
       // 2. Cancelled transaction (status=3, success=0)

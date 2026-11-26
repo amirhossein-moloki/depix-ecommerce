@@ -294,16 +294,35 @@ export class PaymentApplicationService {
 
         await this.paymentRepo.create(payment);
 
-        const response: CreatePaymentResponse = await this.retryPolicy.execute(() =>
-          TimeoutPolicy.withTimeout(
-            createCapableGateway.createPayment({
-              payment,
-              options: input.options,
+        let response: CreatePaymentResponse;
+        try {
+          response = await this.retryPolicy.execute(() =>
+            TimeoutPolicy.withTimeout(
+              createCapableGateway.createPayment({
+                payment,
+                options: input.options,
+              }),
+              this.config.defaultTimeoutMs ?? 0,
+              `CreatePayment (${input.gateway})`,
+            ),
+          );
+        } catch (err) {
+          payment.transitionTo(PaymentStatus.FAILED);
+          const failedPayment = await this.paymentRepo.update(payment, payment.version);
+          await this.transactionRepo.create(
+            new Transaction({
+              paymentId: failedPayment.id,
+              gateway: failedPayment.gateway!,
+              type: TransactionType.PAYMENT,
+              status: TransactionStatus.FAILED,
+              amount: failedPayment.amount,
+              metadata: {
+                error: err instanceof Error ? err.message : String(err),
+              },
             }),
-            this.config.defaultTimeoutMs ?? 0,
-            `CreatePayment (${input.gateway})`,
-          ),
-        );
+          );
+          throw err;
+        }
 
         if (response.success) {
           payment.transitionTo(response.status || PaymentStatus.PENDING);
