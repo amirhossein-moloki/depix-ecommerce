@@ -15,6 +15,7 @@ import {
   remapProductResponse,
   remapVariantResponse,
 } from "../../helpers"
+import { ensureProductDefaultInventoryAndChannel } from "../../utils/ensure-default-inventory"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.AdminProductVariantParams>,
@@ -67,6 +68,8 @@ export const POST = async (
   await createProductVariantsWorkflow(req.scope).run({
     input: { product_variants: input, additional_data },
   })
+
+  await ensureProductDefaultInventoryAndChannel(req.scope, productId)
 
   const product = await refetchEntity({
     entity: "product",

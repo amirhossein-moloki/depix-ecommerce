@@ -13,6 +13,7 @@ import {
 } from "@medusajs/framework/utils"
 import IndexEngineFeatureFlag from "../../../feature-flags/index-engine"
 import { remapKeysForProduct, remapProductResponse } from "./helpers"
+import { ensureProductDefaultInventoryAndChannel } from "./utils/ensure-default-inventory"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.AdminProductListParams>,
@@ -120,6 +121,8 @@ export const POST = async (
   const { result } = await createProductsWorkflow(req.scope).run({
     input: { products: [products], additional_data },
   })
+
+  await ensureProductDefaultInventoryAndChannel(req.scope, result[0].id)
 
   const product = await refetchEntity({
     entity: "product",
