@@ -16,6 +16,7 @@ import {
   ContainerRegistrationKeys,
   MedusaError,
   Modules,
+  remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
 import crypto from "crypto"
 import { applyOrderStatusMetadata } from "../../utils/order-status"
@@ -621,6 +622,90 @@ function extractGatewayErrorDetail(
   }
 }
 
+export function computeCartTotalIrr(cart: any): number {
+  if (Array.isArray(cart?.items)) {
+    if (cart.items.length === 0) {
+      return 0
+    }
+    const itemsSubtotal = cart.items.reduce(
+      (sum: number, item: any) =>
+        sum + Number(item?.unit_price ?? 0) * Number(item?.quantity ?? 0),
+      0
+    )
+    const discountTotal = Number(cart.discount_total ?? 0)
+    const taxTotal = Number(cart.tax_total ?? 0)
+    const shippingTotal =
+      cart.shipping_total !== undefined && cart.shipping_total !== null
+        ? Number(cart.shipping_total)
+        : (cart.shipping_methods ?? []).reduce(
+            (sum: number, sm: any) => sum + Number(sm?.amount ?? 0),
+            0
+          )
+
+    return Math.max(
+      0,
+      Math.round(itemsSubtotal - discountTotal + taxTotal + shippingTotal)
+    )
+  }
+
+  return Math.round(Number(cart?.total ?? 0))
+}
+
+function normalizeAmountToIrr(amount: number, currencyCode?: string | null): number {
+  const normalized = String(currencyCode || "IRR")
+    .trim()
+    .toUpperCase()
+  if (normalized === "IRT" || normalized === "TOMAN") {
+    return Math.round(amount * 10)
+  }
+  return Math.round(amount)
+}
+
+async function retrieveFullCartForPayment(
+  scope: MedusaContainer,
+  cartId: string
+): Promise<any> {
+  try {
+    const remoteQuery = scope.resolve<any>(ContainerRegistrationKeys.REMOTE_QUERY)
+    if (typeof remoteQuery === "function") {
+      const queryObject = remoteQueryObjectFromString({
+        entryPoint: "cart",
+        variables: { filters: { id: cartId } },
+        fields: [
+          "id",
+          "customer_id",
+          "email",
+          "currency_code",
+          "total",
+          "subtotal",
+          "discount_total",
+          "tax_total",
+          "shipping_total",
+          "metadata",
+          "shipping_address.*",
+          "items.id",
+          "items.quantity",
+          "items.unit_price",
+          "shipping_methods.id",
+          "shipping_methods.amount",
+          "shipping_methods.data",
+        ],
+      })
+      const [cart] = await remoteQuery(queryObject)
+      if (cart) {
+        return cart
+      }
+    }
+  } catch {
+    // Fall back to cartService when remoteQuery is not available (e.g. unit tests)
+  }
+
+  const cartService = scope.resolve<any>(Modules.CART)
+  return await cartService
+    .retrieveCart(cartId, { relations: ["items", "shipping_methods"] })
+    .catch(() => cartService.retrieveCart(cartId).catch(() => null))
+}
+
 export const initiateGatewayPayment = async (
   scope: MedusaContainer,
   {
@@ -631,8 +716,7 @@ export const initiateGatewayPayment = async (
     customerId,
   }: InitiatePaymentInput
 ) => {
-  const cartService = scope.resolve<any>(Modules.CART)
-  let cart = await cartService.retrieveCart(cartId).catch(() => null)
+  let cart = await retrieveFullCartForPayment(scope, cartId)
 
   if (!cart) {
     throw new MedusaError(
@@ -648,11 +732,11 @@ export const initiateGatewayPayment = async (
       customerId
     )
     if (attached) {
-      cart = (await cartService.retrieveCart(cartId).catch(() => null)) ?? cart
+      cart = (await retrieveFullCartForPayment(scope, cartId)) ?? cart
     }
   }
 
-  const amountValue = Number(cart.total ?? 0)
+  const amountValue = computeCartTotalIrr(cart)
   if (!Number.isFinite(amountValue) || amountValue <= 0) {
     throw new MedusaError(
       MedusaError.Types.INVALID_DATA,
@@ -747,6 +831,11 @@ export const initiateGatewayPayment = async (
     .toUpperCase()}`
   let redirectUrl = `${effectiveCallbackUrl}${effectiveCallbackUrl.includes("?") ? "&" : "?"}Authority=${authority}&Status=OK`
 
+  const amountIrr = normalizeAmountToIrr(
+    amountValue,
+    cart.currency_code ?? "IRR"
+  )
+
   const merchantId = process.env.ZARINPAL_MERCHANT_ID
   if (normalizedProvider === "zarinpal" && merchantId) {
     const response = await fetch(
@@ -756,7 +845,8 @@ export const initiateGatewayPayment = async (
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           merchant_id: merchantId,
-          amount: amountValue,
+          amount: amountIrr,
+          currency: "IRR",
           callback_url: effectiveCallbackUrl,
           description: `پرداخت سفارش سبد ${cart.id}`,
           metadata: {
@@ -784,7 +874,7 @@ export const initiateGatewayPayment = async (
     payment_id: paymentId,
     authority,
     provider: normalizedProvider,
-    amount_irr: amountValue,
+    amount_irr: amountIrr,
     callback_url: effectiveCallbackUrl,
     status: "pending",
     initiated_at: new Date().toISOString(),
@@ -796,7 +886,7 @@ export const initiateGatewayPayment = async (
     payment_id: paymentId,
     redirect_url: redirectUrl,
     authority,
-    amount_irr: amountValue,
+    amount_irr: amountIrr,
     provider: normalizedProvider,
   }
 }

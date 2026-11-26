@@ -10,12 +10,17 @@ export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.AdminOrderFilters>,
   res: MedusaResponse<HttpTypes.AdminOrderListResponse>
 ) => {
+  const pagination = {
+    ...req.queryConfig.pagination,
+    order: req.queryConfig.pagination?.order ?? { created_at: "DESC" },
+  }
+
   const variables = {
     filters: {
       ...req.filterableFields,
       is_draft_order: false,
     },
-    ...req.queryConfig.pagination,
+    ...pagination,
   }
 
   const workflow = getOrdersListWorkflow(req.scope)

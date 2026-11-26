@@ -48,7 +48,8 @@ export const POST = async (
     )
   }
 
-  const { additional_data, ...rest } = req.validatedBody
+  const { additional_data, product_ids, min_purchase_amount, max_purchase_amount, is_active, ...rest } =
+    req.validatedBody as any
   const updateCampaigns = updateCampaignsWorkflow(req.scope)
   const campaignsData = [
     {

@@ -1,5 +1,6 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
+import { formatTicketMessage } from "../helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -29,7 +30,9 @@ export const GET = async (
 
   const byCreatedAtAsc = (a: any, b: any) =>
     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  const sortedMessages = [...(ticket.messages || [])].sort(byCreatedAtAsc)
+  const sortedMessages = [...(ticket.messages || [])]
+    .sort(byCreatedAtAsc)
+    .map(formatTicketMessage)
   const sortedHistory = [...(ticket.history || [])].sort(byCreatedAtAsc)
 
   // Fetch optional order info

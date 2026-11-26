@@ -1,4 +1,7 @@
 import { authenticate, MiddlewareRoute } from "@medusajs/framework/http"
+import multer from "multer"
+
+const upload = multer({ storage: multer.memoryStorage() })
 
 export const adminTicketRoutesMiddlewares: MiddlewareRoute[] = [
   {
@@ -50,6 +53,14 @@ export const adminTicketRoutesMiddlewares: MiddlewareRoute[] = [
     method: ["POST"],
     matcher: "/admin/tickets/:id/reopen",
     middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/ticket-attachments",
+    middlewares: [
+      authenticate("user", ["session", "bearer", "api-key"]),
+      upload.single("file") as any,
+    ],
   },
   {
     method: ["GET"],

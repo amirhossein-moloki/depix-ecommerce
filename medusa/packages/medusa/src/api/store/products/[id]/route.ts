@@ -10,6 +10,7 @@ import {
   wrapVariantsWithInventoryQuantityForSalesChannel,
 } from "../../../utils/middlewares"
 import {
+  applyActiveAutomaticPromotionsToProducts,
   enrichProductsWithStoreSummary,
   filterOutInternalProductCategories,
   RequestWithContext,
@@ -81,5 +82,6 @@ export const GET = async (
 
   await wrapProductsWithTaxPrices(req, [product])
   enrichProductsWithStoreSummary([product])
+  await applyActiveAutomaticPromotionsToProducts(req.scope, [product])
   res.json({ product })
 }

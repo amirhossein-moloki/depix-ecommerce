@@ -42,7 +42,8 @@ export const POST = async (
   >,
   res: MedusaResponse<HttpTypes.AdminCampaignResponse>
 ) => {
-  const { additional_data, ...rest } = req.validatedBody
+  const { additional_data, product_ids, min_purchase_amount, max_purchase_amount, is_active, ...rest } =
+    req.validatedBody as any
   const createCampaigns = createCampaignsWorkflow(req.scope)
   const campaignsData = [rest]
 

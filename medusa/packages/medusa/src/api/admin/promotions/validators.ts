@@ -176,6 +176,11 @@ export const CreatePromotion = z
     application_method: AdminCreateApplicationMethod,
     rules: z.array(AdminCreatePromotionRule).optional(),
     limit: z.number().int().min(1).nullable().optional(),
+    title: z.string().nullish(),
+    description: z.string().nullish(),
+    starts_at: z.coerce.date().nullish(),
+    ends_at: z.coerce.date().nullish(),
+    usage_limit: z.number().int().min(1).nullish(),
     metadata: z.record(z.string(), z.unknown()).nullish(),
   })
   .strict()
@@ -219,6 +224,11 @@ export const UpdatePromotion = z
     campaign_id: z.string().nullish(),
     application_method: AdminUpdateApplicationMethod.optional(),
     limit: z.number().int().min(1).nullable().optional(),
+    title: z.string().nullish(),
+    description: z.string().nullish(),
+    starts_at: z.coerce.date().nullish(),
+    ends_at: z.coerce.date().nullish(),
+    usage_limit: z.number().int().min(1).nullish(),
     metadata: z.record(z.string(), z.unknown()).nullish(),
   })
   .strict()

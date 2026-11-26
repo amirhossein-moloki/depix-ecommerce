@@ -20,6 +20,7 @@ import {
   sortCatalogProducts,
 } from "./catalog-filters"
 import {
+  applyActiveAutomaticPromotionsToProducts,
   enrichProductsWithStoreSummary,
   RequestWithContext,
   wrapProductsWithTaxPrices,
@@ -203,6 +204,7 @@ async function getProducts(
 
     await wrapProductsWithTaxPrices(req, products)
     enrichProductsWithStoreSummary(products)
+    await applyActiveAutomaticPromotionsToProducts(req.scope, products)
 
     return res.json({
       products,
@@ -253,6 +255,7 @@ async function getProducts(
 
   await wrapProductsWithTaxPrices(req, pagedProducts)
   enrichProductsWithStoreSummary(pagedProducts)
+  await applyActiveAutomaticPromotionsToProducts(req.scope, pagedProducts)
 
   return res.json({
     products: pagedProducts,

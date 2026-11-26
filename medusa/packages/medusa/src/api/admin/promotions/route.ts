@@ -7,7 +7,11 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { refetchPromotion } from "./helpers"
+import {
+  enrichPromotionResponse,
+  extractPromotionMetadataFields,
+  refetchPromotion,
+} from "./helpers"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
 export const GET = async (
@@ -28,7 +32,7 @@ export const GET = async (
   const { rows: promotions, metadata } = await remoteQuery(queryObject)
 
   res.json({
-    promotions,
+    promotions: (promotions || []).map(enrichPromotionResponse),
     count: metadata.count,
     offset: metadata.skip,
     limit: metadata.take,
@@ -44,7 +48,7 @@ export const POST = async (
 ) => {
   const { additional_data, ...rest } = req.validatedBody
   const createPromotions = createPromotionsWorkflow(req.scope)
-  const promotionsData = [rest] as any
+  const promotionsData = [extractPromotionMetadataFields(rest)] as any
 
   const { result } = await createPromotions.run({
     input: { promotionsData, additional_data },
@@ -56,5 +60,5 @@ export const POST = async (
     req.queryConfig.fields
   )
 
-  res.status(200).json({ promotion })
+  res.status(200).json({ promotion: enrichPromotionResponse(promotion) })
 }

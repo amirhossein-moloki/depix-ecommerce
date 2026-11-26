@@ -4,6 +4,10 @@ import {
 } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import { AdminUpdateFreeShippingRuleType } from "../validators"
+import {
+  enrichFreeShippingRuleResponse,
+  mergeFreeShippingRuleMetadata,
+} from "../helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -23,7 +27,7 @@ export const GET = async (
     )
   }
 
-  res.json({ free_shipping_rule })
+  res.json({ free_shipping_rule: enrichFreeShippingRuleResponse(free_shipping_rule) })
 }
 
 export const PATCH = async (
@@ -44,12 +48,27 @@ export const PATCH = async (
     )
   }
 
+  const {
+    description,
+    max_purchase_amount,
+    usage_limit,
+    used_count,
+    metadata,
+    ...rest
+  } = req.validatedBody
+
+  const mergedMetadata = mergeFreeShippingRuleMetadata(
+    { description, max_purchase_amount, usage_limit, used_count, metadata },
+    existing.metadata
+  )
+
   const free_shipping_rule = await promotionService.updateFreeShippingRules({
     id,
-    ...req.validatedBody,
+    ...rest,
+    ...(mergedMetadata !== null ? { metadata: mergedMetadata } : {}),
   })
 
-  res.json({ free_shipping_rule })
+  res.json({ free_shipping_rule: enrichFreeShippingRuleResponse(free_shipping_rule) })
 }
 
 export const POST = PATCH

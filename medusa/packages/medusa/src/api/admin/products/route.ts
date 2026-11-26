@@ -12,6 +12,10 @@ import {
   isPresent,
 } from "@medusajs/framework/utils"
 import IndexEngineFeatureFlag from "../../../feature-flags/index-engine"
+import {
+  prepareInventoryQuantityFields,
+  wrapVariantsWithTotalInventoryQuantity,
+} from "../../utils/middlewares"
 import { remapKeysForProduct, remapProductResponse } from "./helpers"
 import { ensureProductDefaultInventoryAndChannel } from "./utils/ensure-default-inventory"
 
@@ -42,7 +46,11 @@ async function getProducts(
   req: AuthenticatedMedusaRequest<HttpTypes.AdminProductListParams>,
   res: MedusaResponse<HttpTypes.AdminProductListResponse>
 ) {
-  const selectFields = remapKeysForProduct(req.queryConfig.fields ?? [])
+  const { fields, withInventoryQuantity } = prepareInventoryQuantityFields(
+    req.queryConfig.fields ?? [],
+    { relation: "variants" }
+  )
+  const selectFields = remapKeysForProduct(fields)
 
   const { data: products, metadata } = await refetchEntities({
     entity: "product",
@@ -52,6 +60,13 @@ async function getProducts(
     pagination: req.queryConfig.pagination,
     withDeleted: req.queryConfig.withDeleted,
   })
+
+  if (withInventoryQuantity) {
+    await wrapVariantsWithTotalInventoryQuantity(
+      req,
+      products.map((p: any) => p.variants ?? []).flat(1)
+    )
+  }
 
   res.json({
     products: products.map(remapProductResponse),
@@ -92,13 +107,25 @@ async function getProductsWithIndexEngine(
     filters["variants"] ??= {}
   }
 
+  const { fields, withInventoryQuantity } = prepareInventoryQuantityFields(
+    req.queryConfig.fields ?? [],
+    { relation: "variants" }
+  )
+
   const { data: products, metadata } = await query.index({
     entity: "product",
-    fields: req.queryConfig.fields ?? [],
+    fields,
     filters: filters,
     pagination: req.queryConfig.pagination,
     withDeleted: req.queryConfig.withDeleted,
   })
+
+  if (withInventoryQuantity) {
+    await wrapVariantsWithTotalInventoryQuantity(
+      req,
+      products.map((p: any) => p.variants ?? []).flat(1)
+    )
+  }
 
   res.json({
     products: products.map(remapProductResponse),
@@ -124,12 +151,21 @@ export const POST = async (
 
   await ensureProductDefaultInventoryAndChannel(req.scope, result[0].id)
 
+  const { fields, withInventoryQuantity } = prepareInventoryQuantityFields(
+    req.queryConfig.fields ?? [],
+    { relation: "variants" }
+  )
+
   const product = await refetchEntity({
     entity: "product",
     idOrFilter: result[0].id,
     scope: req.scope,
-    fields: remapKeysForProduct(req.queryConfig.fields ?? []),
+    fields: remapKeysForProduct(fields),
   })
+
+  if (withInventoryQuantity && product) {
+    await wrapVariantsWithTotalInventoryQuantity(req as any, product.variants ?? [])
+  }
 
   res.status(200).json({ product: remapProductResponse(product) })
 }

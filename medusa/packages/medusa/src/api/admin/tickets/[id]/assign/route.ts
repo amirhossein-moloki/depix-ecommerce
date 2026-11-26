@@ -7,13 +7,14 @@ export const POST = async (
 ) => {
   const actorId = req.auth_context?.actor_id || req.auth_context?.auth_identity_id || "admin"
   const ticketId = req.params.id
-  const body = req.body as any
-  const { assigned_to } = body || {}
+  const body = (req.body as any) || {}
+  const targetUserId =
+    body.user_id !== undefined ? body.user_id : body.assigned_to
 
   const { result: ticket } = await assignTicketWorkflow(req.scope).run({
     input: {
       ticket_id: ticketId,
-      assigned_to: assigned_to || null,
+      assigned_to: targetUserId ? String(targetUserId) : null,
       actor_id: actorId,
     },
   })

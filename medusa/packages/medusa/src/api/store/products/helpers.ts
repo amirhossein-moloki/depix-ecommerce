@@ -8,8 +8,10 @@ import {
 import {
   applyTranslationsToTaxLines,
   calculateAmountsWithTax,
+  ContainerRegistrationKeys,
   FeatureFlag,
   Modules,
+  remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
 import { StoreRequestWithContext } from "../types"
 import TranslationFeatureFlag from "../../../feature-flags/translation"
@@ -249,5 +251,142 @@ export const enrichProductsWithStoreSummary = (products: any[]) => {
     product.finalPrice = finalPrice
     product.discount = discount
     product.stock = stock
+  }
+}
+
+function isPromotionTimeActive(promo: any, now: number): boolean {
+  const startsAt = promo?.metadata?.starts_at ?? promo?.campaign?.starts_at
+  const endsAt = promo?.metadata?.ends_at ?? promo?.campaign?.ends_at
+  if (startsAt && new Date(startsAt).getTime() > now) {
+    return false
+  }
+  if (endsAt && new Date(endsAt).getTime() < now) {
+    return false
+  }
+  return true
+}
+
+function doesPromotionMatchProduct(promo: any, productId: string): boolean {
+  const targetRules = promo?.application_method?.target_rules ?? []
+  if (!Array.isArray(targetRules) || targetRules.length === 0) {
+    return true
+  }
+
+  return targetRules.some((rule: any) => {
+    const attr = String(rule?.attribute || "")
+    if (
+      attr !== "items.product.id" &&
+      attr !== "product_id" &&
+      attr !== "items.product_id"
+    ) {
+      return false
+    }
+    const values = (rule?.values ?? []).map((v: any) =>
+      typeof v === "string" ? v : v?.value
+    )
+    const op = String(rule?.operator || "in").toLowerCase()
+    if (op === "ne") {
+      return !values.includes(productId)
+    }
+    return values.includes(productId)
+  })
+}
+
+/**
+ * Applies active automatic promotions (storewide or product-targeted) to product summary
+ * fields (`realPrice`, `finalPrice`, `discount`) so product cards display discounts before checkout.
+ */
+export async function applyActiveAutomaticPromotionsToProducts(
+  scope: MedusaContainer,
+  products: any[]
+): Promise<void> {
+  if (!Array.isArray(products) || products.length === 0) {
+    return
+  }
+
+  let promotions: any[] = []
+  try {
+    const remoteQuery = scope.resolve<any>(ContainerRegistrationKeys.REMOTE_QUERY)
+    if (typeof remoteQuery === "function") {
+      const queryObj = remoteQueryObjectFromString({
+        entryPoint: "promotion",
+        variables: {
+          filters: { status: "active", is_automatic: true },
+          take: 100,
+        },
+        fields: [
+          "id",
+          "code",
+          "status",
+          "is_automatic",
+          "metadata",
+          "campaign.starts_at",
+          "campaign.ends_at",
+          "application_method.type",
+          "application_method.value",
+          "application_method.target_type",
+          "application_method.target_rules.attribute",
+          "application_method.target_rules.operator",
+          "application_method.target_rules.values.value",
+        ],
+      })
+      const result = await remoteQuery(queryObj)
+      promotions = Array.isArray(result) ? result : result?.rows ?? []
+    }
+  } catch {
+    return
+  }
+
+  const now = Date.now()
+  const activePromos = promotions.filter(
+    (p: any) =>
+      p?.status === "active" &&
+      p?.is_automatic === true &&
+      p?.application_method &&
+      isPromotionTimeActive(p, now)
+  )
+
+  if (activePromos.length === 0) {
+    return
+  }
+
+  for (const product of products) {
+    const basePrice = Number(product?.realPrice ?? product?.finalPrice ?? 0)
+    if (!Number.isFinite(basePrice) || basePrice <= 0) {
+      continue
+    }
+
+    let bestFinal = Number(product?.finalPrice ?? basePrice)
+    for (const promo of activePromos) {
+      if (!doesPromotionMatchProduct(promo, product.id)) {
+        continue
+      }
+
+      const methodType = promo.application_method?.type
+      const methodValue = Number(promo.application_method?.value ?? 0)
+      if (!Number.isFinite(methodValue) || methodValue <= 0) {
+        continue
+      }
+
+      let candidateFinal = basePrice
+      if (methodType === "percentage") {
+        candidateFinal = Math.max(
+          0,
+          Math.round(basePrice * (1 - methodValue / 100))
+        )
+      } else if (methodType === "fixed") {
+        candidateFinal = Math.max(0, Math.round(basePrice - methodValue))
+      }
+
+      if (candidateFinal < bestFinal) {
+        bestFinal = candidateFinal
+      }
+    }
+
+    if (bestFinal < basePrice) {
+      product.realPrice = basePrice
+      product.finalPrice = bestFinal
+      product.discount = Math.round(((basePrice - bestFinal) / basePrice) * 100)
+    }
   }
 }

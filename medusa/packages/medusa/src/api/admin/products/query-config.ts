@@ -100,6 +100,7 @@ export const defaultAdminProductFields = [
   "variants.prices.price_rules.attribute",
   "*variants.options",
   "*variants.images",
+  "variants.inventory_quantity",
   "*sales_channels",
 ]
 

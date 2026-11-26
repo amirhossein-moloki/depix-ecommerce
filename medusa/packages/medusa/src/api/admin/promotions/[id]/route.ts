@@ -11,7 +11,11 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { refetchPromotion } from "../helpers"
+import {
+  enrichPromotionResponse,
+  extractPromotionMetadataFields,
+  refetchPromotion,
+} from "../helpers"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
 export const GET = async (
@@ -36,7 +40,7 @@ export const GET = async (
     )
   }
 
-  res.status(200).json({ promotion })
+  res.status(200).json({ promotion: enrichPromotionResponse(promotion) })
 }
 
 export const POST = async (
@@ -47,11 +51,17 @@ export const POST = async (
   res: MedusaResponse<HttpTypes.AdminPromotionResponse>
 ) => {
   const { additional_data, ...rest } = req.validatedBody
+  const existing = await refetchPromotion(
+    req.params.id,
+    req.scope,
+    ["id", "metadata"]
+  ).catch(() => null)
+
   const updatePromotions = updatePromotionsWorkflow(req.scope)
   const promotionsData = [
     {
       id: req.params.id,
-      ...rest,
+      ...extractPromotionMetadataFields(rest, existing?.metadata),
     } as any,
   ]
 
@@ -65,7 +75,7 @@ export const POST = async (
     req.queryConfig.fields
   )
 
-  res.status(200).json({ promotion })
+  res.status(200).json({ promotion: enrichPromotionResponse(promotion) })
 }
 
 export const PATCH = POST

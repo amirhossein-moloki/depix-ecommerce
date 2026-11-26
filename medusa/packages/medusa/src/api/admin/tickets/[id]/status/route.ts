@@ -1,6 +1,7 @@
 import { updateTicketStatusWorkflow } from "@medusajs/core-flows"
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"
+import { normalizeTicketStatus } from "../../helpers"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest,
@@ -18,10 +19,12 @@ export const POST = async (
     )
   }
 
+  const normalizedStatus = normalizeTicketStatus(status)
+
   const { result: ticket } = await updateTicketStatusWorkflow(req.scope).run({
     input: {
       ticket_id: ticketId,
-      status,
+      status: normalizedStatus,
       actor_id: actorId,
     },
   })

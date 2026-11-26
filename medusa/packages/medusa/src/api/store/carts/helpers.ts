@@ -95,5 +95,16 @@ export const refetchCart = async (
     )
   }
 
+  if (Array.isArray(cart.promotions)) {
+    cart.promotions = cart.promotions.map((promo: any) => ({
+      ...promo,
+      type: promo?.application_method?.type ?? promo?.type ?? null,
+      value:
+        promo?.application_method?.value != null
+          ? Number(promo.application_method.value)
+          : (promo?.value ?? null),
+    }))
+  }
+
   return cart
 }

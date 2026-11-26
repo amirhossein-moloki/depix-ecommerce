@@ -13,6 +13,9 @@ export interface StoreAddressDTO {
   floor: string | null
   postalCode: string
   postal_code?: string
+  postexCityCode?: number | null
+  postex_city_code?: number | null
+  isDefaultShipping?: boolean
   createdAt: Date | string
   updatedAt: Date | string
 }
@@ -114,7 +117,17 @@ export class StoreSettingsService {
   /**
    * Formats internal StoreAddress entity into DTO with camelCase & snake_case properties.
    */
-  public formatAddress(addr: any): StoreAddressDTO {
+  public formatAddress(addr: any, defaultShippingAddressId?: string | null): StoreAddressDTO {
+    const rawPostexCityCode =
+      addr.postex_city_code ??
+      addr.postexCityCode ??
+      addr.metadata?.postexCityCode ??
+      addr.metadata?.postex_city_code
+    const postexCityCode =
+      rawPostexCityCode !== undefined && rawPostexCityCode !== null
+        ? Number(rawPostexCityCode)
+        : null
+
     return {
       id: addr.id,
       title: addr.title,
@@ -128,6 +141,12 @@ export class StoreSettingsService {
       floor: addr.floor || null,
       postalCode: addr.postal_code || addr.postalCode || "",
       postal_code: addr.postal_code || addr.postalCode || "",
+      ...(postexCityCode !== null && Number.isFinite(postexCityCode)
+        ? { postexCityCode, postex_city_code: postexCityCode }
+        : {}),
+      ...(defaultShippingAddressId !== undefined
+        ? { isDefaultShipping: addr.id === defaultShippingAddressId }
+        : {}),
       createdAt: addr.created_at || addr.createdAt || new Date(),
       updatedAt: addr.updated_at || addr.updatedAt || new Date(),
     }
@@ -167,19 +186,22 @@ export class StoreSettingsService {
   public async getSettings(): Promise<StoreSettingsDTO> {
     const settingsRecord = await this.getOrCreateSettingsRecord()
     const addressesRaw = await this.storeService.listStoreAddresses({}, { order: { created_at: "ASC" } })
-    const formattedAddresses = (addressesRaw || []).map((a: any) => this.formatAddress(a))
 
     let defaultShippingId = settingsRecord.default_shipping_address_id || settingsRecord.defaultShippingAddressId || null
     let defaultReturnId = settingsRecord.default_return_address_id || settingsRecord.defaultReturnAddressId || null
 
     // Fallback if configured default ID points to non-existent address
-    const validAddressIds = new Set(formattedAddresses.map((a: StoreAddressDTO) => a.id))
-    if (defaultShippingId && !validAddressIds.has(defaultShippingId)) {
-      defaultShippingId = formattedAddresses.length > 0 ? formattedAddresses[0].id : null
+    const rawAddressIds = new Set((addressesRaw || []).map((a: any) => a.id))
+    if (defaultShippingId && !rawAddressIds.has(defaultShippingId)) {
+      defaultShippingId = addressesRaw?.length > 0 ? addressesRaw[0].id : null
     }
-    if (defaultReturnId && !validAddressIds.has(defaultReturnId)) {
-      defaultReturnId = formattedAddresses.length > 0 ? formattedAddresses[0].id : null
+    if (defaultReturnId && !rawAddressIds.has(defaultReturnId)) {
+      defaultReturnId = addressesRaw?.length > 0 ? addressesRaw[0].id : null
     }
+
+    const formattedAddresses = (addressesRaw || []).map((a: any) =>
+      this.formatAddress(a, defaultShippingId)
+    )
 
     return {
       id: settingsRecord.id,
@@ -379,6 +401,15 @@ export class StoreSettingsService {
 
     const plaque = data.plaque ? String(data.plaque).trim() : null
     const floor = data.floor ? String(data.floor).trim() : null
+    const rawPostexCityCode = data.postexCityCode ?? data.postex_city_code
+    let postexCityCode: number | null = null
+    if (rawPostexCityCode !== undefined && rawPostexCityCode !== null && rawPostexCityCode !== "") {
+      const parsed = Number(rawPostexCityCode)
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, "postexCityCode must be a positive integer.")
+      }
+      postexCityCode = parsed
+    }
 
     const existingAddresses = await this.storeService.listStoreAddresses({}, { take: 100 })
     const isFirstAddress = !existingAddresses || existingAddresses.length === 0
@@ -394,17 +425,23 @@ export class StoreSettingsService {
         plaque,
         floor,
         postal_code: postalCode,
+        ...(postexCityCode !== null
+          ? { metadata: { ...(data.metadata ?? {}), postexCityCode } }
+          : data.metadata !== undefined
+            ? { metadata: data.metadata }
+            : {}),
       },
     ])
 
-    // If this is the first address and no defaults exist, assign as both shipping & return defaults automatically
+    // If this is the first address and no defaults exist, or isDefaultShipping is true, assign default
     const settingsRecord = await this.getOrCreateSettingsRecord()
     const currentShippingDefault = settingsRecord.default_shipping_address_id
     const currentReturnDefault = settingsRecord.default_return_address_id
 
-    if (isFirstAddress || (!currentShippingDefault && !currentReturnDefault)) {
+    if (isFirstAddress || (!currentShippingDefault && !currentReturnDefault) || data.isDefaultShipping === true) {
       await this.storeService.updateStoreSettings(settingsRecord.id, {
-        default_shipping_address_id: currentShippingDefault || created.id,
+        default_shipping_address_id:
+          data.isDefaultShipping === true ? created.id : currentShippingDefault || created.id,
         default_return_address_id: currentReturnDefault || created.id,
         updated_at: new Date(),
       })
@@ -484,9 +521,25 @@ export class StoreSettingsService {
       updates.floor = data.floor ? String(data.floor).trim() : null
     }
 
+    const rawPostexCityCode = data.postexCityCode ?? data.postex_city_code
+    if (rawPostexCityCode !== undefined) {
+      if (rawPostexCityCode === null || rawPostexCityCode === "") {
+        updates.metadata = { ...(existing.metadata ?? {}), postexCityCode: null }
+      } else {
+        const parsed = Number(rawPostexCityCode)
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+          throw new MedusaError(MedusaError.Types.INVALID_DATA, "postexCityCode must be a positive integer.")
+        }
+        updates.metadata = { ...(existing.metadata ?? {}), postexCityCode: parsed }
+      }
+    }
+
     updates.updated_at = new Date()
 
     await this.storeService.updateStoreAddresses(id, updates)
+    if (data.isDefaultShipping === true) {
+      await this.setDefaultShippingAddress(id)
+    }
     const updated = await this.storeService.retrieveStoreAddress(id)
     return this.formatAddress(updated)
   }
@@ -587,6 +640,9 @@ export class StoreSettingsService {
       plaque: addr.plaque,
       floor: addr.floor,
       postalCode: addr.postalCode,
+      ...(addr.postexCityCode !== undefined && addr.postexCityCode !== null
+        ? { postexCityCode: addr.postexCityCode }
+        : {}),
     }
   }
 
@@ -608,6 +664,9 @@ export class StoreSettingsService {
       plaque: addr.plaque,
       floor: addr.floor,
       postalCode: addr.postalCode,
+      ...(addr.postexCityCode !== undefined && addr.postexCityCode !== null
+        ? { postexCityCode: addr.postexCityCode }
+        : {}),
     }
   }
 

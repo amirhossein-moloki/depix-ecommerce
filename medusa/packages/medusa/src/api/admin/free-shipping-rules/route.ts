@@ -7,6 +7,10 @@ import {
   AdminCreateFreeShippingRuleType,
   AdminGetFreeShippingRulesParamsType,
 } from "./validators"
+import {
+  enrichFreeShippingRuleResponse,
+  mergeFreeShippingRuleMetadata,
+} from "./helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<AdminGetFreeShippingRulesParamsType>,
@@ -37,7 +41,9 @@ export const GET = async (
     })
 
   res.json({
-    free_shipping_rules,
+    free_shipping_rules: (free_shipping_rules ?? []).map(
+      enrichFreeShippingRuleResponse
+    ),
     count,
     offset: skip,
     limit: take,
@@ -51,16 +57,28 @@ export const POST = async (
   const promotionService = req.scope.resolve<any>(Modules.PROMOTION)
   const {
     title,
+    description,
     scope,
     product_ids,
     category_ids,
     campaign_id,
     min_purchase_amount,
+    max_purchase_amount,
+    usage_limit,
+    used_count,
     starts_at,
     ends_at,
     is_active,
     metadata,
   } = req.validatedBody
+
+  const mergedMetadata = mergeFreeShippingRuleMetadata({
+    description,
+    max_purchase_amount,
+    usage_limit,
+    used_count,
+    metadata,
+  })
 
   const free_shipping_rule = await promotionService.createFreeShippingRules({
     title,
@@ -72,8 +90,10 @@ export const POST = async (
     starts_at: starts_at ?? null,
     ends_at: ends_at ?? null,
     is_active,
-    metadata: metadata ?? null,
+    metadata: mergedMetadata,
   })
 
-  res.status(201).json({ free_shipping_rule })
+  res.status(201).json({
+    free_shipping_rule: enrichFreeShippingRuleResponse(free_shipping_rule),
+  })
 }

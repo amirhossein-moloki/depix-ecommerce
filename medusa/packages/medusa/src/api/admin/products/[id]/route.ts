@@ -10,12 +10,20 @@ import { remapKeysForProduct, remapProductResponse } from "../helpers"
 import { MedusaError } from "@medusajs/framework/utils"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 import { refetchEntity } from "@medusajs/framework/http"
+import {
+  prepareInventoryQuantityFields,
+  wrapVariantsWithTotalInventoryQuantity,
+} from "../../../utils/middlewares"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.AdminGetProductParams>,
   res: MedusaResponse<HttpTypes.AdminProductResponse>
 ) => {
-  const selectFields = remapKeysForProduct(req.queryConfig.fields ?? [])
+  const { fields, withInventoryQuantity } = prepareInventoryQuantityFields(
+    req.queryConfig.fields ?? [],
+    { relation: "variants" }
+  )
+  const selectFields = remapKeysForProduct(fields)
   const product = await refetchEntity({
     entity: "product",
     idOrFilter: req.params.id,
@@ -25,6 +33,10 @@ export const GET = async (
 
   if (!product) {
     throw new MedusaError(MedusaError.Types.NOT_FOUND, "Product not found")
+  }
+
+  if (withInventoryQuantity) {
+    await wrapVariantsWithTotalInventoryQuantity(req, product.variants ?? [])
   }
 
   res.status(200).json({ product: remapProductResponse(product) })
@@ -63,12 +75,21 @@ export const POST = async (
     },
   })
 
+  const { fields, withInventoryQuantity } = prepareInventoryQuantityFields(
+    req.queryConfig.fields ?? [],
+    { relation: "variants" }
+  )
+
   const product = await refetchEntity({
     entity: "product",
     idOrFilter: result[0].id,
     scope: req.scope,
-    fields: remapKeysForProduct(req.queryConfig.fields ?? []),
+    fields: remapKeysForProduct(fields),
   })
+
+  if (withInventoryQuantity && product) {
+    await wrapVariantsWithTotalInventoryQuantity(req as any, product.variants ?? [])
+  }
 
   res.status(200).json({ product: remapProductResponse(product) })
 }

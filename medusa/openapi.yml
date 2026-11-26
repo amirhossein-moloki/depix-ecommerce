@@ -1257,6 +1257,90 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /admin/inventory/adjust:
+    post:
+      summary: Adjust Variant Inventory
+      operationId: adminAdjustInventory
+      description: Sets or adjusts real inventory stock for a product variant in the Inventory Module and records an InventoryTransaction.
+      tags:
+      - Admin Inventory
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - variant_id
+              properties:
+                product_id:
+                  type: string
+                variant_id:
+                  type: string
+                quantity:
+                  type: integer
+                  minimum: 0
+                  description: Target absolute inventory quantity.
+                delta:
+                  type: integer
+                  description: Relative inventory change (used when quantity is omitted).
+                reason:
+                  type: string
+                  default: manual_adjustment
+                location_id:
+                  type: string
+                note:
+                  type: string
+                reference_type:
+                  type: string
+                reference_id:
+                  type: string
+      responses:
+        '200':
+          description: Inventory updated and transaction recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - product_id
+                - variant_id
+                - location_id
+                - quantity_before
+                - quantity_change
+                - quantity_after
+                - inventory_quantity
+                properties:
+                  success:
+                    type: boolean
+                  product_id:
+                    type: string
+                  variant_id:
+                    type: string
+                  location_id:
+                    type: string
+                  quantity_before:
+                    type: integer
+                  quantity_change:
+                    type: integer
+                  quantity_after:
+                    type: integer
+                  inventory_quantity:
+                    type: integer
+                  inventory_level_id:
+                    type: string
+                    nullable: true
+                  transaction:
+                    $ref: '#/components/schemas/InventoryTransaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/inventory/history:
     get:
       summary: Get Global Inventory Transaction History
@@ -2659,9 +2743,70 @@ paths:
                           type: string
                         is_free:
                           type: boolean
+                  free_shipping:
+                    type: object
+                    properties:
+                      has_active_rule:
+                        type: boolean
+                      is_eligible:
+                        type: boolean
+                      rule_title:
+                        type: string
+                        nullable: true
+                      min_purchase_amount_irr:
+                        type: number
+                        nullable: true
+                      remaining_amount_irr:
+                        type: number
+                        nullable: true
+  /store/free-shipping-rules/active:
+    get:
+      summary: Get Active Free Shipping Rules
+      operationId: storeGetActiveFreeShippingRules
+      description: Returns active free shipping rule status and optional cart eligibility / remaining threshold in IRR.
+      tags:
+      - Carts & Checkout
+      parameters:
+      - name: cart_id
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Active free shipping status and matching rules.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - free_shipping
+                - rules
+                properties:
+                  free_shipping:
+                    type: object
+                    properties:
+                      has_active_rule:
+                        type: boolean
+                      is_eligible:
+                        type: boolean
+                      rule_title:
+                        type: string
+                        nullable: true
+                      min_purchase_amount_irr:
+                        type: number
+                        nullable: true
+                      remaining_amount_irr:
+                        type: number
+                        nullable: true
+                  rules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminFreeShippingRule'
   /store/carts/{id}/shipping-methods:
     post:
       summary: Add Shipping Method to Cart
+      description: Attaches a shipping method to the cart. Supports dynamic Postex quote calculation (`postex_post` with `data.to_city_code`, applying active `FreeShippingRule` discounts) and Tabriz local courier (`tabriz_courier` with `shipping_total = 0` and pay-on-delivery metadata).
       tags:
       - Carts & Checkout
       parameters:
@@ -2681,8 +2826,20 @@ paths:
               properties:
                 option_id:
                   type: string
+                  description: Shipping option ID, `postex_post`, or `tabriz_courier`.
                 data:
                   type: object
+                  properties:
+                    to_city_code:
+                      type: integer
+                      description: Destination city code required for `postex_post`.
+                    courier_code:
+                      type: string
+                      description: Optional Postex courier code (defaults to `IR_POST`).
+                    box_size_id:
+                      type: integer
+                      description: Optional Postex box size identifier.
+                  additionalProperties: true
       responses:
         '200':
           description: Updated cart with shipping_total and total (IRR)
@@ -2813,7 +2970,7 @@ paths:
   /store/payments/initiate:
     post:
       summary: Initiate Online Payment Gateway Session
-      description: Initiates a payment gateway session. When called with a valid customer Bearer token on a guest cart, customer_id is automatically attached before creating the payment session.
+      description: 'Initiates a payment gateway session. Deterministically recalculates cart total in IRR (`Σ(unit_price × quantity) - discount_total + tax_total + shipping_total`) and sends amounts in IRR (including explicit `currency: "IRR"` for Zarinpal and Rial conversion for Zibal). When called with a valid customer Bearer token on a guest cart, customer_id is automatically attached before creating the payment session.'
       tags:
       - Carts & Checkout
       requestBody:
@@ -4283,6 +4440,52 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '404':
           $ref: '#/components/responses/NotFound'
+  /admin/ticket-attachments:
+    post:
+      summary: Upload Ticket Attachment
+      operationId: adminUploadTicketAttachment
+      description: Uploads a file attachment for a support ticket message and returns an attachment_id to pass in attachment_ids.
+      tags:
+      - Admin Tickets
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Attachment uploaded and staged.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - attachment_id
+                - original_filename
+                - mime_type
+                - file_size
+                properties:
+                  attachment_id:
+                    type: string
+                  original_filename:
+                    type: string
+                  mime_type:
+                    type: string
+                  file_size:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /admin/tickets/{id}/messages:
     post:
       summary: Post Admin Reply to Ticket
@@ -4347,11 +4550,15 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-              - user_id
               properties:
                 user_id:
                   type: string
+                  nullable: true
+                  description: Staff user ID to assign, or null to unassign.
+                assigned_to:
+                  type: string
+                  nullable: true
+                  description: Alias for user_id.
       responses:
         '200':
           description: Ticket assigned.
@@ -5996,6 +6203,17 @@ paths:
         in: query
         schema:
           type: string
+      - name: order
+        in: query
+        description: Sort expression (defaults to `-created_at` / `created_at DESC`).
+        schema:
+          type: string
+          default: -created_at
+      - name: q
+        in: query
+        description: Search query across order number, customer name, email, or phone.
+        schema:
+          type: string
       responses:
         '200':
           description: List of orders.
@@ -6244,6 +6462,27 @@ paths:
                 campaign_id:
                   type: string
                   nullable: true
+                title:
+                  type: string
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                usage_limit:
+                  type: integer
+                  nullable: true
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
                 application_method:
                   type: object
                   required:
@@ -6357,6 +6596,27 @@ paths:
                   - inactive
                 campaign_id:
                   type: string
+                  nullable: true
+                title:
+                  type: string
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                usage_limit:
+                  type: integer
+                  nullable: true
+                metadata:
+                  type: object
+                  additionalProperties: true
                   nullable: true
                 application_method:
                   type: object
@@ -6764,6 +7024,27 @@ paths:
                 campaign_id:
                   type: string
                   nullable: true
+                title:
+                  type: string
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                usage_limit:
+                  type: integer
+                  nullable: true
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
                 min_purchase_amount:
                   type: number
                   minimum: 0
@@ -6861,6 +7142,27 @@ paths:
                     type: string
                 campaign_id:
                   type: string
+                  nullable: true
+                title:
+                  type: string
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                usage_limit:
+                  type: integer
+                  nullable: true
+                metadata:
+                  type: object
+                  additionalProperties: true
                   nullable: true
                 min_purchase_amount:
                   type: number
@@ -7959,6 +8261,15 @@ components:
           type: string
         postal_code:
           type: string
+        postexCityCode:
+          type: integer
+          nullable: true
+          description: Postex origin city code for shipping quote calculation
+        postex_city_code:
+          type: integer
+          nullable: true
+        isDefaultShipping:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -8258,8 +8569,46 @@ components:
           nullable: true
         currency_code:
           type: string
+        subtotal:
+          type: number
+        discount_total:
+          type: number
+        tax_total:
+          type: number
+        shipping_total:
+          type: number
         total:
           type: number
+        promotions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              code:
+                type: string
+              is_automatic:
+                type: boolean
+              type:
+                type: string
+                nullable: true
+                enum:
+                - percentage
+                - fixed
+              value:
+                type: number
+                nullable: true
+              application_method:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    type: number
+                  currency_code:
+                    type: string
+                    nullable: true
         metadata:
           type: object
           nullable: true

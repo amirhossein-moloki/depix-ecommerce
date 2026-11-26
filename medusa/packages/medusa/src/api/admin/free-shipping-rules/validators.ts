@@ -31,11 +31,15 @@ export type AdminCreateFreeShippingRuleType = z.infer<
 export const AdminCreateFreeShippingRule = z
   .object({
     title: z.string().min(1),
+    description: z.string().nullish(),
     scope: FreeShippingRuleScopeEnum.default("store"),
     product_ids: z.array(z.string()).nullish(),
     category_ids: z.array(z.string()).nullish(),
     campaign_id: z.string().nullish(),
     min_purchase_amount: z.number().nonnegative().nullish(),
+    max_purchase_amount: z.number().nonnegative().nullish(),
+    usage_limit: z.number().int().min(1).nullish(),
+    used_count: z.number().int().min(0).optional(),
     starts_at: z.coerce.date().nullish(),
     ends_at: z.coerce.date().nullish(),
     is_active: z.boolean().default(true),
@@ -49,11 +53,15 @@ export type AdminUpdateFreeShippingRuleType = z.infer<
 export const AdminUpdateFreeShippingRule = z
   .object({
     title: z.string().min(1).optional(),
+    description: z.string().nullish(),
     scope: FreeShippingRuleScopeEnum.optional(),
     product_ids: z.array(z.string()).nullish(),
     category_ids: z.array(z.string()).nullish(),
     campaign_id: z.string().nullish(),
     min_purchase_amount: z.number().nonnegative().nullish(),
+    max_purchase_amount: z.number().nonnegative().nullish(),
+    usage_limit: z.number().int().min(1).nullish(),
+    used_count: z.number().int().min(0).optional(),
     starts_at: z.coerce.date().nullish(),
     ends_at: z.coerce.date().nullish(),
     is_active: z.boolean().optional(),

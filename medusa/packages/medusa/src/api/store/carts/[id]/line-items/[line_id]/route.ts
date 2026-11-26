@@ -6,6 +6,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
 import { refetchCart } from "../../../helpers"
+import { defaultStoreCartFields } from "../../../query-config"
 
 export const POST = async (
   req: MedusaRequest<
@@ -24,11 +25,12 @@ export const POST = async (
     },
   })
 
-  const updatedCart = await refetchCart(
-    req.params.id,
-    req.scope,
-    req.queryConfig.fields
-  )
+  const fields =
+    req.queryConfig?.fields && req.queryConfig.fields.length > 0
+      ? req.queryConfig.fields
+      : defaultStoreCartFields
+
+  const updatedCart = await refetchCart(req.params.id, req.scope, fields)
 
   res.status(200).json({ cart: updatedCart })
 }

@@ -26,4 +26,9 @@ export const adminCustomInventoryRoutesMiddlewares: MiddlewareRoute[] = [
     matcher: "/admin/inventory/history",
     middlewares: [authenticate("admin", ["bearer", "session"])],
   },
+  {
+    method: ["POST"],
+    matcher: "/admin/inventory/adjust",
+    middlewares: [authenticate("admin", ["bearer", "session"])],
+  },
 ]
