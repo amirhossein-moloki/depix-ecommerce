@@ -6374,6 +6374,38 @@ paths:
                 properties:
                   product:
                     $ref: '#/components/schemas/Product'
+  /admin/products/bulk-import:
+    post:
+      summary: Bulk Import Products (Admin)
+      operationId: bulkImportAdminProducts
+      description: >
+        Bulk imports simple and multi-variant products from JSON. Automatically performs
+        find-or-create for categories (including parent_slug hierarchy) and brands, links
+        products to the default sales channel, provisions real Inventory Module stock levels,
+        stores compare_at_price in variant metadata, and supports upsert/skip/create_only modes
+        plus dry_run validation.
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminBulkImportProductsRequest'
+      responses:
+        '200':
+          description: Bulk import summary and per-product results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBulkImportProductsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /admin/products/{id}:
     get:
       summary: Get Product Details (Admin)
@@ -8492,6 +8524,10 @@ components:
           nullable: true
         is_active:
           type: boolean
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
         created_at:
           type: string
           format: date-time
@@ -8809,6 +8845,26 @@ components:
         updated_at:
           type: string
           format: date-time
+    ProductBrandSummary:
+      type: object
+      required:
+      - id
+      - name
+      - slug
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        logo_id:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
     Product:
       type: object
       properties:
@@ -8828,6 +8884,15 @@ components:
           type: string
         thumbnail:
           type: string
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/ProductBrandSummary'
+          nullable: true
+          description: Resolved brand summary hydrated from product metadata
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
         realPrice:
           type: number
           nullable: true
@@ -8846,6 +8911,387 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductVariant'
+    BulkImportCategoryInput:
+      type: object
+      description: Category lookup or creation payload (at least one of id, slug, or name is required).
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        parent_slug:
+          type: string
+          nullable: true
+        parent_name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        image_id:
+          type: string
+          nullable: true
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+    BulkImportBrandInput:
+      type: object
+      description: Brand lookup or creation payload (at least one of id, slug, or name is required).
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        logo_id:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+    BulkImportOptionInput:
+      type: object
+      required:
+      - title
+      - values
+      properties:
+        title:
+          type: string
+        values:
+          type: array
+          minItems: 1
+          items:
+            type: string
+    BulkImportVariantInput:
+      type: object
+      description: Variant specification (at least one of price_irr or price is required).
+      properties:
+        title:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        barcode:
+          type: string
+          nullable: true
+        ean:
+          type: string
+          nullable: true
+        upc:
+          type: string
+          nullable: true
+        price_irr:
+          type: number
+          minimum: 0
+        price:
+          type: number
+          minimum: 0
+        compare_at_price_irr:
+          type: number
+          minimum: 0
+          nullable: true
+        compare_at_price:
+          type: number
+          minimum: 0
+          nullable: true
+        stock:
+          type: integer
+          minimum: 0
+        manage_inventory:
+          type: boolean
+          default: true
+        allow_backorder:
+          type: boolean
+          default: false
+        options:
+          type: object
+          additionalProperties:
+            type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+    BulkImportProductInput:
+      type: object
+      required:
+      - title
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        handle:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - draft
+          - proposed
+          - published
+          - rejected
+          default: published
+        category:
+          allOf:
+          - $ref: '#/components/schemas/BulkImportCategoryInput'
+          nullable: true
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkImportCategoryInput'
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/BulkImportBrandInput'
+          nullable: true
+        thumbnail:
+          type: string
+          nullable: true
+        images:
+          type: array
+          items:
+            oneOf:
+            - type: string
+            - type: object
+              required:
+              - url
+              properties:
+                url:
+                  type: string
+        tags:
+          type: array
+          items:
+            oneOf:
+            - type: string
+            - type: object
+              required:
+              - value
+              properties:
+                id:
+                  type: string
+                value:
+                  type: string
+        specifications:
+          type: array
+          items:
+            type: object
+            required:
+            - label
+            - value
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+        color_hex_map:
+          type: object
+          additionalProperties:
+            type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkImportOptionInput'
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkImportVariantInput'
+        sku:
+          type: string
+          nullable: true
+        barcode:
+          type: string
+          nullable: true
+        ean:
+          type: string
+          nullable: true
+        upc:
+          type: string
+          nullable: true
+        price_irr:
+          type: number
+          minimum: 0
+        price:
+          type: number
+          minimum: 0
+        compare_at_price_irr:
+          type: number
+          minimum: 0
+          nullable: true
+        compare_at_price:
+          type: number
+          minimum: 0
+          nullable: true
+        stock:
+          type: integer
+          minimum: 0
+        manage_inventory:
+          type: boolean
+        allow_backorder:
+          type: boolean
+    AdminBulkImportProductsRequest:
+      type: object
+      required:
+      - products
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum:
+          - upsert
+          - skip
+          - create_only
+          default: upsert
+        dry_run:
+          type: boolean
+          default: false
+        price_unit:
+          type: string
+          enum:
+          - irr
+          - irt
+          default: irr
+          description: Unit of incoming prices (irr = Rials, irt = Tomans converted x10 to IRR).
+        download_images:
+          type: boolean
+          default: false
+          description: Reserved for SSRF-safe remote image download in future versions (v1 stores direct URLs).
+        products:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/BulkImportProductInput'
+    AdminBulkImportProductItemResult:
+      type: object
+      required:
+      - index
+      - handle
+      - title
+      - status
+      - product_id
+      - category_ids
+      - brand_id
+      - variants_created
+      - variants_updated
+      - warnings
+      - errors
+      properties:
+        index:
+          type: integer
+        handle:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - created
+          - updated
+          - skipped
+          - would_create
+          - would_update
+          - would_skip
+          - failed
+        product_id:
+          type: string
+          nullable: true
+        category_ids:
+          type: array
+          items:
+            type: string
+        brand_id:
+          type: string
+          nullable: true
+        variants_created:
+          type: integer
+        variants_updated:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+    AdminBulkImportProductsResponse:
+      type: object
+      required:
+      - dry_run
+      - mode
+      - price_unit
+      - download_images
+      - summary
+      - warnings
+      - results
+      properties:
+        dry_run:
+          type: boolean
+        mode:
+          type: string
+          enum:
+          - upsert
+          - skip
+          - create_only
+        price_unit:
+          type: string
+          enum:
+          - irr
+          - irt
+        download_images:
+          type: boolean
+        summary:
+          type: object
+          required:
+          - total
+          - created
+          - updated
+          - skipped
+          - failed
+          - categories_created
+          - brands_created
+          properties:
+            total:
+              type: integer
+            created:
+              type: integer
+            updated:
+              type: integer
+            skipped:
+              type: integer
+            failed:
+              type: integer
+            categories_created:
+              type: integer
+            brands_created:
+              type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminBulkImportProductItemResult'
     ProductVariant:
       type: object
       properties:

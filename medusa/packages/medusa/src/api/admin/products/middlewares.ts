@@ -35,6 +35,7 @@ import {
   CreateProduct,
   CreateProductVariant,
 } from "./validators"
+import { AdminBulkImportProducts } from "./bulk-import/validators"
 
 const upload = multer({ storage: multer.memoryStorage() })
 
@@ -174,6 +175,28 @@ export const adminProductRoutesMiddlewares: MiddlewareRoute[] = [
     method: ["POST"],
     matcher: "/admin/products/import/:transaction_id/confirm",
     middlewares: [],
+  },
+  {
+    method: ["POST"],
+    matcher: "/admin/products/bulk-import",
+    bodyParser: {
+      sizeLimit: DEFAULT_BATCH_ENDPOINTS_SIZE_LIMIT,
+    },
+    middlewares: [validateAndTransformBody(AdminBulkImportProducts)],
+    policies: [
+      {
+        resource: Entities.product,
+        operation: [PolicyOperation.create, PolicyOperation.update],
+      },
+      {
+        resource: Entities.inventory_item,
+        operation: [PolicyOperation.create, PolicyOperation.update],
+      },
+      {
+        resource: Entities.price,
+        operation: [PolicyOperation.create, PolicyOperation.update],
+      },
+    ],
   },
   {
     method: ["GET"],
