@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.blog.example
 
 # Node modules & Package Managers
 node_modules/

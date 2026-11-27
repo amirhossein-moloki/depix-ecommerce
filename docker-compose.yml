@@ -1,5 +1,38 @@
 name: depix-ecommerce
 
+x-blog-common: &blog-common
+  image: depix-ecommerce-blog:latest
+  build:
+    context: ./Blog
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  env_file:
+    - path: .env.blog
+      required: false
+  environment:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_DB: ${BLOG_DB_NAME:-blog_db}
+    POSTGRES_USER: ${BLOG_DB_USER:-blog_user}
+    POSTGRES_PASSWORD: ${BLOG_DB_PASSWORD:-blog_password}
+    DATABASE_URL: ${BLOG_DATABASE_URL:-postgres://${BLOG_DB_USER:-blog_user}:${BLOG_DB_PASSWORD:-blog_password}@postgres:5432/${BLOG_DB_NAME:-blog_db}}
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    REDIS_URL: ${BLOG_REDIS_URL:-redis://redis:6379}
+    USE_REDIS: ${BLOG_USE_REDIS:-True}
+    DEBUG: ${BLOG_DEBUG:-True}
+    ALLOWED_HOSTS: ${BLOG_ALLOWED_HOSTS:-localhost,127.0.0.1,blog}
+    FORCE_SCRIPT_NAME: ${BLOG_FORCE_SCRIPT_NAME:-/blog}
+    STATIC_URL: ${BLOG_STATIC_URL:-/blog/static/}
+    MEDIA_URL: ${BLOG_MEDIA_URL:-/blog/media/}
+    SECURE_SSL_REDIRECT: ${BLOG_SECURE_SSL_REDIRECT:-False}
+    SESSION_COOKIE_SECURE: ${BLOG_SESSION_COOKIE_SECURE:-False}
+    CSRF_COOKIE_SECURE: ${BLOG_CSRF_COOKIE_SECURE:-False}
+    CSRF_TRUSTED_ORIGINS: ${BLOG_CSRF_TRUSTED_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:8000,http://localhost:3000}
+    BACKUP_DIR: /app/backups
+  networks:
+    - depix_network
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,15 +42,43 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-depix_db}
+      BLOG_DB_NAME: ${BLOG_DB_NAME:-blog_db}
+      BLOG_DB_USER: ${BLOG_DB_USER:-blog_user}
+      BLOG_DB_PASSWORD: ${BLOG_DB_PASSWORD:-blog_password}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-depix_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - depix_network
+
+  db-init:
+    image: postgres:16-alpine
+    container_name: depix-db-init
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-depix_db}
+      BLOG_DB_NAME: ${BLOG_DB_NAME:-blog_db}
+      BLOG_DB_USER: ${BLOG_DB_USER:-blog_user}
+      BLOG_DB_PASSWORD: ${BLOG_DB_PASSWORD:-blog_password}
+    volumes:
+      - ./infrastructure/postgres/init-databases.sh:/init-databases.sh:ro
+    entrypoint: ["/bin/sh", "/init-databases.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - depix_network
 
   redis:
     image: redis:7-alpine
@@ -32,8 +93,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - depix_network
 
   medusa:
+    image: depix-ecommerce-medusa:latest
     build:
       context: ./medusa
       dockerfile: Dockerfile
@@ -50,7 +114,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       DATABASE_URL: ${MEDUSA_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/depix_db?sslmode=disable}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      REDIS_URL: ${MEDUSA_REDIS_URL:-redis://redis:6379/2}
       JWT_SECRET: ${MEDUSA_JWT_SECRET:-supersecret}
       COOKIE_SECRET: ${MEDUSA_COOKIE_SECRET:-supersecret}
       DISABLE_MEDUSA_ADMIN: ${DISABLE_MEDUSA_ADMIN:-true}
@@ -73,6 +137,78 @@ services:
       timeout: 5s
       retries: 8
       start_period: 90s
+    networks:
+      - depix_network
+
+  blog:
+    <<: *blog-common
+    container_name: depix-blog
+    command: ["/usr/local/bin/docker-entrypoint.sh"]
+    ports:
+      - "${BLOG_PORT:-8000}:8000"
+    volumes:
+      - blog_static:/app/staticfiles
+      - blog_media:/app/media
+      - blog_private_media:/app/private_media
+      - blog_backups:/app/backups
+      - blog_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys, urllib.request; req = urllib.request.Request('http://127.0.0.1:8000/health/cache', headers={'Host': 'localhost', 'X-Forwarded-Proto': 'https'}); r = urllib.request.urlopen(req, timeout=5); sys.exit(0 if r.status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  blog-celery-worker:
+    <<: *blog-common
+    container_name: depix-blog-celery-worker
+    command: ["sh", "-c", "exec celery -A blog worker -l info -Q high_priority,default,low_priority -n worker@%h --concurrency=${BLOG_CELERY_CONCURRENCY:-2}"]
+    volumes:
+      - blog_media:/app/media
+      - blog_private_media:/app/private_media
+      - blog_backups:/app/backups
+      - blog_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      blog:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A blog inspect ping -d worker@$$HOSTNAME --timeout=5"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
+  blog-celery-beat:
+    <<: *blog-common
+    container_name: depix-blog-celery-beat
+    command: ["sh", "-c", "rm -f /tmp/celerybeat.pid && exec celery -A blog beat -l info -s /app/celerybeat/celerybeat-schedule --pidfile=/tmp/celerybeat.pid"]
+    volumes:
+      - blog_media:/app/media
+      - blog_backups:/app/backups
+      - blog_logs:/app/logs
+      - blog_celerybeat:/app/celerybeat
+    depends_on:
+      redis:
+        condition: service_healthy
+      blog:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/celerybeat.pid && kill -0 $$(cat /tmp/celerybeat.pid)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   nginx:
     image: nginx:alpine
@@ -82,12 +218,35 @@ services:
       - "${NGINX_PORT:-80}:80"
     volumes:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - blog_static:/var/www/blog/staticfiles:ro
+      - blog_media:/var/www/blog/media:ro
     depends_on:
       medusa:
         condition: service_healthy
+      blog:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -qx OK"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - depix_network
+
+networks:
+  depix_network:
+    name: depix-network
+    driver: bridge
 
 volumes:
   postgres_data:
   redis_data:
   medusa_uploads:
   medusa_media_uploads:
+  blog_static:
+  blog_media:
+  blog_private_media:
+  blog_backups:
+  blog_logs:
+  blog_celerybeat:
