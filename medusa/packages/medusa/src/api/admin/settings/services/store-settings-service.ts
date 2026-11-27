@@ -1,5 +1,36 @@
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 
+export const ALLOWED_SOCIAL_PLATFORMS = [
+  "instagram",
+  "whatsapp",
+  "telegram",
+  "aparat",
+  "linkedin",
+  "youtube",
+] as const
+
+export type SocialPlatform = (typeof ALLOWED_SOCIAL_PLATFORMS)[number]
+
+export interface StoreContactPhoneDTO {
+  label: string
+  number: string
+}
+
+export interface StoreSocialLinkDTO {
+  platform: SocialPlatform
+  url: string
+}
+
+export interface PublicStoreSettingsDTO {
+  storeName: string
+  logoUrl: string | null
+  brandDescription: string
+  address: string
+  contactPhones: StoreContactPhoneDTO[]
+  socialLinks: StoreSocialLinkDTO[]
+  updatedAt: string
+}
+
 export interface StoreAddressDTO {
   id: string
   title: string
@@ -23,7 +54,12 @@ export interface StoreAddressDTO {
 export interface StoreSettingsDTO {
   id: string
   storeName: string
+  logoId: string | null
+  logoUrl: string | null
+  brandDescription: string
   contactPhone: string
+  contactPhones: StoreContactPhoneDTO[]
+  socialLinks: StoreSocialLinkDTO[]
   supportEmail: string
   address: string
   taxRate: number
@@ -107,6 +143,221 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email.trim())
 }
 
+/**
+ * Validates an admin-configured store logo URL or local upload path.
+ */
+export function validateLogoUrl(input: unknown): string | null {
+  if (input === null) {
+    return null
+  }
+  if (typeof input !== "string") {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "logoUrl must be a string or null.")
+  }
+  const trimmed = input.trim()
+  if (!trimmed) {
+    return null
+  }
+  if (trimmed.length > 2048) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "logoUrl must not exceed 2048 characters.")
+  }
+  if (/^\/(uploads|static)\/\S+$/.test(trimmed)) {
+    return trimmed
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "logoUrl must be a valid HTTP(S) URL or local upload path.")
+  }
+  if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !parsed.hostname) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "logoUrl must use http or https protocol with a valid hostname.")
+  }
+  return trimmed
+}
+
+/**
+ * Validates and normalizes a storefront contact phone number while preserving formatting such as hyphens.
+ */
+export function validateContactPhoneNumber(input: unknown, fieldName: string = "Phone number"): string {
+  if (typeof input !== "string" || !input.trim()) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, `${fieldName} is required.`)
+  }
+  const normalized = normalizeDigits(input.trim()).replace(/\s+/g, " ")
+  if (!/^[+]?[\d\s-]+$/.test(normalized)) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      `${fieldName} contains invalid characters.`
+    )
+  }
+  const digitsCount = normalized.replace(/\D/g, "").length
+  if (digitsCount < 8 || digitsCount > 15) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      `${fieldName} must contain between 8 and 15 digits.`
+    )
+  }
+  return normalized
+}
+
+/**
+ * Validates the structured storefront contactPhones array (1..5 labeled items).
+ */
+export function validateContactPhones(input: unknown): StoreContactPhoneDTO[] {
+  if (!Array.isArray(input)) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "contactPhones must be an array.")
+  }
+  if (input.length < 1 || input.length > 5) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "contactPhones must contain between 1 and 5 items."
+    )
+  }
+
+  return input.map((item, idx) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `contactPhones[${idx}] must be an object with label and number.`
+      )
+    }
+    const rawLabel = (item as Record<string, unknown>).label
+    if (typeof rawLabel !== "string" || !rawLabel.trim()) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `contactPhones[${idx}].label is required.`
+      )
+    }
+    const label = rawLabel.trim()
+    if (label.length > 40) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `contactPhones[${idx}].label must not exceed 40 characters.`
+      )
+    }
+    const number = validateContactPhoneNumber(
+      (item as Record<string, unknown>).number,
+      `contactPhones[${idx}].number`
+    )
+    return { label, number }
+  })
+}
+
+/**
+ * Validates structured storefront socialLinks (0..6 unique allowed platforms with HTTP(S) URLs).
+ */
+export function validateSocialLinks(input: unknown): StoreSocialLinkDTO[] {
+  if (input === null) {
+    return []
+  }
+  if (!Array.isArray(input)) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "socialLinks must be an array.")
+  }
+  if (input.length > 6) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "socialLinks must not contain more than 6 items."
+    )
+  }
+
+  const seenPlatforms = new Set<string>()
+  const allowedSet = new Set<string>(ALLOWED_SOCIAL_PLATFORMS)
+
+  return input.map((item, idx) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `socialLinks[${idx}] must be an object with platform and url.`
+      )
+    }
+    const rawPlatform = (item as Record<string, unknown>).platform
+    if (typeof rawPlatform !== "string" || !rawPlatform.trim()) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `socialLinks[${idx}].platform is required.`
+      )
+    }
+    const platform = rawPlatform.trim().toLowerCase()
+    if (!allowedSet.has(platform)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `socialLinks[${idx}].platform must be one of: ${ALLOWED_SOCIAL_PLATFORMS.join(", ")}.`
+      )
+    }
+    if (seenPlatforms.has(platform)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `Duplicate socialLinks platform '${platform}' is not allowed.`
+      )
+    }
+    seenPlatforms.add(platform)
+
+    const rawUrl = (item as Record<string, unknown>).url
+    if (typeof rawUrl !== "string" || !rawUrl.trim()) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `socialLinks[${idx}].url is required.`
+      )
+    }
+    const url = rawUrl.trim()
+    if (url.length > 2048) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `socialLinks[${idx}].url must not exceed 2048 characters.`
+      )
+    }
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `socialLinks[${idx}].url must be a valid HTTP(S) URL.`
+      )
+    }
+    if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !parsed.hostname) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `socialLinks[${idx}].url must use http or https protocol with a valid hostname.`
+      )
+    }
+
+    return { platform: platform as SocialPlatform, url }
+  })
+}
+
+function pickDefined(
+  data: Record<string, any>,
+  ...keys: string[]
+): { present: boolean; value: any } {
+  for (const key of keys) {
+    if (key in data && data[key] !== undefined) {
+      return { present: true, value: data[key] }
+    }
+  }
+  return { present: false, value: undefined }
+}
+
+function normalizeOptionalBoundedString(
+  value: unknown,
+  fieldName: string,
+  maxLength: number
+): string {
+  if (value === null || value === "") {
+    return ""
+  }
+  if (typeof value !== "string") {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, `${fieldName} must be a string.`)
+  }
+  const trimmed = value.trim()
+  if (trimmed.length > maxLength) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      `${fieldName} must not exceed ${maxLength} characters.`
+    )
+  }
+  return trimmed
+}
+
 export class StoreSettingsService {
   private storeService: any
 
@@ -165,7 +416,12 @@ export class StoreSettingsService {
     const [created] = await this.storeService.createStoreSettings([
       {
         store_name: "Mepusham",
+        logo_id: null,
+        logo_url: null,
+        brand_description: "",
         contact_phone: "",
+        contact_phones: [],
+        social_links: [],
         support_email: "",
         address: "",
         tax_rate: 0,
@@ -178,6 +434,78 @@ export class StoreSettingsService {
       },
     ])
     return created
+  }
+
+  private buildPublicSettings(settingsRecord: any): PublicStoreSettingsDTO {
+    const rawPhones = settingsRecord.contact_phones ?? settingsRecord.contactPhones
+    let contactPhones: StoreContactPhoneDTO[] = []
+    if (Array.isArray(rawPhones) && rawPhones.length > 0) {
+      contactPhones = rawPhones
+        .filter(
+          (p: any) =>
+            p &&
+            typeof p === "object" &&
+            typeof p.label === "string" &&
+            p.label.trim() &&
+            typeof p.number === "string" &&
+            p.number.trim()
+        )
+        .map((p: any) => ({
+          label: p.label.trim(),
+          number: p.number.trim(),
+        }))
+    }
+    if (contactPhones.length === 0) {
+      const legacyPhone = String(
+        settingsRecord.contact_phone ?? settingsRecord.contactPhone ?? ""
+      ).trim()
+      if (legacyPhone) {
+        contactPhones = [{ label: "پشتیبانی", number: legacyPhone }]
+      }
+    }
+
+    const allowedSet = new Set<string>(ALLOWED_SOCIAL_PLATFORMS)
+    const rawLinks = settingsRecord.social_links ?? settingsRecord.socialLinks
+    const socialLinks: StoreSocialLinkDTO[] = Array.isArray(rawLinks)
+      ? rawLinks
+          .filter(
+            (l: any) =>
+              l &&
+              typeof l === "object" &&
+              typeof l.platform === "string" &&
+              allowedSet.has(l.platform.trim().toLowerCase()) &&
+              typeof l.url === "string" &&
+              l.url.trim()
+          )
+          .map((l: any) => ({
+            platform: l.platform.trim().toLowerCase() as SocialPlatform,
+            url: l.url.trim(),
+          }))
+      : []
+
+    const rawUpdatedAt = settingsRecord.updated_at || settingsRecord.updatedAt || new Date()
+    const updatedAt =
+      rawUpdatedAt instanceof Date
+        ? rawUpdatedAt.toISOString()
+        : new Date(rawUpdatedAt).toISOString()
+
+    return {
+      storeName: settingsRecord.store_name ?? settingsRecord.storeName ?? "Mepusham",
+      logoUrl: settingsRecord.logo_url ?? settingsRecord.logoUrl ?? null,
+      brandDescription: settingsRecord.brand_description ?? settingsRecord.brandDescription ?? "",
+      address: settingsRecord.address ?? "",
+      contactPhones,
+      socialLinks,
+      updatedAt,
+    }
+  }
+
+  /**
+   * Retrieves sanitized public storefront identity settings without internal operational fields.
+   */
+  public async getPublicSettings(): Promise<PublicStoreSettingsDTO> {
+    const settingsRecord = await this.getOrCreateSettingsRecord()
+    return this.buildPublicSettings(settingsRecord)
   }
 
   /**
@@ -202,13 +530,22 @@ export class StoreSettingsService {
     const formattedAddresses = (addressesRaw || []).map((a: any) =>
       this.formatAddress(a, defaultShippingId)
     )
+    const publicFields = this.buildPublicSettings(settingsRecord)
 
     return {
       id: settingsRecord.id,
-      storeName: settingsRecord.store_name ?? settingsRecord.storeName ?? "Mepusham",
-      contactPhone: settingsRecord.contact_phone ?? settingsRecord.contactPhone ?? "",
+      storeName: publicFields.storeName,
+      logoId: settingsRecord.logo_id ?? settingsRecord.logoId ?? null,
+      logoUrl: publicFields.logoUrl,
+      brandDescription: publicFields.brandDescription,
+      contactPhone:
+        (settingsRecord.contact_phone ?? settingsRecord.contactPhone) ||
+        publicFields.contactPhones[0]?.number ||
+        "",
+      contactPhones: publicFields.contactPhones,
+      socialLinks: publicFields.socialLinks,
       supportEmail: settingsRecord.support_email ?? settingsRecord.supportEmail ?? "",
-      address: settingsRecord.address ?? "",
+      address: publicFields.address,
       taxRate: Number(settingsRecord.tax_rate ?? settingsRecord.taxRate ?? 0),
       enableSmsNotifications: Boolean(settingsRecord.enable_sms_notifications ?? settingsRecord.enableSmsNotifications ?? true),
       enableEmailNotifications: Boolean(settingsRecord.enable_email_notifications ?? settingsRecord.enableEmailNotifications ?? true),
@@ -241,38 +578,106 @@ export class StoreSettingsService {
 
     const updates: Record<string, any> = {}
 
-    // Store Name validation
-    const storeName = data.storeName ?? data.store_name
-    if (storeName !== undefined) {
+    // Store Name validation (2..60 chars)
+    const storeNameField = pickDefined(data, "storeName", "store_name")
+    if (storeNameField.present) {
+      const storeName = storeNameField.value
       if (typeof storeName !== "string" || !storeName.trim()) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
           "Store name must not be empty or whitespace-only."
         )
       }
-      if (storeName.trim().length > 255) {
+      const trimmedName = storeName.trim()
+      if (trimmedName.length < 2 || trimmedName.length > 60) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
-          "Store name must not exceed 255 characters."
+          "Store name must be between 2 and 60 characters."
         )
       }
-      updates.store_name = storeName.trim()
+      updates.store_name = trimmedName
+    }
+
+    // Brand Description validation (max 300 chars)
+    const brandDescriptionField = pickDefined(data, "brandDescription", "brand_description")
+    if (brandDescriptionField.present) {
+      updates.brand_description = normalizeOptionalBoundedString(
+        brandDescriptionField.value,
+        "brandDescription",
+        300
+      )
+    }
+
+    // Logo ID & URL validation
+    const logoIdField = pickDefined(data, "logoId", "logo_id")
+    if (logoIdField.present) {
+      const logoId = logoIdField.value
+      if (logoId === null || logoId === "") {
+        updates.logo_id = null
+      } else {
+        if (typeof logoId !== "string" || !logoId.trim() || logoId.trim().length > 128) {
+          throw new MedusaError(
+            MedusaError.Types.INVALID_DATA,
+            "logoId must be a non-empty string up to 128 characters, or null."
+          )
+        }
+        updates.logo_id = logoId.trim()
+      }
+    }
+
+    const logoUrlField = pickDefined(data, "logoUrl", "logo_url")
+    if (logoUrlField.present) {
+      updates.logo_url = validateLogoUrl(logoUrlField.value)
+      if (updates.logo_url === null && !logoIdField.present) {
+        updates.logo_id = null
+      }
+    }
+
+    // Contact Phones array (1..5) and legacy single contactPhone sync
+    const contactPhonesField = pickDefined(data, "contactPhones", "contact_phones")
+    const legacyContactPhoneField = pickDefined(
+      data,
+      "contactPhone",
+      "contact_phone",
+      "supportPhone",
+      "support_phone"
+    )
+
+    if (contactPhonesField.present) {
+      const validatedPhones = validateContactPhones(contactPhonesField.value)
+      updates.contact_phones = validatedPhones
+      if (!legacyContactPhoneField.present) {
+        updates.contact_phone = validatedPhones[0].number.replace(/[^\d+]/g, "")
+      }
     }
 
     // Contact / Support Phone validation
-    const contactPhone = data.contactPhone ?? data.contact_phone ?? data.supportPhone ?? data.support_phone
-    if (contactPhone !== undefined) {
+    if (legacyContactPhoneField.present) {
+      const contactPhone = legacyContactPhoneField.value
       if (contactPhone !== "" && contactPhone !== null) {
         const cleanedPhone = validateAndCleanPhone(contactPhone, "Contact phone")
         updates.contact_phone = cleanedPhone
       } else {
         updates.contact_phone = ""
       }
+      if (!contactPhonesField.present && updates.contact_phone) {
+        const existingPhones = settingsRecord.contact_phones ?? settingsRecord.contactPhones
+        if (!Array.isArray(existingPhones) || existingPhones.length === 0) {
+          updates.contact_phones = [{ label: "پشتیبانی", number: updates.contact_phone }]
+        }
+      }
+    }
+
+    // Social Links validation (0..6)
+    const socialLinksField = pickDefined(data, "socialLinks", "social_links")
+    if (socialLinksField.present) {
+      updates.social_links = validateSocialLinks(socialLinksField.value)
     }
 
     // Support Email validation
-    const supportEmail = data.supportEmail ?? data.support_email
-    if (supportEmail !== undefined) {
+    const supportEmailField = pickDefined(data, "supportEmail", "support_email")
+    if (supportEmailField.present) {
+      const supportEmail = supportEmailField.value
       if (supportEmail && (typeof supportEmail !== "string" || !validateEmail(supportEmail))) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
@@ -282,9 +687,9 @@ export class StoreSettingsService {
       updates.support_email = supportEmail ? supportEmail.trim() : ""
     }
 
-    // Address
-    if (data.address !== undefined) {
-      updates.address = data.address ? String(data.address).trim() : ""
+    // Address validation (max 300 chars)
+    if ("address" in data && data.address !== undefined) {
+      updates.address = normalizeOptionalBoundedString(data.address, "address", 300)
     }
 
     // Tax Rate validation

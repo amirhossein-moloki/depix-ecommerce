@@ -3,9 +3,14 @@ import {
   validateAndCleanPhone,
   validateAndCleanPostalCode,
   validateEmail,
+  validateLogoUrl,
+  validateContactPhoneNumber,
+  validateContactPhones,
+  validateSocialLinks,
   StoreSettingsService,
 } from "../services/store-settings-service"
 import { GET as getSettings, PATCH as patchSettings } from "../route"
+import { GET as getPublicStoreSettings } from "../../../store/settings/route"
 import { GET as listAddresses, POST as createAddress } from "../addresses/route"
 import { PATCH as updateAddress, DELETE as deleteAddress } from "../addresses/[id]/route"
 import { PUT as setDefaultShippingAddress } from "../default-shipping-address/route"
@@ -430,6 +435,229 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
         expect.objectContaining({ default_return_address_id: "staddr_1" })
       )
       expect(res.status).toHaveBeenCalledWith(200)
+    })
+
+    it("GET /store/settings handler should return only the 7 public fields and exclude internal admin fields", async () => {
+      mockStoreService.listStoreSettings.mockResolvedValue([
+        {
+          id: "stset_1",
+          store_name: "ابزارمارکت",
+          logo_id: "media_1",
+          logo_url: "https://cdn.example.com/uploads/logo.png",
+          brand_description: "فروشگاه تخصصی ابزارآلات صنعتی",
+          address: "تهران، خیابان امام خمینی",
+          contact_phone: "02188776655",
+          contact_phones: [
+            { label: "فروش و مشاوره", number: "021-88776655" },
+            { label: "پشتیبانی", number: "09121234567" },
+          ],
+          social_links: [
+            { platform: "instagram", url: "https://instagram.com/abzarmarket" },
+          ],
+          tax_rate: 9,
+          auto_approve_returns: true,
+          return_window_days: 7,
+          support_email: "internal@example.com",
+          default_shipping_address_id: "staddr_1",
+          updated_at: "2026-11-27T17:00:00.000Z",
+        },
+      ])
+
+      await getPublicStoreSettings(req, res)
+
+      expect(mockStoreService.listStoreAddresses).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(200)
+
+      const payload = res.json.mock.calls[0][0]
+      expect(Object.keys(payload).sort()).toEqual([
+        "address",
+        "brandDescription",
+        "contactPhones",
+        "logoUrl",
+        "socialLinks",
+        "storeName",
+        "updatedAt",
+      ])
+      expect(payload).toEqual({
+        storeName: "ابزارمارکت",
+        logoUrl: "https://cdn.example.com/uploads/logo.png",
+        brandDescription: "فروشگاه تخصصی ابزارآلات صنعتی",
+        address: "تهران، خیابان امام خمینی",
+        contactPhones: [
+          { label: "فروش و مشاوره", number: "021-88776655" },
+          { label: "پشتیبانی", number: "09121234567" },
+        ],
+        socialLinks: [
+          { platform: "instagram", url: "https://instagram.com/abzarmarket" },
+        ],
+        updatedAt: "2026-11-27T17:00:00.000Z",
+      })
+      expect(payload.taxRate).toBeUndefined()
+      expect(payload.autoApproveReturns).toBeUndefined()
+      expect(payload.addresses).toBeUndefined()
+      expect(payload.supportEmail).toBeUndefined()
+      expect(payload.returnWindowDays).toBeUndefined()
+      expect(payload.id).toBeUndefined()
+      expect(payload.logoId).toBeUndefined()
+    })
+  })
+
+  describe("Public Brand Identity, Contact Phones & Social Links Validation", () => {
+    let mockStoreService: any
+    let service: StoreSettingsService
+    let settingsDb: any[]
+
+    beforeEach(() => {
+      settingsDb = [
+        {
+          id: "stset_1",
+          store_name: "Mepusham",
+          logo_id: null,
+          logo_url: null,
+          brand_description: "",
+          contact_phone: "09120000000",
+          contact_phones: [],
+          social_links: [],
+          support_email: "",
+          address: "",
+          tax_rate: 0,
+          enable_sms_notifications: true,
+          enable_email_notifications: true,
+          return_window_days: 2,
+          auto_approve_returns: false,
+          default_shipping_address_id: null,
+          default_return_address_id: null,
+          created_at: new Date("2026-11-27T10:00:00.000Z"),
+          updated_at: new Date("2026-11-27T10:00:00.000Z"),
+        },
+      ]
+      mockStoreService = {
+        listStoreSettings: jest.fn().mockImplementation(async () => settingsDb),
+        createStoreSettings: jest.fn(),
+        updateStoreSettings: jest.fn().mockImplementation(async (id: string, data: any) => {
+          settingsDb[0] = { ...settingsDb[0], ...data }
+          return settingsDb[0]
+        }),
+        listStoreAddresses: jest.fn().mockResolvedValue([]),
+      }
+      service = new StoreSettingsService({ resolve: () => mockStoreService })
+    })
+
+    it("should enforce storeName (2..60 chars), brandDescription (<=300), and address (<=300) bounds", async () => {
+      await expect(service.updateSettings({ storeName: "ا" })).rejects.toThrow(MedusaError)
+      await expect(service.updateSettings({ storeName: "a".repeat(61) })).rejects.toThrow(MedusaError)
+      await expect(service.updateSettings({ brandDescription: "a".repeat(301) })).rejects.toThrow(MedusaError)
+      await expect(service.updateSettings({ address: "ت".repeat(301) })).rejects.toThrow(MedusaError)
+
+      const updated = await service.updateSettings({
+        storeName: "ابزارمارکت",
+        brandDescription: "ت".repeat(300),
+        address: "ت".repeat(300),
+      })
+      expect(updated.storeName).toBe("ابزارمارکت")
+      expect(updated.brandDescription).toHaveLength(300)
+      expect(updated.address).toHaveLength(300)
+
+      const cleared = await service.updateSettings({ brandDescription: null, address: null })
+      expect(cleared.brandDescription).toBe("")
+      expect(cleared.address).toBe("")
+    })
+
+    it("should validate logoUrl and clear logoId when logoUrl is cleared with null", async () => {
+      expect(validateLogoUrl("https://cdn.example.com/uploads/logo.png")).toBe(
+        "https://cdn.example.com/uploads/logo.png"
+      )
+      expect(validateLogoUrl("/uploads/logo.webp")).toBe("/uploads/logo.webp")
+      expect(validateLogoUrl(null)).toBeNull()
+      expect(() => validateLogoUrl("javascript:alert(1)")).toThrow(MedusaError)
+      expect(() => validateLogoUrl("data:image/png;base64,AAA")).toThrow(MedusaError)
+      expect(() => validateLogoUrl("not-a-valid-url")).toThrow(MedusaError)
+
+      const setRes = await service.updateSettings({
+        logoId: "media_123",
+        logoUrl: "/uploads/logo.png",
+      })
+      expect(setRes.logoId).toBe("media_123")
+      expect(setRes.logoUrl).toBe("/uploads/logo.png")
+
+      const clearedRes = await service.updateSettings({ logoUrl: null })
+      expect(clearedRes.logoUrl).toBeNull()
+      expect(clearedRes.logoId).toBeNull()
+    })
+
+    it("should validate contactPhones (1..5 items), preserve hyphens, and sync legacy contactPhone", async () => {
+      expect(validateContactPhoneNumber("۰۲۱-۸۸۷۷۶۶۵۵")).toBe("021-88776655")
+      expect(() => validateContactPhones([])).toThrow(MedusaError)
+      expect(() =>
+        validateContactPhones([
+          { label: "1", number: "09121111111" },
+          { label: "2", number: "09121111112" },
+          { label: "3", number: "09121111113" },
+          { label: "4", number: "09121111114" },
+          { label: "5", number: "09121111115" },
+          { label: "6", number: "09121111116" },
+        ])
+      ).toThrow(MedusaError)
+      expect(() => validateContactPhones([{ label: "", number: "09121234567" }])).toThrow(MedusaError)
+      expect(() => validateContactPhones([{ label: "a".repeat(41), number: "09121234567" }])).toThrow(MedusaError)
+      expect(() => validateContactPhones([{ label: "پشتیبانی", number: "abc" }])).toThrow(MedusaError)
+
+      const updated = await service.updateSettings({
+        contactPhones: [
+          { label: "فروش و مشاوره", number: "۰۲۱-۸۸۷۷۶۶۵۵" },
+          { label: "پشتیبانی", number: "09121234567" },
+        ],
+      })
+      expect(updated.contactPhones).toEqual([
+        { label: "فروش و مشاوره", number: "021-88776655" },
+        { label: "پشتیبانی", number: "09121234567" },
+      ])
+      expect(updated.contactPhone).toBe("02188776655")
+    })
+
+    it("should fall back to legacy contactPhone when contact_phones is empty", async () => {
+      const pub = await service.getPublicSettings()
+      expect(pub.contactPhones).toEqual([{ label: "پشتیبانی", number: "09120000000" }])
+    })
+
+    it("should validate socialLinks (0..6 items, allowed platforms only, unique platforms, valid http/https URL)", async () => {
+      expect(validateSocialLinks([])).toEqual([])
+      expect(() =>
+        validateSocialLinks([
+          { platform: "instagram", url: "https://instagram.com/a" },
+          { platform: "whatsapp", url: "https://wa.me/98912" },
+          { platform: "telegram", url: "https://t.me/a" },
+          { platform: "aparat", url: "https://aparat.com/a" },
+          { platform: "linkedin", url: "https://linkedin.com/company/a" },
+          { platform: "youtube", url: "https://youtube.com/@a" },
+          { platform: "twitter", url: "https://x.com/a" },
+        ])
+      ).toThrow(MedusaError)
+      expect(() =>
+        validateSocialLinks([{ platform: "tiktok", url: "https://tiktok.com/@a" }])
+      ).toThrow(MedusaError)
+      expect(() =>
+        validateSocialLinks([
+          { platform: "instagram", url: "https://instagram.com/a" },
+          { platform: "INSTAGRAM", url: "https://instagram.com/b" },
+        ])
+      ).toThrow(MedusaError)
+      expect(() =>
+        validateSocialLinks([{ platform: "instagram", url: "ftp://instagram.com/a" }])
+      ).toThrow(MedusaError)
+
+      const updated = await service.updateSettings({
+        socialLinks: [
+          { platform: "instagram", url: "https://instagram.com/abzarmarket" },
+          { platform: "whatsapp", url: "https://wa.me/989121234567" },
+          { platform: "telegram", url: "https://t.me/abzarmarket" },
+          { platform: "aparat", url: "https://www.aparat.com/abzarmarket" },
+          { platform: "linkedin", url: "https://www.linkedin.com/company/abzarmarket" },
+          { platform: "youtube", url: "https://youtube.com/@abzarmarket" },
+        ],
+      })
+      expect(updated.socialLinks).toHaveLength(6)
+      expect((await service.getPublicSettings()).socialLinks).toHaveLength(6)
     })
   })
 })

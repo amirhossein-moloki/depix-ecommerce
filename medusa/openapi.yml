@@ -1117,8 +1117,8 @@ paths:
     get:
       summary: Get Store Settings
       operationId: getStoreSettings
-      description: Retrieve global store settings, notification toggles, return window
-        parameters, tax rates, and associated store addresses.
+      description: Retrieve global store settings, public storefront identity fields,
+        notification toggles, return window parameters, tax rates, and associated store addresses.
       tags:
       - Admin Store Settings
       security:
@@ -1135,7 +1135,8 @@ paths:
     patch:
       summary: Update Store Settings
       operationId: updateStoreSettings
-      description: Update editable store settings attributes (e.g., storeName, supportEmail,
+      description: Update editable store settings attributes (e.g., storeName, logoId,
+        logoUrl, brandDescription, address, contactPhones, socialLinks, supportEmail,
         taxRate, returnWindowDays, notification toggles). Rejects server-managed fields.
       tags:
       - Admin Store Settings
@@ -1150,12 +1151,41 @@ paths:
               properties:
                 storeName:
                   type: string
+                  minLength: 2
+                  maxLength: 60
+                logoId:
+                  type: string
+                  nullable: true
+                  maxLength: 128
+                logoUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                  maxLength: 2048
+                brandDescription:
+                  type: string
+                  nullable: true
+                  maxLength: 300
                 contactPhone:
                   type: string
+                contactPhones:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  items:
+                    $ref: '#/components/schemas/StoreContactPhone'
+                socialLinks:
+                  type: array
+                  minItems: 0
+                  maxItems: 6
+                  items:
+                    $ref: '#/components/schemas/StoreSocialLink'
                 supportEmail:
                   type: string
                 address:
                   type: string
+                  nullable: true
+                  maxLength: 300
                 taxRate:
                   type: number
                 enableSmsNotifications:
@@ -1183,6 +1213,23 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /store/settings:
+    get:
+      summary: Get Public Store Settings
+      operationId: getPublicStoreSettings
+      description: Public storefront endpoint returning brand identity and contact
+        information without exposing internal operational or admin fields such as
+        taxRate, autoApproveReturns, or warehouse addresses.
+      tags:
+      - Store Settings
+      security: []
+      responses:
+        '200':
+          description: Public store settings payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStoreSettings'
   /admin/settings/addresses:
     get:
       summary: List Store Addresses
@@ -8839,12 +8886,87 @@ components:
         updatedAt:
           type: string
           format: date-time
+    StoreContactPhone:
+      type: object
+      required:
+      - label
+      - number
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        number:
+          type: string
+    StoreSocialLink:
+      type: object
+      required:
+      - platform
+      - url
+      properties:
+        platform:
+          type: string
+          enum:
+          - instagram
+          - whatsapp
+          - telegram
+          - aparat
+          - linkedin
+          - youtube
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+    PublicStoreSettings:
+      type: object
+      required:
+      - storeName
+      - logoUrl
+      - brandDescription
+      - address
+      - contactPhones
+      - socialLinks
+      - updatedAt
+      properties:
+        storeName:
+          type: string
+          minLength: 2
+          maxLength: 60
+        logoUrl:
+          type: string
+          nullable: true
+        brandDescription:
+          type: string
+          maxLength: 300
+        address:
+          type: string
+          maxLength: 300
+        contactPhones:
+          type: array
+          minItems: 0
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/StoreContactPhone'
+        socialLinks:
+          type: array
+          minItems: 0
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/StoreSocialLink'
+        updatedAt:
+          type: string
+          format: date-time
     StoreSettings:
       type: object
       required:
       - id
       - storeName
+      - logoId
+      - logoUrl
+      - brandDescription
       - contactPhone
+      - contactPhones
+      - socialLinks
       - supportEmail
       - address
       - taxRate
@@ -8858,12 +8980,32 @@ components:
           type: string
         storeName:
           type: string
+          minLength: 2
+          maxLength: 60
+        logoId:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        brandDescription:
+          type: string
+          maxLength: 300
         contactPhone:
           type: string
+        contactPhones:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreContactPhone'
+        socialLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreSocialLink'
         supportEmail:
           type: string
         address:
           type: string
+          maxLength: 300
         taxRate:
           type: number
         enableSmsNotifications:
