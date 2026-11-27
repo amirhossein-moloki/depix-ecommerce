@@ -22,7 +22,7 @@ ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 RUN --mount=type=cache,target=/root/.yarn/berry/cache yarn install
 
-RUN --mount=type=cache,target=/app/node_modules/.cache/turbo yarn turbo run build build:plugin \
+RUN --mount=type=cache,id=medusa-turbo-v2,target=/app/node_modules/.cache/turbo yarn turbo run build build:plugin \
     --filter=@medusajs/medusa... \
     --filter=@medusajs/cli... \
     --filter=@medusajs/draft-order... \

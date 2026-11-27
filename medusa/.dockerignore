@@ -1,8 +1,9 @@
 www
 node_modules
 .git
-.turbo
+**/.turbo
 **/dist
+**/*.tsbuildinfo
 **/.medusa
 **/coverage
 *.log
