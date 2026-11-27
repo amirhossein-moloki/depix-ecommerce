@@ -13,6 +13,10 @@ import {
   wrapVariantsWithTotalInventoryQuantity,
 } from "../../utils/middlewares"
 import {
+  enrichProductsWithBrand,
+  ensureMetadataInFields,
+} from "../../utils/enrich-products-with-brand"
+import {
   buildCandidateFields,
   CatalogFilterParams,
   extractCatalogFilterParams,
@@ -68,7 +72,7 @@ async function getProductsWithIndexEngine(
     req.queryConfig.fields,
     { relation: "variants" }
   )
-  req.queryConfig.fields = fields
+  req.queryConfig.fields = ensureMetadataInFields(fields)
 
   if (isPresent(req.pricingContext)) {
     context["variants"] ??= {}
@@ -117,6 +121,7 @@ async function getProductsWithIndexEngine(
 
   await wrapProductsWithTaxPrices(req, products)
   enrichProductsWithStoreSummary(products)
+  await enrichProductsWithBrand(req.scope, products)
 
   res.json({
     products,
@@ -172,7 +177,7 @@ async function getProducts(
     requestedFields,
     { relation: "variants" }
   )
-  req.queryConfig.fields = fields
+  req.queryConfig.fields = ensureMetadataInFields(fields)
 
   if (isPresent(req.pricingContext)) {
     context["variants"] ??= {}
@@ -205,6 +210,7 @@ async function getProducts(
     await wrapProductsWithTaxPrices(req, products)
     enrichProductsWithStoreSummary(products)
     await applyActiveAutomaticPromotionsToProducts(req.scope, products)
+    await enrichProductsWithBrand(req.scope, products)
 
     return res.json({
       products,
@@ -256,6 +262,7 @@ async function getProducts(
   await wrapProductsWithTaxPrices(req, pagedProducts)
   enrichProductsWithStoreSummary(pagedProducts)
   await applyActiveAutomaticPromotionsToProducts(req.scope, pagedProducts)
+  await enrichProductsWithBrand(req.scope, pagedProducts)
 
   return res.json({
     products: pagedProducts,

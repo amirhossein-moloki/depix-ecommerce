@@ -14,6 +14,10 @@ import {
   prepareInventoryQuantityFields,
   wrapVariantsWithTotalInventoryQuantity,
 } from "../../../utils/middlewares"
+import {
+  enrichProductsWithBrand,
+  ensureMetadataInFields,
+} from "../../../utils/enrich-products-with-brand"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest<HttpTypes.AdminGetProductParams>,
@@ -23,7 +27,7 @@ export const GET = async (
     req.queryConfig.fields ?? [],
     { relation: "variants" }
   )
-  const selectFields = remapKeysForProduct(fields)
+  const selectFields = ensureMetadataInFields(remapKeysForProduct(fields))
   const product = await refetchEntity({
     entity: "product",
     idOrFilter: req.params.id,
@@ -39,7 +43,10 @@ export const GET = async (
     await wrapVariantsWithTotalInventoryQuantity(req, product.variants ?? [])
   }
 
-  res.status(200).json({ product: remapProductResponse(product) })
+  const remappedProduct = remapProductResponse(product)
+  await enrichProductsWithBrand(req.scope, [remappedProduct])
+
+  res.status(200).json({ product: remappedProduct })
 }
 
 export const POST = async (
@@ -84,14 +91,17 @@ export const POST = async (
     entity: "product",
     idOrFilter: result[0].id,
     scope: req.scope,
-    fields: remapKeysForProduct(fields),
+    fields: ensureMetadataInFields(remapKeysForProduct(fields)),
   })
 
   if (withInventoryQuantity && product) {
     await wrapVariantsWithTotalInventoryQuantity(req as any, product.variants ?? [])
   }
 
-  res.status(200).json({ product: remapProductResponse(product) })
+  const remappedProduct = remapProductResponse(product)
+  await enrichProductsWithBrand(req.scope, [remappedProduct])
+
+  res.status(200).json({ product: remappedProduct })
 }
 
 export const DELETE = async (

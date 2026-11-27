@@ -16,6 +16,10 @@ import {
   prepareInventoryQuantityFields,
   wrapVariantsWithTotalInventoryQuantity,
 } from "../../utils/middlewares"
+import {
+  enrichProductsWithBrand,
+  ensureMetadataInFields,
+} from "../../utils/enrich-products-with-brand"
 import { remapKeysForProduct, remapProductResponse } from "./helpers"
 import { ensureProductDefaultInventoryAndChannel } from "./utils/ensure-default-inventory"
 
@@ -50,7 +54,7 @@ async function getProducts(
     req.queryConfig.fields ?? [],
     { relation: "variants" }
   )
-  const selectFields = remapKeysForProduct(fields)
+  const selectFields = ensureMetadataInFields(remapKeysForProduct(fields))
 
   const { data: products, metadata } = await refetchEntities({
     entity: "product",
@@ -68,8 +72,11 @@ async function getProducts(
     )
   }
 
+  const remappedProducts = products.map(remapProductResponse)
+  await enrichProductsWithBrand(req.scope, remappedProducts)
+
   res.json({
-    products: products.map(remapProductResponse),
+    products: remappedProducts,
     count: metadata.count,
     offset: metadata.skip,
     limit: metadata.take,
@@ -114,7 +121,7 @@ async function getProductsWithIndexEngine(
 
   const { data: products, metadata } = await query.index({
     entity: "product",
-    fields,
+    fields: ensureMetadataInFields(fields),
     filters: filters,
     pagination: req.queryConfig.pagination,
     withDeleted: req.queryConfig.withDeleted,
@@ -127,8 +134,11 @@ async function getProductsWithIndexEngine(
     )
   }
 
+  const remappedProducts = products.map(remapProductResponse)
+  await enrichProductsWithBrand(req.scope, remappedProducts)
+
   res.json({
-    products: products.map(remapProductResponse),
+    products: remappedProducts,
     count: metadata!.estimate_count,
     estimate_count: metadata!.estimate_count,
     offset: metadata!.skip,
@@ -160,12 +170,15 @@ export const POST = async (
     entity: "product",
     idOrFilter: result[0].id,
     scope: req.scope,
-    fields: remapKeysForProduct(fields),
+    fields: ensureMetadataInFields(remapKeysForProduct(fields)),
   })
 
   if (withInventoryQuantity && product) {
     await wrapVariantsWithTotalInventoryQuantity(req as any, product.variants ?? [])
   }
 
-  res.status(200).json({ product: remapProductResponse(product) })
+  const remappedProduct = remapProductResponse(product)
+  await enrichProductsWithBrand(req.scope, [remappedProduct])
+
+  res.status(200).json({ product: remappedProduct })
 }

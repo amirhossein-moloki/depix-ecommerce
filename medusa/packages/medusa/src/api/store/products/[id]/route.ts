@@ -10,6 +10,10 @@ import {
   wrapVariantsWithInventoryQuantityForSalesChannel,
 } from "../../../utils/middlewares"
 import {
+  enrichProductsWithBrand,
+  ensureMetadataInFields,
+} from "../../../utils/enrich-products-with-brand"
+import {
   applyActiveAutomaticPromotionsToProducts,
   enrichProductsWithStoreSummary,
   filterOutInternalProductCategories,
@@ -25,7 +29,7 @@ export const GET = async (
     req.queryConfig.fields,
     { relation: "variants" }
   )
-  req.queryConfig.fields = fields
+  req.queryConfig.fields = ensureMetadataInFields(fields)
 
   const filters: object = {
     id: req.params.id,
@@ -83,5 +87,6 @@ export const GET = async (
   await wrapProductsWithTaxPrices(req, [product])
   enrichProductsWithStoreSummary([product])
   await applyActiveAutomaticPromotionsToProducts(req.scope, [product])
+  await enrichProductsWithBrand(req.scope, [product])
   res.json({ product })
 }
