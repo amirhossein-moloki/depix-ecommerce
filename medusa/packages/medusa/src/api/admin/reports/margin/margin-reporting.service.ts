@@ -37,7 +37,18 @@ export class MarginReportingService {
   protected readonly knex_: Knex
 
   constructor(container: any) {
-    this.knex_ = container[ContainerRegistrationKeys.PG_CONNECTION] || container.pgConnection
+    let resolved: Knex | undefined
+    if (typeof container?.resolve === "function") {
+      try {
+        resolved = container.resolve(ContainerRegistrationKeys.PG_CONNECTION)
+      } catch {
+        resolved = undefined
+      }
+    }
+    this.knex_ =
+      resolved ||
+      container?.[ContainerRegistrationKeys.PG_CONNECTION] ||
+      container?.pgConnection
   }
 
   private parseDate(val?: string | Date, isEnd = false): Date | null {

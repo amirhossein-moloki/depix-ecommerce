@@ -160,7 +160,7 @@ export function validateLogoUrl(input: unknown): string | null {
   if (trimmed.length > 2048) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "logoUrl must not exceed 2048 characters.")
   }
-  if (/^\/(uploads|static)\/\S+$/.test(trimmed)) {
+  if (/^\/(?:api\/medusa\/)?(uploads|static)\/\S+$/.test(trimmed) && !trimmed.includes("..")) {
     return trimmed
   }
   let parsed: URL
@@ -767,7 +767,10 @@ export class StoreSettingsService {
 
     updates.updated_at = new Date()
 
-    await this.storeService.updateStoreSettings(settingsRecord.id, updates)
+    await this.storeService.updateStoreSettings({
+      id: settingsRecord.id,
+      ...updates,
+    })
     return this.getSettings()
   }
 
@@ -844,7 +847,8 @@ export class StoreSettingsService {
     const currentReturnDefault = settingsRecord.default_return_address_id
 
     if (isFirstAddress || (!currentShippingDefault && !currentReturnDefault) || data.isDefaultShipping === true) {
-      await this.storeService.updateStoreSettings(settingsRecord.id, {
+      await this.storeService.updateStoreSettings({
+        id: settingsRecord.id,
         default_shipping_address_id:
           data.isDefaultShipping === true ? created.id : currentShippingDefault || created.id,
         default_return_address_id: currentReturnDefault || created.id,
@@ -941,7 +945,10 @@ export class StoreSettingsService {
 
     updates.updated_at = new Date()
 
-    await this.storeService.updateStoreAddresses(id, updates)
+    await this.storeService.updateStoreAddresses({
+      id,
+      ...updates,
+    })
     if (data.isDefaultShipping === true) {
       await this.setDefaultShippingAddress(id)
     }
@@ -977,7 +984,10 @@ export class StoreSettingsService {
 
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date()
-      await this.storeService.updateStoreSettings(settingsRecord.id, updates)
+      await this.storeService.updateStoreSettings({
+        id: settingsRecord.id,
+        ...updates,
+      })
     }
 
     return { deleted: true, id }
@@ -997,7 +1007,8 @@ export class StoreSettingsService {
     }
 
     const settingsRecord = await this.getOrCreateSettingsRecord()
-    await this.storeService.updateStoreSettings(settingsRecord.id, {
+    await this.storeService.updateStoreSettings({
+      id: settingsRecord.id,
       default_shipping_address_id: addressId,
       updated_at: new Date(),
     })
@@ -1019,7 +1030,8 @@ export class StoreSettingsService {
     }
 
     const settingsRecord = await this.getOrCreateSettingsRecord()
-    await this.storeService.updateStoreSettings(settingsRecord.id, {
+    await this.storeService.updateStoreSettings({
+      id: settingsRecord.id,
       default_return_address_id: addressId,
       updated_at: new Date(),
     })

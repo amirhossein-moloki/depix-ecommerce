@@ -23,7 +23,12 @@ describe("StoreAddress postexCityCode, Product Automatic Promotions & Cart Promo
     const mockStoreService = {
       listStoreSettings: jest.fn().mockImplementation(async () => [settingsRecord]),
       createStoreSettings: jest.fn(),
-      updateStoreSettings: jest.fn().mockImplementation(async (_id, data) => {
+      updateStoreSettings: jest.fn().mockImplementation(async (data: any) => {
+        if (!data || typeof data !== "object" || typeof data.id !== "string") {
+          throw new TypeError(
+            "MedusaService update expects an object/array with id, not positional (id, data)"
+          )
+        }
         settingsRecord = { ...settingsRecord, ...data }
         return settingsRecord
       }),

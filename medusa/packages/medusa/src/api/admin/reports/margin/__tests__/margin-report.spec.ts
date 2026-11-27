@@ -460,7 +460,9 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
 
       const req: any = {
         scope: {
-          [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+          resolve: jest.fn((key: string) =>
+            key === ContainerRegistrationKeys.PG_CONNECTION ? mockKnex : undefined
+          ),
         },
         validatedQuery: {
           from: "2026-01-01",

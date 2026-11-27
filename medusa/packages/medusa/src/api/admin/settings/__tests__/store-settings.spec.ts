@@ -74,13 +74,23 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
           settingsDb.push(...created)
           return created
         }),
-        updateStoreSettings: jest.fn().mockImplementation(async (id: string, data: any) => {
-          const idx = settingsDb.findIndex((s) => s.id === id)
-          if (idx !== -1) {
-            settingsDb[idx] = { ...settingsDb[idx], ...data }
-            return settingsDb[idx]
+        updateStoreSettings: jest.fn().mockImplementation(async (data: any) => {
+          const items = Array.isArray(data) ? data : [data]
+          const updated: any[] = []
+          for (const item of items) {
+            if (!item || typeof item !== "object" || typeof item.id !== "string") {
+              throw new TypeError(
+                "MedusaService update expects an object/array with id, not positional (id, data)"
+              )
+            }
+            const idx = settingsDb.findIndex((s) => s.id === item.id)
+            if (idx === -1) {
+              throw new Error("Settings not found")
+            }
+            settingsDb[idx] = { ...settingsDb[idx], ...item }
+            updated.push(settingsDb[idx])
           }
-          throw new Error("Settings not found")
+          return Array.isArray(data) ? updated : updated[0]
         }),
         listStoreAddresses: jest.fn().mockImplementation(async () => addressesDb),
         createStoreAddresses: jest.fn().mockImplementation(async (data: any[]) => {
@@ -98,13 +108,23 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
           if (!found) throw new Error("Address not found")
           return found
         }),
-        updateStoreAddresses: jest.fn().mockImplementation(async (id: string, data: any) => {
-          const idx = addressesDb.findIndex((a) => a.id === id)
-          if (idx !== -1) {
-            addressesDb[idx] = { ...addressesDb[idx], ...data }
-            return addressesDb[idx]
+        updateStoreAddresses: jest.fn().mockImplementation(async (data: any) => {
+          const items = Array.isArray(data) ? data : [data]
+          const updated: any[] = []
+          for (const item of items) {
+            if (!item || typeof item !== "object" || typeof item.id !== "string") {
+              throw new TypeError(
+                "MedusaService update expects an object/array with id, not positional (id, data)"
+              )
+            }
+            const idx = addressesDb.findIndex((a) => a.id === item.id)
+            if (idx === -1) {
+              throw new Error("Address not found")
+            }
+            addressesDb[idx] = { ...addressesDb[idx], ...item }
+            updated.push(addressesDb[idx])
           }
-          throw new Error("Address not found")
+          return Array.isArray(data) ? updated : updated[0]
         }),
         deleteStoreAddresses: jest.fn().mockImplementation(async (id: string) => {
           addressesDb = addressesDb.filter((a) => a.id !== id)
@@ -358,7 +378,14 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
             postal_code: "1234567890",
           },
         ]),
-        updateStoreSettings: jest.fn().mockResolvedValue({}),
+        updateStoreSettings: jest.fn().mockImplementation(async (data: any) => {
+          if (!data || typeof data !== "object" || typeof data.id !== "string") {
+            throw new TypeError(
+              "MedusaService update expects an object/array with id, not positional (id, data)"
+            )
+          }
+          return data
+        }),
         retrieveStoreAddress: jest.fn().mockResolvedValue({
           id: "staddr_1",
           title: "Main Warehouse",
@@ -407,8 +434,10 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
       await patchSettings(req, res)
 
       expect(mockStoreService.updateStoreSettings).toHaveBeenCalledWith(
-        "stset_1",
-        expect.objectContaining({ store_name: "Updated Store Name" })
+        expect.objectContaining({
+          id: "stset_1",
+          store_name: "Updated Store Name",
+        })
       )
       expect(res.status).toHaveBeenCalledWith(200)
     })
@@ -419,8 +448,10 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
       await setDefaultShippingAddress(req, res)
 
       expect(mockStoreService.updateStoreSettings).toHaveBeenCalledWith(
-        "stset_1",
-        expect.objectContaining({ default_shipping_address_id: "staddr_1" })
+        expect.objectContaining({
+          id: "stset_1",
+          default_shipping_address_id: "staddr_1",
+        })
       )
       expect(res.status).toHaveBeenCalledWith(200)
     })
@@ -431,8 +462,10 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
       await setDefaultReturnAddress(req, res)
 
       expect(mockStoreService.updateStoreSettings).toHaveBeenCalledWith(
-        "stset_1",
-        expect.objectContaining({ default_return_address_id: "staddr_1" })
+        expect.objectContaining({
+          id: "stset_1",
+          default_return_address_id: "staddr_1",
+        })
       )
       expect(res.status).toHaveBeenCalledWith(200)
     })
@@ -534,7 +567,12 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
       mockStoreService = {
         listStoreSettings: jest.fn().mockImplementation(async () => settingsDb),
         createStoreSettings: jest.fn(),
-        updateStoreSettings: jest.fn().mockImplementation(async (id: string, data: any) => {
+        updateStoreSettings: jest.fn().mockImplementation(async (data: any) => {
+          if (!data || typeof data !== "object" || typeof data.id !== "string") {
+            throw new TypeError(
+              "MedusaService update expects an object/array with id, not positional (id, data)"
+            )
+          }
           settingsDb[0] = { ...settingsDb[0], ...data }
           return settingsDb[0]
         }),
@@ -568,7 +606,9 @@ describe("Store Settings & Addresses Module Unit and Integration Tests", () => {
         "https://cdn.example.com/uploads/logo.png"
       )
       expect(validateLogoUrl("/uploads/logo.webp")).toBe("/uploads/logo.webp")
+      expect(validateLogoUrl("/api/medusa/uploads/logo.png")).toBe("/api/medusa/uploads/logo.png")
       expect(validateLogoUrl(null)).toBeNull()
+      expect(() => validateLogoUrl("/uploads/../etc/passwd")).toThrow(MedusaError)
       expect(() => validateLogoUrl("javascript:alert(1)")).toThrow(MedusaError)
       expect(() => validateLogoUrl("data:image/png;base64,AAA")).toThrow(MedusaError)
       expect(() => validateLogoUrl("not-a-valid-url")).toThrow(MedusaError)

@@ -213,7 +213,9 @@ describe("Sales Reporting System Unit & Integration Tests", () => {
 
       const req: any = {
         scope: {
-          [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+          resolve: jest.fn((key: string) =>
+            key === ContainerRegistrationKeys.PG_CONNECTION ? mockKnex : undefined
+          ),
         },
         validatedQuery: {
           from: "2025-01-01",
