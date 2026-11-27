@@ -80,6 +80,31 @@ const getZarinpalStartPayBaseUrl = () =>
     ? "https://sandbox.zarinpal.com/pg/StartPay"
     : "https://www.zarinpal.com/pg/StartPay"
 
+/**
+ * Safely parses numeric values that may arrive as primitives or Medusa BigNumber `{ value }` objects.
+ */
+function extractNumericAmount(value: unknown, fallback = 0): number {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : fallback
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return fallback
+    }
+    const parsed = Number(trimmed)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+  if (value && typeof value === "object") {
+    const raw =
+      (value as any).value ?? (value as any).numeric_ ?? (value as any).amount
+    if (raw !== undefined && raw !== null) {
+      return extractNumericAmount(raw, fallback)
+    }
+  }
+  return fallback
+}
+
 async function updateCartMetadata(
   scope: MedusaContainer,
   cart: any,
@@ -88,6 +113,22 @@ async function updateCartMetadata(
   const nextMetadata = {
     ...(cart?.metadata ?? {}),
     payment_session: paymentSession,
+  }
+
+  let cartService: any = null
+  try {
+    cartService = scope.resolve<any>(Modules.CART)
+  } catch {
+    cartService = null
+  }
+
+  // Prefer direct metadata persistence so we do not trigger updateCartWorkflow ->
+  // refreshCartShippingMethodsWorkflow and wipe dynamic shipping rates before payment.
+  if (typeof cartService?.updateCarts === "function") {
+    await cartService.updateCarts(cart.id, {
+      metadata: nextMetadata,
+    })
+    return
   }
 
   let we: any = null
@@ -103,11 +144,6 @@ async function updateCartMetadata(
         id: cart.id,
         metadata: nextMetadata,
       },
-    })
-  } else {
-    const cartService = scope.resolve<any>(Modules.CART)
-    await cartService.updateCarts(cart.id, {
-      metadata: nextMetadata,
     })
   }
 }
@@ -180,10 +216,12 @@ async function ensureOrderPaymentCaptured(
     queriedOrder = null
   }
 
+  const verifiedPaidAmount = extractNumericAmount(params.amount, 0)
+  const orderTotal = extractNumericAmount(queriedOrder?.total, 0)
   const captureAmount =
-    Number(queriedOrder?.total) > 0
-      ? Number(queriedOrder.total)
-      : Number(params.amount ?? 0)
+    verifiedPaidAmount > 0
+      ? Math.round(verifiedPaidAmount)
+      : Math.round(orderTotal)
 
   if (!Number.isFinite(captureAmount) || captureAmount <= 0) {
     return
@@ -364,6 +402,72 @@ function buildOrderPromotionsSnapshot(cart: any): Array<{
     }))
 }
 
+function mapCartAdjustmentsForOrder(adjustments: any[] = []) {
+  if (!Array.isArray(adjustments)) {
+    return []
+  }
+
+  return adjustments
+    .map((adj: any) => ({
+      code: adj?.code ?? undefined,
+      amount: Math.max(0, Math.round(extractNumericAmount(adj?.amount ?? adj?.raw_amount, 0))),
+      description: adj?.description ?? undefined,
+      promotion_id: adj?.promotion_id ?? undefined,
+      provider_id: adj?.provider_id ?? undefined,
+      is_tax_inclusive:
+        adj?.is_tax_inclusive !== undefined ? Boolean(adj.is_tax_inclusive) : undefined,
+    }))
+    .filter((adj) => adj.amount > 0)
+}
+
+function mapCartTaxLinesForOrder(taxLines: any[] = []) {
+  if (!Array.isArray(taxLines)) {
+    return []
+  }
+
+  return taxLines.map((tl: any) => ({
+    description: tl?.description ?? undefined,
+    tax_rate_id: tl?.tax_rate_id ?? undefined,
+    code: tl?.code ?? undefined,
+    rate: extractNumericAmount(tl?.rate, 0),
+    provider_id: tl?.provider_id ?? undefined,
+    metadata: tl?.metadata ?? null,
+    data: tl?.data ?? null,
+  }))
+}
+
+function resolveCartDiscountTotal(cart: any): number {
+  const explicitDiscount =
+    cart?.discount_total !== undefined && cart?.discount_total !== null
+      ? extractNumericAmount(cart.discount_total, NaN)
+      : NaN
+  if (Number.isFinite(explicitDiscount) && explicitDiscount >= 0) {
+    return Math.round(explicitDiscount)
+  }
+
+  const itemAdjSum = (cart?.items ?? []).reduce(
+    (sum: number, item: any) =>
+      sum +
+      (item?.adjustments ?? []).reduce(
+        (s: number, adj: any) =>
+          s + extractNumericAmount(adj?.amount ?? adj?.raw_amount, 0),
+        0
+      ),
+    0
+  )
+  const shippingAdjSum = (cart?.shipping_methods ?? []).reduce(
+    (sum: number, sm: any) =>
+      sum +
+      (sm?.adjustments ?? []).reduce(
+        (s: number, adj: any) =>
+          s + extractNumericAmount(adj?.amount ?? adj?.raw_amount, 0),
+        0
+      ),
+    0
+  )
+  return Math.max(0, Math.round(itemAdjSum + shippingAdjSum))
+}
+
 function buildCartFinancialSnapshot(cart: any): {
   subtotal: number
   discount_total: number
@@ -374,26 +478,33 @@ function buildCartFinancialSnapshot(cart: any): {
   const itemsSubtotal = Array.isArray(cart?.items) && cart.items.length > 0
     ? cart.items.reduce(
         (sum: number, item: any) =>
-          sum + Number(item?.unit_price ?? 0) * Number(item?.quantity ?? 0),
+          sum +
+          extractNumericAmount(item?.unit_price, 0) *
+            extractNumericAmount(item?.quantity, 0),
         0
       )
-    : Number(cart?.subtotal ?? 0)
-  const subtotal = Math.round(Number(cart?.subtotal ?? itemsSubtotal))
-  const discountTotal = Math.round(Number(cart?.discount_total ?? 0))
+    : extractNumericAmount(cart?.subtotal, 0)
+  const subtotal = Math.round(
+    cart?.subtotal !== undefined && cart?.subtotal !== null
+      ? extractNumericAmount(cart.subtotal, itemsSubtotal)
+      : itemsSubtotal
+  )
+  const discountTotal = resolveCartDiscountTotal(cart)
   const shippingTotal = Math.round(
     cart?.shipping_total !== undefined && cart?.shipping_total !== null
-      ? Number(cart.shipping_total)
+      ? extractNumericAmount(cart.shipping_total, 0)
       : (cart?.shipping_methods ?? []).reduce(
-          (sum: number, sm: any) => sum + Number(sm?.amount ?? 0),
+          (sum: number, sm: any) =>
+            sum + extractNumericAmount(sm?.amount ?? sm?.raw_amount, 0),
           0
         )
   )
-  const taxTotal = Math.round(Number(cart?.tax_total ?? 0))
+  const taxTotal = Math.round(extractNumericAmount(cart?.tax_total, 0))
   const total = Math.max(
     0,
     Math.round(
       cart?.total !== undefined && cart?.total !== null
-        ? Number(cart.total)
+        ? extractNumericAmount(cart.total, 0)
         : subtotal - discountTotal + taxTotal + shippingTotal
     )
   )
@@ -420,40 +531,152 @@ async function createOrderFromCartFallback(
   }
 ): Promise<any> {
   const orderService = scope.resolve<any>(Modules.ORDER)
-  const items = (cart.items ?? []).map((item: any) => ({
-    title: item.title || "Item",
-    subtitle: item.subtitle ?? undefined,
-    thumbnail: item.thumbnail ?? undefined,
-    quantity: Number(item.quantity ?? 1),
-    variant_id: item.variant_id ?? undefined,
-    variant_sku: item.variant_sku ?? undefined,
-    variant_barcode: item.variant_barcode ?? undefined,
-    variant_title: item.variant_title ?? undefined,
-    product_id: item.product_id ?? undefined,
-    product_title: item.product_title ?? undefined,
-    product_description: item.product_description ?? undefined,
-    product_subtitle: item.product_subtitle ?? undefined,
-    product_handle: item.product_handle ?? undefined,
-    requires_shipping: item.requires_shipping ?? true,
-    is_discountable: item.is_discountable ?? true,
-    is_tax_inclusive: item.is_tax_inclusive ?? false,
-    unit_price: Number(item.unit_price ?? 0),
-    compare_at_unit_price: item.compare_at_unit_price ?? undefined,
-    metadata: item.metadata ?? undefined,
-  }))
+  const items = (cart.items ?? []).map((item: any) => {
+    const adjustments = mapCartAdjustmentsForOrder(item.adjustments ?? [])
+    const taxLines = mapCartTaxLinesForOrder(item.tax_lines ?? [])
+    return {
+      title: item.title || "Item",
+      subtitle: item.subtitle ?? undefined,
+      thumbnail: item.thumbnail ?? undefined,
+      quantity: extractNumericAmount(item.quantity, 1),
+      variant_id: item.variant_id ?? undefined,
+      variant_sku: item.variant_sku ?? undefined,
+      variant_barcode: item.variant_barcode ?? undefined,
+      variant_title: item.variant_title ?? undefined,
+      product_id: item.product_id ?? undefined,
+      product_title: item.product_title ?? undefined,
+      product_description: item.product_description ?? undefined,
+      product_subtitle: item.product_subtitle ?? undefined,
+      product_handle: item.product_handle ?? undefined,
+      requires_shipping: item.requires_shipping ?? true,
+      is_discountable: item.is_discountable ?? true,
+      is_tax_inclusive: item.is_tax_inclusive ?? false,
+      unit_price: extractNumericAmount(item.unit_price, 0),
+      compare_at_unit_price:
+        item.compare_at_unit_price !== undefined &&
+        item.compare_at_unit_price !== null
+          ? extractNumericAmount(item.compare_at_unit_price, 0)
+          : undefined,
+      ...(adjustments.length > 0 ? { adjustments } : {}),
+      ...(taxLines.length > 0 ? { tax_lines: taxLines } : {}),
+      metadata: item.metadata ?? undefined,
+    }
+  })
 
-  const shippingMethods = (cart.shipping_methods ?? []).map((sm: any) => ({
-    name: sm.name || "Standard Shipping",
-    description: sm.description ?? undefined,
-    amount: Number(sm.raw_amount ?? sm.amount ?? 0),
-    is_tax_inclusive: sm.is_tax_inclusive ?? false,
-    shipping_option_id: sm.shipping_option_id ?? undefined,
-    data: sm.data ?? undefined,
-    metadata: sm.metadata ?? undefined,
-  }))
+  const shippingMethods = (cart.shipping_methods ?? []).map((sm: any) => {
+    const adjustments = mapCartAdjustmentsForOrder(sm.adjustments ?? [])
+    const taxLines = mapCartTaxLinesForOrder(sm.tax_lines ?? [])
+    const numericAmount = extractNumericAmount(
+      sm.amount,
+      extractNumericAmount(sm.raw_amount, 0)
+    )
+    return {
+      name: sm.name || "Standard Shipping",
+      description: sm.description ?? undefined,
+      amount: Math.max(0, Math.round(numericAmount)),
+      is_tax_inclusive: sm.is_tax_inclusive ?? false,
+      shipping_option_id: sm.shipping_option_id ?? undefined,
+      data: sm.data ?? undefined,
+      metadata: sm.metadata ?? undefined,
+      ...(adjustments.length > 0 ? { adjustments } : {}),
+      ...(taxLines.length > 0 ? { tax_lines: taxLines } : {}),
+    }
+  })
 
   const promotionsSnapshot = buildOrderPromotionsSnapshot(cart)
   const financialSnapshot = buildCartFinancialSnapshot(cart)
+
+  // Defensive proportional discount allocation when cart has discount_total > 0
+  // but item-level adjustments were missing or incomplete in the cart snapshot.
+  const existingItemAdjTotal = items.reduce(
+    (sum: number, item: any) =>
+      sum +
+      (item.adjustments ?? []).reduce(
+        (s: number, adj: any) => s + extractNumericAmount(adj.amount, 0),
+        0
+      ),
+    0
+  )
+  const existingShippingAdjTotal = shippingMethods.reduce(
+    (sum: number, sm: any) =>
+      sum +
+      (sm.adjustments ?? []).reduce(
+        (s: number, adj: any) => s + extractNumericAmount(adj.amount, 0),
+        0
+      ),
+    0
+  )
+  const totalExistingAdjustments =
+    existingItemAdjTotal + existingShippingAdjTotal
+  const cartDiscountTotal = Math.max(
+    0,
+    Math.round(extractNumericAmount(cart.discount_total, financialSnapshot.discount_total))
+  )
+
+  if (cartDiscountTotal > totalExistingAdjustments && items.length > 0) {
+    const shortfall = Math.round(cartDiscountTotal - totalExistingAdjustments)
+    const discountable = items.filter((it: any) => it.is_discountable !== false)
+    const targetItems = discountable.length > 0 ? discountable : items
+    const weights = targetItems.map((it: any) =>
+      Math.max(0, Number(it.unit_price ?? 0) * Number(it.quantity ?? 1))
+    )
+    const totalWeight = weights.reduce((a: number, b: number) => a + b, 0)
+    const firstPromo = Array.isArray(cart.promotions) ? cart.promotions[0] : undefined
+    const promoCode = firstPromo?.code ? String(firstPromo.code) : "DISCOUNT"
+    const promoId = firstPromo?.id ? String(firstPromo.id) : undefined
+
+    let allocated = 0
+    targetItems.forEach((it: any, idx: number) => {
+      const isLast = idx === targetItems.length - 1
+      const share = isLast
+        ? Math.max(0, shortfall - allocated)
+        : totalWeight > 0
+          ? Math.round((shortfall * weights[idx]) / totalWeight)
+          : idx === 0
+            ? shortfall
+            : 0
+      allocated += share
+      if (share > 0) {
+        it.adjustments = [
+          ...(it.adjustments ?? []),
+          {
+            code: promoCode,
+            amount: share,
+            ...(promoId ? { promotion_id: promoId } : {}),
+            description: "Cart discount adjustment",
+          },
+        ]
+      }
+    })
+  }
+
+  const promoCodes = Array.from(
+    new Set(
+      [
+        ...items.flatMap((it: any) =>
+          (it.adjustments ?? []).map((a: any) => a.code)
+        ),
+        ...shippingMethods.flatMap((sm: any) =>
+          (sm.adjustments ?? []).map((a: any) => a.code)
+        ),
+        ...(cart.promotions ?? []).map((p: any) => p?.code),
+      ].filter(Boolean)
+    )
+  )
+
+  const verifiedAt = new Date().toISOString()
+  const paidPaymentSession = {
+    ...(cart.metadata?.payment_session ?? {}),
+    payment_id: params.paymentId ?? cart.metadata?.payment_session?.payment_id,
+    track_id: params.trackId ?? cart.metadata?.payment_session?.track_id,
+    ref_id: params.refId ?? cart.metadata?.payment_session?.ref_id,
+    amount_irr:
+      params.amount && Number(params.amount) > 0
+        ? Math.round(Number(params.amount))
+        : (cart.metadata?.payment_session?.amount_irr ?? financialSnapshot.total),
+    status: "paid",
+    verified_at: verifiedAt,
+  }
 
   const orderInput = {
     region_id: cart.region_id ?? undefined,
@@ -467,6 +690,7 @@ async function createOrderFromCartFallback(
     billing_address: stripAddressIds(cart.billing_address),
     shipping_methods: shippingMethods,
     items,
+    ...(promoCodes.length > 0 ? { promo_codes: promoCodes } : {}),
     metadata: {
       ...(cart.metadata ?? {}),
       cart_id: cart.id,
@@ -475,6 +699,7 @@ async function createOrderFromCartFallback(
       track_id: params.trackId,
       ref_id: params.refId,
       payment_status: "paid",
+      payment_session: paidPaymentSession,
       promotions: promotionsSnapshot,
       financial_snapshot: financialSnapshot,
     },
@@ -487,10 +712,23 @@ async function createOrderFromCartFallback(
     try {
       const link = scope.resolve<any>(ContainerRegistrationKeys.LINK)
       if (link?.create) {
-        await link.create({
-          [Modules.CART]: { cart_id: cart.id },
-          [Modules.ORDER]: { order_id: order.id },
-        })
+        const links: any[] = [
+          {
+            [Modules.CART]: { cart_id: cart.id },
+            [Modules.ORDER]: { order_id: order.id },
+          },
+        ]
+        for (const promo of cart.promotions ?? []) {
+          if (promo?.id) {
+            links.push({
+              [Modules.ORDER]: { order_id: order.id },
+              [Modules.PROMOTION]: { promotion_id: promo.id },
+            })
+          }
+        }
+        for (const linkDef of links) {
+          await link.create(linkDef)
+        }
       }
     } catch {
       // Optional link creation in custom checkout or unit-test scopes
@@ -542,7 +780,8 @@ async function completeCartIdempotently(
       if (existingOrderId) {
         await ensureOrderPaymentCaptured(scope, {
           orderId: existingOrderId,
-          amount: params.amount ?? Number(cart.total ?? 0),
+          amount:
+            params.amount ?? extractNumericAmount(cart.total, 0),
         })
       }
       const order = existingOrderId
@@ -573,12 +812,17 @@ async function completeCartIdempotently(
     }
 
     const orderId = order?.id ? String(order.id) : undefined
+    const paidAmountIrr =
+      params.amount && Number(params.amount) > 0
+        ? Math.round(Number(params.amount))
+        : cart.metadata?.payment_session?.amount_irr
     const nextSession = {
       ...(cart.metadata?.payment_session ?? {}),
       payment_id:
         params.paymentId || cart.metadata?.payment_session?.payment_id,
       track_id: params.trackId || cart.metadata?.payment_session?.track_id,
       ref_id: params.refId || cart.metadata?.payment_session?.ref_id,
+      ...(paidAmountIrr !== undefined ? { amount_irr: paidAmountIrr } : {}),
       status: "paid",
       order_id: orderId,
       verified_at: new Date().toISOString(),
@@ -615,35 +859,41 @@ async function completeCartIdempotently(
     if (orderId) {
       await ensureOrderPaymentCaptured(scope, {
         orderId,
-        amount: params.amount ?? Number(order?.total ?? cart.total ?? 0),
+        amount:
+          params.amount ??
+          extractNumericAmount(order?.total, extractNumericAmount(cart.total, 0)),
       })
 
-      // Ensure promotions & financial snapshot are persisted on order.metadata even when completeCartWorkflow ran
-      if (!usedFallback) {
-        try {
-          const orderService = scope.resolve<any>(Modules.ORDER)
-          const existingMeta = (order?.metadata ?? {}) as Record<string, any>
-          const promotionsSnapshot = buildOrderPromotionsSnapshot(cart)
-          const financialSnapshot = buildCartFinancialSnapshot(cart)
-          if (
-            orderService?.updateOrders &&
-            (!existingMeta.financial_snapshot ||
-              (promotionsSnapshot.length > 0 && !existingMeta.promotions))
-          ) {
-            await orderService.updateOrders(orderId, {
-              metadata: {
-                ...existingMeta,
-                ...(promotionsSnapshot.length > 0
-                  ? { promotions: promotionsSnapshot }
-                  : {}),
-                financial_snapshot:
-                  existingMeta.financial_snapshot ?? financialSnapshot,
-              },
-            })
-          }
-        } catch {
-          // Optional metadata sync
+      // Ensure promotions, financial_snapshot, and paid payment_session are persisted on order.metadata
+      try {
+        const orderService = scope.resolve<any>(Modules.ORDER)
+        const existingMeta = (order?.metadata ?? {}) as Record<string, any>
+        const promotionsSnapshot = buildOrderPromotionsSnapshot(cart)
+        const financialSnapshot = buildCartFinancialSnapshot(cart)
+        const existingSessionStatus = existingMeta?.payment_session?.status
+        const needsMetadataSync =
+          !existingMeta.financial_snapshot ||
+          existingSessionStatus !== "paid" ||
+          existingMeta?.payment_session?.order_id !== orderId ||
+          existingMeta?.payment_status !== "paid" ||
+          (promotionsSnapshot.length > 0 && !existingMeta.promotions)
+
+        if (typeof orderService?.updateOrders === "function" && needsMetadataSync) {
+          await orderService.updateOrders(orderId, {
+            metadata: {
+              ...existingMeta,
+              payment_status: "paid",
+              payment_session: nextSession,
+              ...(promotionsSnapshot.length > 0
+                ? { promotions: promotionsSnapshot }
+                : {}),
+              financial_snapshot:
+                existingMeta.financial_snapshot ?? financialSnapshot,
+            },
+          })
         }
+      } catch {
+        // Optional metadata sync
       }
 
       await deductInventoryForCompletedOrder(scope, orderId, cart)
@@ -723,16 +973,19 @@ export function computeCartTotalIrr(cart: any): number {
     }
     const itemsSubtotal = cart.items.reduce(
       (sum: number, item: any) =>
-        sum + Number(item?.unit_price ?? 0) * Number(item?.quantity ?? 0),
+        sum +
+        extractNumericAmount(item?.unit_price, 0) *
+          extractNumericAmount(item?.quantity, 0),
       0
     )
-    const discountTotal = Number(cart.discount_total ?? 0)
-    const taxTotal = Number(cart.tax_total ?? 0)
+    const discountTotal = resolveCartDiscountTotal(cart)
+    const taxTotal = extractNumericAmount(cart.tax_total, 0)
     const shippingTotal =
       cart.shipping_total !== undefined && cart.shipping_total !== null
-        ? Number(cart.shipping_total)
+        ? extractNumericAmount(cart.shipping_total, 0)
         : (cart.shipping_methods ?? []).reduce(
-            (sum: number, sm: any) => sum + Number(sm?.amount ?? 0),
+            (sum: number, sm: any) =>
+              sum + extractNumericAmount(sm?.amount ?? sm?.raw_amount, 0),
             0
           )
 
@@ -742,7 +995,7 @@ export function computeCartTotalIrr(cart: any): number {
     )
   }
 
-  return Math.round(Number(cart?.total ?? 0))
+  return Math.round(extractNumericAmount(cart?.total, 0))
 }
 
 function normalizeAmountToIrr(amount: number, currencyCode?: string | null): number {
@@ -767,19 +1020,31 @@ async function retrieveFullCartForPayment(
         variables: { filters: { id: cartId } },
         fields: [
           "id",
+          "region_id",
+          "sales_channel_id",
           "customer_id",
           "email",
           "currency_code",
+          "locale",
+          "completed_at",
           "total",
           "subtotal",
+          "item_subtotal",
+          "item_total",
+          "item_discount_total",
           "discount_total",
+          "shipping_discount_total",
           "tax_total",
           "shipping_total",
           "metadata",
           "shipping_address.*",
           "billing_address.*",
           "items.*",
+          "items.adjustments.*",
+          "items.tax_lines.*",
           "shipping_methods.*",
+          "shipping_methods.adjustments.*",
+          "shipping_methods.tax_lines.*",
           "promotions.id",
           "promotions.code",
           "promotions.is_automatic",
@@ -799,8 +1064,21 @@ async function retrieveFullCartForPayment(
 
   const cartService = scope.resolve<any>(Modules.CART)
   return await cartService
-    .retrieveCart(cartId, { relations: ["items", "shipping_methods"] })
-    .catch(() => cartService.retrieveCart(cartId).catch(() => null))
+    .retrieveCart(cartId, {
+      relations: [
+        "items",
+        "items.adjustments",
+        "items.tax_lines",
+        "shipping_methods",
+        "shipping_methods.adjustments",
+        "shipping_methods.tax_lines",
+      ],
+    })
+    .catch(() =>
+      cartService
+        .retrieveCart(cartId, { relations: ["items", "shipping_methods"] })
+        .catch(() => cartService.retrieveCart(cartId).catch(() => null))
+    )
 }
 
 export const initiateGatewayPayment = async (
@@ -1306,14 +1584,25 @@ export const verifyGatewayPayment = async (
       const existingMeta = (order?.metadata ?? {}) as Record<string, any>
       const promotionsSnapshot = buildOrderPromotionsSnapshot(fullCart)
       const financialSnapshot = buildCartFinancialSnapshot(fullCart)
+      const nextZarinpalSession = {
+        ...(existingMeta.payment_session ?? session ?? {}),
+        ref_id: verifiedRefId,
+        order_id: completedOrderId,
+        status: "paid",
+        verified_at: new Date().toISOString(),
+      }
       if (
-        orderService?.updateOrders &&
+        typeof orderService?.updateOrders === "function" &&
         (!existingMeta.financial_snapshot ||
+          existingMeta?.payment_session?.status !== "paid" ||
+          existingMeta?.payment_status !== "paid" ||
           (promotionsSnapshot.length > 0 && !existingMeta.promotions))
       ) {
         await orderService.updateOrders(completedOrderId, {
           metadata: {
             ...existingMeta,
+            payment_status: "paid",
+            payment_session: nextZarinpalSession,
             ...(promotionsSnapshot.length > 0
               ? { promotions: promotionsSnapshot }
               : {}),

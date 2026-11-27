@@ -10,10 +10,15 @@ import {
   calculateAmountsWithTax,
   ContainerRegistrationKeys,
   FeatureFlag,
+  getTotalVariantAvailability,
+  getVariantAvailability,
+  isPresent,
   Modules,
+  QueryContext,
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
 import { StoreRequestWithContext } from "../types"
+import { enrichProductsWithBrand } from "../../utils/enrich-products-with-brand"
 import TranslationFeatureFlag from "../../../feature-flags/translation"
 
 export type RequestWithContext<
@@ -430,4 +435,222 @@ export async function applyActiveAutomaticPromotionsToProducts(
       }
     }
   }
+}
+
+async function resolveDiscoveryPricingContext(
+  req: any,
+  query: any
+): Promise<Record<string, any>> {
+  if (isPresent(req?.pricingContext) && typeof req.pricingContext === "object") {
+    return req.pricingContext
+  }
+
+  const queryCurrency =
+    typeof req?.query?.currency_code === "string" && req.query.currency_code.trim()
+      ? req.query.currency_code.trim().toLowerCase()
+      : undefined
+  const queryRegionId =
+    typeof req?.query?.region_id === "string" && req.query.region_id.trim()
+      ? req.query.region_id.trim()
+      : undefined
+
+  try {
+    let regionId = queryRegionId
+    if (!regionId) {
+      const storeRes = await query.graph({
+        entity: "store",
+        fields: ["id", "default_region_id"],
+        pagination: { take: 1, skip: 0 },
+      })
+      const stores = storeRes?.data ?? []
+      regionId = stores[0]?.default_region_id ?? undefined
+    }
+
+    if (regionId) {
+      const regRes = await query.graph({
+        entity: "region",
+        filters: { id: regionId },
+        fields: ["id", "currency_code"],
+        pagination: { take: 1, skip: 0 },
+      })
+      const region = regRes?.data?.[0]
+      if (region) {
+        return {
+          region_id: region.id,
+          currency_code: queryCurrency ?? region.currency_code ?? "irr",
+        }
+      }
+    }
+
+    const fallbackRegRes = await query.graph({
+      entity: "region",
+      fields: ["id", "currency_code"],
+      pagination: { take: 1, skip: 0 },
+    })
+    const firstRegion = fallbackRegRes?.data?.[0]
+    if (firstRegion) {
+      return {
+        region_id: firstRegion.id,
+        currency_code: queryCurrency ?? firstRegion.currency_code ?? "irr",
+      }
+    }
+  } catch {
+    // Fall back to default store currency context
+  }
+
+  return { currency_code: queryCurrency ?? "irr" }
+}
+
+async function hydrateDiscoveryVariantsInventory(
+  req: any,
+  query: any,
+  products: any[]
+): Promise<void> {
+  const variants = products.flatMap((p) => p?.variants ?? []).filter((v) => v?.id)
+  if (variants.length === 0) {
+    return
+  }
+
+  const variantIds = Array.from(new Set<string>(variants.map((v) => v.id)))
+  const pkChannels = req?.publishable_key_context?.sales_channel_ids ?? []
+  const singleChannelId = pkChannels.length === 1 ? pkChannels[0] : undefined
+
+  let availability: Record<string, { availability: number | null }> = {}
+  try {
+    availability = singleChannelId
+      ? await getVariantAvailability(query, {
+          variant_ids: variantIds,
+          sales_channel_id: singleChannelId,
+        })
+      : await getTotalVariantAvailability(query, {
+          variant_ids: variantIds,
+        })
+  } catch {
+    return
+  }
+
+  for (const variant of variants) {
+    if (variant.manage_inventory === false) {
+      continue
+    }
+    const qty = availability?.[variant.id]?.availability
+    if (qty !== null && qty !== undefined && Number.isFinite(Number(qty))) {
+      variant.inventory_quantity = Number(qty)
+    }
+  }
+}
+
+/**
+ * Hydrates discovery & recommendation products (`/related`, `bestsellers`, `newest`,
+ * `popular`, `trending`, `similar`, `frequently-bought-together`, `recommendations`)
+ * with variant prices, calculated prices, inventory quantities, `realPrice`, `finalPrice`,
+ * `discount`, `stock`, active automatic promotions, and `brand`.
+ */
+export async function enrichStoreDiscoveryProducts(
+  req: any,
+  products: any[]
+): Promise<any[]> {
+  if (!Array.isArray(products) || products.length === 0) {
+    return products ?? []
+  }
+
+  const productIds = Array.from(
+    new Set<string>(
+      products
+        .map((p) => p?.id)
+        .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
+    )
+  )
+
+  if (productIds.length > 0 && req?.scope) {
+    let query: any = null
+    try {
+      query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+    } catch {
+      query = null
+    }
+
+    if (typeof query?.graph === "function") {
+      try {
+        const pricingContext = await resolveDiscoveryPricingContext(req, query)
+        const baseFields = [
+          "id",
+          "metadata",
+          "thumbnail",
+          "images.*",
+          "options.*",
+          "options.values.*",
+          "variants.*",
+          "variants.prices.*",
+        ]
+
+        let hydratedProducts: any[] = []
+        try {
+          const graphRes = await query.graph(
+            {
+              entity: "product",
+              filters: { id: productIds },
+              fields: [...baseFields, "variants.calculated_price.*"],
+              context: {
+                variants: {
+                  calculated_price: QueryContext(pricingContext),
+                },
+              },
+            },
+            { locale: req?.locale }
+          )
+          hydratedProducts = graphRes?.data ?? []
+        } catch {
+          const fallbackRes = await query.graph(
+            {
+              entity: "product",
+              filters: { id: productIds },
+              fields: baseFields,
+            },
+            { locale: req?.locale }
+          )
+          hydratedProducts = fallbackRes?.data ?? []
+        }
+
+        if (hydratedProducts.length > 0) {
+          await hydrateDiscoveryVariantsInventory(req, query, hydratedProducts)
+          const byId = new Map<string, any>(
+            hydratedProducts.filter((hp) => hp?.id).map((hp) => [hp.id, hp])
+          )
+
+          for (const product of products) {
+            const hydrated = product?.id ? byId.get(product.id) : undefined
+            if (!hydrated) {
+              continue
+            }
+            if (Array.isArray(hydrated.variants)) {
+              product.variants = hydrated.variants
+            }
+            if (Array.isArray(hydrated.images)) {
+              product.images = hydrated.images
+            }
+            if (Array.isArray(hydrated.options)) {
+              product.options = hydrated.options
+            }
+            if (hydrated.metadata !== undefined) {
+              product.metadata = hydrated.metadata
+            }
+            if (hydrated.thumbnail !== undefined && hydrated.thumbnail !== null) {
+              product.thumbnail = hydrated.thumbnail
+            }
+          }
+        }
+      } catch {
+        // Continue with existing variant/metadata fields when graph hydration is unavailable
+      }
+    }
+  }
+
+  enrichProductsWithStoreSummary(products)
+  if (req?.scope) {
+    await applyActiveAutomaticPromotionsToProducts(req.scope, products)
+    await enrichProductsWithBrand(req.scope, products)
+  }
+
+  return products
 }

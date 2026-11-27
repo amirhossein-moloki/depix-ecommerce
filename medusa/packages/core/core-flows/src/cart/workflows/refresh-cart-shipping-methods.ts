@@ -29,6 +29,104 @@ export type RefreshCartShippingMethodsWorkflowInput = {
   cart?: any
 }
 
+const CUSTOM_DYNAMIC_SHIPPING_CODES = new Set([
+  "postex_post",
+  "tabriz_courier",
+])
+
+/**
+ * Returns true when a cart shipping method uses a custom dynamic rate
+ * (e.g. Postex or Tabriz local courier) rather than a static DB shipping option.
+ */
+export function isCustomDynamicShippingMethod(shippingMethod: any): boolean {
+  const candidates = [
+    shippingMethod?.shipping_option_id,
+    shippingMethod?.data?.code,
+    shippingMethod?.metadata?.code,
+  ]
+  return candidates.some(
+    (c) =>
+      typeof c === "string" &&
+      CUSTOM_DYNAMIC_SHIPPING_CODES.has(c.trim().toLowerCase())
+  )
+}
+
+/**
+ * Computes which shipping methods should be removed or updated, preserving
+ * custom dynamic shipping methods (`postex_post`, `tabriz_courier`).
+ */
+export function partitionShippingMethodRefreshUpdates(
+  shippingMethods: any[] = [],
+  items: any[] = [],
+  shippingOptions: any[] = []
+): {
+  shippingMethodsToRemove: string[]
+  shippingMethodsToUpdate: any[]
+} {
+  const standardMethods = shippingMethods.filter(
+    (sm) => !isCustomDynamicShippingMethod(sm)
+  )
+
+  const shouldCleanupOrphanProfiles = standardMethods.length > 1
+  const requiredProfileIds = new Set(
+    (items as any[])
+      .filter((item) => item.requires_shipping)
+      .map((item) => item.variant?.product?.shipping_profile?.id)
+      .filter(Boolean)
+  )
+
+  const validStandardMethods = standardMethods.filter((shippingMethod) => {
+    const shippingOption = shippingOptions.find(
+      (opt) => opt.id === shippingMethod.shipping_option_id
+    )
+
+    const shippingOptionPrice =
+      shippingOption?.calculated_price?.calculated_amount
+
+    if (!isPresent(shippingOption) || !isDefined(shippingOptionPrice)) {
+      return false
+    }
+
+    const profileId = shippingOption.shipping_profile_id
+    if (
+      shouldCleanupOrphanProfiles &&
+      profileId &&
+      !requiredProfileIds.has(profileId)
+    ) {
+      return false
+    }
+
+    return true
+  })
+
+  const validStandardMethodIds = new Set(
+    validStandardMethods.map((sm) => sm.id)
+  )
+  const invalidStandardMethodIds = standardMethods
+    .map((sm) => sm.id)
+    .filter((id) => !validStandardMethodIds.has(id))
+
+  const shippingMethodsToUpdate = validStandardMethods.map((shippingMethod) => {
+    const shippingOption = shippingOptions.find(
+      (s) => s.id === shippingMethod.shipping_option_id
+    )!
+
+    return {
+      id: shippingMethod.id,
+      shipping_option_id: shippingOption.id,
+      name: shippingOption.name,
+      amount: shippingOption.calculated_price.calculated_amount,
+      is_tax_inclusive:
+        shippingOption.calculated_price.is_calculated_price_tax_inclusive,
+    }
+  })
+
+  return {
+    shippingMethodsToRemove: invalidStandardMethodIds,
+    shippingMethodsToUpdate,
+  }
+}
+
 export const refreshCartShippingMethodsWorkflowId =
   "refresh-cart-shipping-methods"
 /**
@@ -121,6 +219,7 @@ export const refreshCartShippingMethodsWorkflow = createWorkflow(
 
     const listShippingOptionsInput = transform({ cart }, ({ cart }) =>
       (cart.shipping_methods || [])
+        .filter((shippingMethod) => !isCustomDynamicShippingMethod(shippingMethod))
         .map((shippingMethod) => ({
           id: shippingMethod.shipping_option_id,
           data: shippingMethod.data,
@@ -154,84 +253,12 @@ export const refreshCartShippingMethodsWorkflow = createWorkflow(
       // on the validity of the shipping options for the cart
       const shippingMethodsData = transform(
         { cart, shippingOptions },
-        ({ cart, shippingOptions }) => {
-          const { shipping_methods: shippingMethods = [], items = [] } = cart
-
-          // Collect profile IDs still required by remaining cart items so that
-          // shipping methods for profiles with no matching items can be dropped.
-          // Avoid clearing shipping methods for single-method carts.
-          const shouldCleanupOrphanProfiles = shippingMethods.length > 1
-          const requiredProfileIds = new Set(
-            (items as any[])
-              .filter((item) => item.requires_shipping)
-              .map((item) => item.variant?.product?.shipping_profile?.id)
-              .filter(Boolean)
+        ({ cart, shippingOptions }) =>
+          partitionShippingMethodRefreshUpdates(
+            cart.shipping_methods ?? [],
+            cart.items ?? [],
+            shippingOptions ?? []
           )
-
-          const validShippingMethods = shippingMethods.filter(
-            (shippingMethod) => {
-              // Fetch  the available shipping options for the cart context and find the one associated
-              // with the current shipping method
-              const shippingOption = shippingOptions.find(
-                (shippingOption) =>
-                  shippingOption.id === shippingMethod.shipping_option_id
-              )
-
-              const shippingOptionPrice =
-                shippingOption?.calculated_price?.calculated_amount
-
-              // The shipping method is only valid if both the shipping option and the price is found
-              // for the context of the cart. The invalid options will lead to a deleted shipping method
-              if (
-                !isPresent(shippingOption) ||
-                !isDefined(shippingOptionPrice)
-              ) {
-                return false
-              }
-
-              // Remove shipping methods whose profile is no longer required by any remaining item.
-              const profileId = shippingOption.shipping_profile_id
-              if (
-                shouldCleanupOrphanProfiles &&
-                profileId &&
-                !requiredProfileIds.has(profileId)
-              ) {
-                return false
-              }
-
-              return true
-            }
-          )
-
-          const shippingMethodIds = shippingMethods.map((sm) => sm.id)
-          const validShippingMethodIds = validShippingMethods.map((sm) => sm.id)
-          const invalidShippingMethodIds = shippingMethodIds.filter(
-            (id) => !validShippingMethodIds.includes(id)
-          )
-
-          const shippingMethodsToUpdate = validShippingMethods.map(
-            (shippingMethod) => {
-              const shippingOption = shippingOptions.find(
-                (s) => s.id === shippingMethod.shipping_option_id
-              )!
-
-              return {
-                id: shippingMethod.id,
-                shipping_option_id: shippingOption.id,
-                name: shippingOption.name,
-                amount: shippingOption.calculated_price.calculated_amount,
-                is_tax_inclusive:
-                  shippingOption.calculated_price
-                    .is_calculated_price_tax_inclusive,
-              }
-            }
-          )
-
-          return {
-            shippingMethodsToRemove: invalidShippingMethodIds,
-            shippingMethodsToUpdate,
-          }
-        }
       )
 
       parallelize(

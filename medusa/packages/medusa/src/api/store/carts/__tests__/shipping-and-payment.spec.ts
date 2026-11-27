@@ -1,6 +1,9 @@
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { partitionShippingMethodRefreshUpdates } from "../../../../../../core/core-flows/src/cart/workflows/refresh-cart-shipping-methods"
+import { GET as getActiveFreeShipping } from "../../free-shipping-rules/active/route"
 import { POST as addShippingMethods } from "../[id]/shipping-methods/route"
 import { POST as updateLineItem } from "../[id]/line-items/[line_id]/route"
+import { refetchCart } from "../helpers"
 import { initiateGatewayPayment } from "../../payments/gateway"
 
 describe("Dynamic Postex/Tabriz Shipping & IRR Payment Consistency", () => {
@@ -279,5 +282,196 @@ describe("Dynamic Postex/Tabriz Shipping & IRR Payment Consistency", () => {
 
     expect(res.status).toHaveBeenCalledWith(200)
     expect(res.json).toHaveBeenCalledWith({ cart: updatedCart })
+  })
+
+  it("preserves custom dynamic shipping methods (postex_post, tabriz_courier) during cart refresh", () => {
+    const result = partitionShippingMethodRefreshUpdates(
+      [
+        {
+          id: "sm_postex",
+          shipping_option_id: "postex_post",
+          amount: 850000,
+          data: { code: "postex_post", to_city_code: 1 },
+        },
+        {
+          id: "sm_tabriz",
+          shipping_option_id: "tabriz_courier",
+          amount: 0,
+          data: { code: "tabriz_courier" },
+        },
+        {
+          id: "sm_orphan_standard",
+          shipping_option_id: "so_deleted",
+          amount: 100000,
+        },
+      ],
+      [{ id: "item_1", requires_shipping: true }],
+      [] // No matching DB shipping_option rows returned
+    )
+
+    expect(result.shippingMethodsToRemove).toEqual(["sm_orphan_standard"])
+    expect(result.shippingMethodsToUpdate).toEqual([])
+  })
+
+  it("evaluates GET /store/free-shipping-rules/active on post-discount payable amount excluding shipping", async () => {
+    const discountedCart = {
+      id: "cart_01M8EE86D1G7VWCSRA64MHSC79",
+      subtotal: 1499970,
+      discount_total: 1199976,
+      item_total: 299994,
+      shipping_total: 850000,
+      total: 1149994,
+      items: [
+        {
+          id: "li_1",
+          product_id: "prod_1",
+          quantity: 1,
+          unit_price: 1499970,
+        },
+      ],
+    }
+
+    const mockPromotionService = {
+      listFreeShippingRules: jest.fn().mockResolvedValue([
+        {
+          id: "fsr_1",
+          title: "ارسال رایگان بالای ۱.۵ میلیون تومان",
+          is_active: true,
+          scope: "store",
+          min_purchase_amount: 15000000,
+        },
+      ]),
+    }
+
+    const mockRemoteQuery = jest.fn().mockResolvedValue([discountedCart])
+
+    const req: any = {
+      query: { cart_id: discountedCart.id },
+      scope: {
+        resolve: jest.fn((key: string) => {
+          if (key === Modules.PROMOTION) return mockPromotionService
+          if (key === ContainerRegistrationKeys.REMOTE_QUERY) {
+            return mockRemoteQuery
+          }
+          return null
+        }),
+      },
+    }
+    const res: any = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    }
+
+    await getActiveFreeShipping(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(200)
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        free_shipping: {
+          has_active_rule: true,
+          is_eligible: false,
+          rule_title: "ارسال رایگان بالای ۱.۵ میلیون تومان",
+          min_purchase_amount_irr: 15000000,
+          remaining_amount_irr: 14700006,
+        },
+      })
+    )
+  })
+
+  it("hydrates variant.inventory_quantity and available_quantity in refetchCart and strips virtual query fields", async () => {
+    const cartRow: any = {
+      id: "cart_inv_1",
+      sales_channel_id: "sc_1",
+      items: [
+        {
+          id: "li_managed",
+          variant_id: "var_managed",
+          quantity: 1,
+          variant: {
+            id: "var_managed",
+            manage_inventory: true,
+          },
+        },
+        {
+          id: "li_unmanaged",
+          variant_id: "var_unmanaged",
+          quantity: 2,
+          variant: {
+            id: "var_unmanaged",
+            manage_inventory: false,
+          },
+        },
+      ],
+    }
+
+    const mockRemoteQuery = jest.fn().mockResolvedValue([cartRow])
+    const mockQuery = {
+      graph: jest.fn().mockImplementation(({ entity }: any) => {
+        if (entity === "product_variant_inventory_items") {
+          return Promise.resolve({
+            data: [
+              {
+                variant_id: "var_managed",
+                required_quantity: 1,
+                variant: { manage_inventory: true, allow_backorder: false },
+                inventory: {
+                  location_levels: [
+                    { location_id: "sloc_1", available_quantity: 7 },
+                  ],
+                },
+              },
+              {
+                variant_id: "var_unmanaged",
+                required_quantity: 1,
+                variant: { manage_inventory: false, allow_backorder: false },
+                inventory: {
+                  location_levels: [
+                    { location_id: "sloc_1", available_quantity: 3 },
+                  ],
+                },
+              },
+            ],
+          })
+        }
+        if (entity === "sales_channel_locations") {
+          return Promise.resolve({
+            data: [{ stock_location_id: "sloc_1" }],
+          })
+        }
+        return Promise.resolve({ data: [] })
+      }),
+    }
+
+    const scope: any = {
+      resolve: jest.fn((key: string) => {
+        if (key === ContainerRegistrationKeys.REMOTE_QUERY) {
+          return mockRemoteQuery
+        }
+        if (key === ContainerRegistrationKeys.QUERY) {
+          return mockQuery
+        }
+        return null
+      }),
+    }
+
+    const cart = await refetchCart("cart_inv_1", scope, [
+      "id",
+      "items.variant",
+      "items.variant.inventory_quantity",
+      "items.available_quantity",
+    ])
+
+    // Virtual fields must not reach remoteQuery
+    expect(mockRemoteQuery).toHaveBeenCalledWith(
+      expect.anything()
+    )
+    const serialized = JSON.stringify(mockRemoteQuery.mock.calls[0][0])
+    expect(serialized).not.toContain("inventory_quantity")
+    expect(serialized).not.toContain("available_quantity")
+
+    expect(cart.items[0].variant.inventory_quantity).toBe(7)
+    expect(cart.items[0].available_quantity).toBe(7)
+    expect(cart.items[1].variant.inventory_quantity).toBeNull()
+    expect(cart.items[1].available_quantity).toBeNull()
   })
 })

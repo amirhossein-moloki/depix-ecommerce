@@ -3,7 +3,7 @@ import { GET as getBestsellers } from "../bestsellers/route"
 import { GET as getRelatedProducts } from "../[id]/related/route"
 import { getBestSellingProductsWorkflow } from "../../../../../../core/core-flows/src/product/workflows/get-bestselling-products"
 import { getRelatedProductsWorkflow } from "../../../../../../core/core-flows/src/product/workflows/get-related-products"
-import { createMedusaContainer, Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, createMedusaContainer, Modules } from "@medusajs/framework/utils"
 import { asValue } from "awilix"
 
 describe("Store Product Discovery API & Workflows", () => {
@@ -186,6 +186,145 @@ describe("Store Product Discovery API & Workflows", () => {
         .catch((e) => ({ errors: [{ error: e }] }))
 
       expect(errors[0].error.message).toContain("Product with id prod_invalid not found")
+    })
+
+    it("enriches GET /store/products/:id/related with realPrice, finalPrice, discount, stock, brand, variants.prices, and inventory_quantity", async () => {
+      const mockProductService = {
+        retrieveProduct: jest.fn().mockResolvedValue({
+          id: "prod_target",
+          categories: [{ id: "cat_tools" }],
+        }),
+        listAndCountProducts: jest.fn().mockResolvedValue([
+          [
+            {
+              id: "prod_rel_1",
+              title: "Bosch Drill",
+              created_at: "2025-02-01",
+              categories: [{ id: "cat_tools" }],
+            },
+          ],
+          1,
+        ]),
+      }
+
+      const mockBrandService = {
+        listBrands: jest.fn().mockResolvedValue([
+          {
+            id: "brand_bosch",
+            name: "بوش",
+            slug: "bosch",
+            logo_id: "med_1",
+            metadata: null,
+          },
+        ]),
+      }
+
+      const mockQuery = {
+        graph: jest.fn().mockImplementation(({ entity }: any) => {
+          if (entity === "store") {
+            return Promise.resolve({
+              data: [{ id: "store_1", default_region_id: "reg_ir" }],
+            })
+          }
+          if (entity === "region") {
+            return Promise.resolve({
+              data: [{ id: "reg_ir", currency_code: "irr" }],
+            })
+          }
+          if (entity === "product") {
+            return Promise.resolve({
+              data: [
+                {
+                  id: "prod_rel_1",
+                  metadata: { brand_slug: "bosch" },
+                  variants: [
+                    {
+                      id: "var_rel_1",
+                      manage_inventory: true,
+                      prices: [{ id: "pr_1", currency_code: "irr", amount: 1000000 }],
+                      calculated_price: {
+                        original_amount: 1000000,
+                        calculated_amount: 1000000,
+                        currency_code: "irr",
+                      },
+                    },
+                  ],
+                },
+              ],
+            })
+          }
+          if (entity === "product_variant_inventory_items") {
+            return Promise.resolve({
+              data: [
+                {
+                  variant_id: "var_rel_1",
+                  required_quantity: 1,
+                  variant: { manage_inventory: true, allow_backorder: false },
+                  inventory: {
+                    location_levels: [
+                      { location_id: "sloc_1", available_quantity: 4 },
+                    ],
+                  },
+                },
+              ],
+            })
+          }
+          return Promise.resolve({ data: [] })
+        }),
+      }
+
+      const mockRemoteQuery = jest.fn().mockResolvedValue([
+        {
+          id: "promo_auto_20",
+          code: "AUTO20",
+          status: "active",
+          is_automatic: true,
+          metadata: {},
+          application_method: {
+            type: "percentage",
+            value: 20,
+            target_type: "items",
+            target_rules: [],
+          },
+        },
+      ])
+
+      const container = createMedusaContainer()
+      container.register({
+        [Modules.PRODUCT]: asValue(mockProductService),
+        [Modules.BRAND]: asValue(mockBrandService),
+        [ContainerRegistrationKeys.QUERY]: asValue(mockQuery),
+        [ContainerRegistrationKeys.REMOTE_QUERY]: asValue(mockRemoteQuery),
+      })
+
+      const req: any = {
+        params: { id: "prod_target" },
+        query: { limit: "10", offset: "0" },
+        scope: container,
+      }
+      const jsonMock = jest.fn()
+      const res: any = { json: jsonMock }
+
+      await getRelatedProducts(req, res)
+
+      const payload = jsonMock.mock.calls[0][0]
+      expect(payload.products).toHaveLength(1)
+      expect(payload.products[0]).toMatchObject({
+        id: "prod_rel_1",
+        realPrice: 1000000,
+        finalPrice: 800000,
+        discount: 20,
+        stock: true,
+        brand: expect.objectContaining({
+          id: "brand_bosch",
+          slug: "bosch",
+          name: "بوش",
+        }),
+      })
+      expect(payload.products[0].variants[0].prices).toEqual([
+        { id: "pr_1", currency_code: "irr", amount: 1000000 },
+      ])
+      expect(payload.products[0].variants[0].inventory_quantity).toBe(4)
     })
   })
 })

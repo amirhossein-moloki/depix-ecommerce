@@ -1,5 +1,9 @@
 import { MedusaContainer } from "@medusajs/framework/types"
-import { Modules } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  Modules,
+  remoteQueryObjectFromString,
+} from "@medusajs/framework/utils"
 
 export interface FreeShippingStatus {
   has_active_rule: boolean
@@ -27,6 +31,125 @@ function isRuleScopeMatching(rule: any, cartProductIds: Set<string>): boolean {
     return rule.product_ids.some((pid: string) => cartProductIds.has(pid))
   }
   return false
+}
+
+/**
+ * Resolves the post-discount payable merchandise amount in IRR (excluding shipping)
+ * so free-shipping thresholds are evaluated after discounts without shipping self-qualifying.
+ */
+export function resolveCartPayableAmountIrr(cart: any): number {
+  if (!cart || typeof cart !== "object") {
+    return 0
+  }
+
+  if (cart.item_total !== undefined && cart.item_total !== null) {
+    const itemTotal = Number(cart.item_total)
+    if (Number.isFinite(itemTotal)) {
+      return Math.max(0, Math.round(itemTotal))
+    }
+  }
+
+  if (cart.total !== undefined && cart.total !== null) {
+    const total = Number(cart.total)
+    if (Number.isFinite(total)) {
+      const shippingTotal = Number(cart.shipping_total ?? 0)
+      return Math.max(
+        0,
+        Math.round(total - (Number.isFinite(shippingTotal) ? shippingTotal : 0))
+      )
+    }
+  }
+
+  const rawSubtotal =
+    cart.item_subtotal !== undefined && cart.item_subtotal !== null
+      ? Number(cart.item_subtotal)
+      : cart.subtotal !== undefined && cart.subtotal !== null
+        ? Number(cart.subtotal)
+        : Array.isArray(cart.items)
+          ? cart.items.reduce(
+              (sum: number, item: any) =>
+                sum + Number(item?.unit_price ?? 0) * Number(item?.quantity ?? 0),
+              0
+            )
+          : 0
+
+  const explicitDiscount =
+    cart.item_discount_total !== undefined && cart.item_discount_total !== null
+      ? Number(cart.item_discount_total)
+      : cart.discount_total !== undefined && cart.discount_total !== null
+        ? Number(cart.discount_total)
+        : Array.isArray(cart.items)
+          ? cart.items.reduce(
+              (sum: number, item: any) =>
+                sum +
+                (Array.isArray(item?.adjustments)
+                  ? item.adjustments.reduce(
+                      (s: number, adj: any) => s + Number(adj?.amount ?? 0),
+                      0
+                    )
+                  : 0),
+              0
+            )
+          : 0
+
+  const safeSubtotal = Number.isFinite(rawSubtotal) ? rawSubtotal : 0
+  const safeDiscount = Number.isFinite(explicitDiscount) ? explicitDiscount : 0
+  return Math.max(0, Math.round(safeSubtotal - safeDiscount))
+}
+
+async function loadCartForFreeShipping(
+  scope: MedusaContainer,
+  cartOrId?: string | any
+): Promise<any> {
+  if (!cartOrId) {
+    return null
+  }
+  if (typeof cartOrId !== "string") {
+    return cartOrId
+  }
+
+  try {
+    const remoteQuery = scope.resolve<any>(ContainerRegistrationKeys.REMOTE_QUERY)
+    if (typeof remoteQuery === "function") {
+      const queryObj = remoteQueryObjectFromString({
+        entryPoint: "cart",
+        variables: { filters: { id: cartOrId } },
+        fields: [
+          "id",
+          "total",
+          "subtotal",
+          "item_total",
+          "item_subtotal",
+          "discount_total",
+          "item_discount_total",
+          "shipping_total",
+          "items.id",
+          "items.product_id",
+          "items.quantity",
+          "items.unit_price",
+          "items.adjustments.amount",
+        ],
+      })
+      const [queriedCart] = await remoteQuery(queryObj)
+      if (queriedCart) {
+        return queriedCart
+      }
+    }
+  } catch {
+    // Fall back to Modules.CART when remoteQuery is unavailable in unit tests
+  }
+
+  const cartService = scope.resolve<any>(Modules.CART)
+  if (!cartService?.retrieveCart) {
+    return null
+  }
+  return await cartService
+    .retrieveCart(cartOrId, { relations: ["items", "items.adjustments"] })
+    .catch(() =>
+      cartService
+        .retrieveCart(cartOrId, { relations: ["items"] })
+        .catch(() => null)
+    )
 }
 
 /**
@@ -58,15 +181,8 @@ export async function getActiveFreeShippingStatus(
       return { status: emptyStatus, activeRules: [] }
     }
 
-    let cart = typeof cartOrId === "string" ? null : cartOrId
-    if (!cart && typeof cartOrId === "string") {
-      const cartService = scope.resolve<any>(Modules.CART)
-      cart = await cartService
-        .retrieveCart(cartOrId, { relations: ["items"] })
-        .catch(() => null)
-    }
-
-    const cartSubtotal = Number(cart?.subtotal ?? cart?.item_subtotal ?? 0)
+    const cart = await loadCartForFreeShipping(scope, cartOrId)
+    const cartPayableAmount = resolveCartPayableAmountIrr(cart)
     const cartProductIds = new Set<string>(
       (cart?.items ?? []).map((i: any) => i.product_id).filter(Boolean)
     )
@@ -78,7 +194,7 @@ export async function getActiveFreeShippingStatus(
           }
           if (
             rule.min_purchase_amount != null &&
-            cartSubtotal < Number(rule.min_purchase_amount)
+            cartPayableAmount < Number(rule.min_purchase_amount)
           ) {
             return false
           }
@@ -99,7 +215,7 @@ export async function getActiveFreeShippingStatus(
     const remainingAmountIrr = eligibleRule
       ? 0
       : minPurchaseIrr != null
-        ? Math.max(0, minPurchaseIrr - cartSubtotal)
+        ? Math.max(0, minPurchaseIrr - cartPayableAmount)
         : null
 
     return {
@@ -118,7 +234,7 @@ export async function getActiveFreeShippingStatus(
 }
 
 /**
- * Evaluates active FreeShippingRule records against a cart's subtotal and items.
+ * Evaluates active FreeShippingRule records against a cart's post-discount payable amount and items.
  */
 export async function isCartEligibleForFreeShipping(
   scope: MedusaContainer,

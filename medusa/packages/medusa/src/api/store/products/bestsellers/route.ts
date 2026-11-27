@@ -3,6 +3,7 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
+import { enrichStoreDiscoveryProducts } from "../helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -20,8 +21,13 @@ export const GET = async (
     },
   })
 
+  const products = await enrichStoreDiscoveryProducts(
+    req,
+    result.products ?? []
+  )
+
   res.json({
-    products: result.products,
+    products,
     count: result.count,
     offset: result.offset,
     limit: result.limit,

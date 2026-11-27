@@ -133,9 +133,15 @@ export const POST = async (
 
       const isFreeShipping = await isCartEligibleForFreeShipping(
         req.scope,
-        existingCart
+        cartId
       )
       const finalAmountIrr = isFreeShipping ? 0 : quotedAmountIrr
+
+      cartMetadataPatch = {
+        shipping_method_code: "postex_post",
+        shipping_payment_type: "prepaid",
+        shipping_note: null,
+      }
 
       preparedOptions.push({
         id: option.option_id,
@@ -170,6 +176,14 @@ export const POST = async (
         },
       })
     } else {
+      if (existingCart.metadata?.shipping_method_code === "tabriz_courier") {
+        cartMetadataPatch = {
+          shipping_method_code: null,
+          shipping_payment_type: null,
+          shipping_note: null,
+        }
+      }
+
       preparedOptions.push({
         id: option.option_id,
         kind,

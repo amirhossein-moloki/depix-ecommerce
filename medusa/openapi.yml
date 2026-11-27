@@ -2335,6 +2335,7 @@ paths:
   /store/products/bestsellers:
     get:
       summary: Get Bestseller Products
+      description: Returns bestselling products enriched with variant prices, inventory quantities, realPrice, finalPrice, discount, stock, and brand.
       tags:
       - Products & Discovery
       parameters:
@@ -2355,9 +2356,16 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
   /store/products/newest:
     get:
       summary: Get Newest Arrival Products
+      description: Returns newest published products enriched with variant prices, inventory quantities, realPrice, finalPrice, discount, stock, and brand.
       tags:
       - Products & Discovery
       parameters:
@@ -2378,9 +2386,16 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
   /store/products/popular:
     get:
       summary: Get Popular Products
+      description: Returns popular products enriched with variant prices, inventory quantities, realPrice, finalPrice, discount, stock, and brand.
       tags:
       - Products & Discovery
       parameters:
@@ -2401,9 +2416,16 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
   /store/products/trending:
     get:
       summary: Get Trending Products
+      description: Returns trending products enriched with variant prices, inventory quantities, realPrice, finalPrice, discount, stock, and brand.
       tags:
       - Products & Discovery
       parameters:
@@ -2424,6 +2446,12 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
   /store/products/{id}/json-ld:
     get:
       summary: Get Schema.org Product JSON-LD Structured Data
@@ -2734,6 +2762,7 @@ paths:
   /store/products/{id}/related:
     get:
       summary: Get Related Products
+      description: Returns related products enriched with variant prices, calculated prices, inventory quantities, realPrice, finalPrice, discount, stock, and brand.
       tags:
       - Recommendations & Comparison & Wishlist
       parameters:
@@ -2742,17 +2771,64 @@ paths:
         required: true
         schema:
           type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
       responses:
         '200':
           description: List of related products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
   /store/recommendations:
     get:
       summary: Get Personalized Product Recommendations
+      description: Returns recommended products enriched with variant prices, calculated prices, inventory quantities, realPrice, finalPrice, discount, stock, and brand.
       tags:
       - Recommendations & Comparison & Wishlist
       responses:
         '200':
           description: Recommended products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+                  strategy_used:
+                    type: string
+                  fallback_applied:
+                    type: boolean
   /store/carts:
     post:
       summary: Create New Cart
@@ -3108,7 +3184,7 @@ paths:
     get:
       summary: Get Active Free Shipping Rules
       operationId: storeGetActiveFreeShippingRules
-      description: Returns active free shipping rule status and optional cart eligibility / remaining threshold in IRR.
+      description: Returns active free shipping rule status and optional cart eligibility / remaining threshold in IRR evaluated against the cart's post-discount payable merchandise total (excluding shipping).
       tags:
       - Carts & Checkout
       parameters:
@@ -9303,8 +9379,36 @@ components:
           type: string
         barcode:
           type: string
+        manage_inventory:
+          type: boolean
+        allow_backorder:
+          type: boolean
+        inventory_quantity:
+          type: integer
+          nullable: true
         price:
           type: number
+        prices:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              currency_code:
+                type: string
+              amount:
+                type: number
+        calculated_price:
+          type: object
+          nullable: true
+          properties:
+            calculated_amount:
+              type: number
+            original_amount:
+              type: number
+            currency_code:
+              type: string
     ProductReview:
       type: object
       properties:
@@ -9370,6 +9474,73 @@ components:
           type: number
         total:
           type: number
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              variant_id:
+                type: string
+              product_id:
+                type: string
+              quantity:
+                type: number
+              unit_price:
+                type: number
+              available_quantity:
+                type: integer
+                nullable: true
+                description: Live available inventory quantity for the variant
+              adjustments:
+                type: array
+                items:
+                  type: object
+              variant:
+                type: object
+                nullable: true
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  sku:
+                    type: string
+                  manage_inventory:
+                    type: boolean
+                  allow_backorder:
+                    type: boolean
+                  inventory_quantity:
+                    type: integer
+                    nullable: true
+                    description: Live inventory quantity resolved for this variant
+        shipping_methods:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+                nullable: true
+              amount:
+                type: number
+              shipping_option_id:
+                type: string
+              data:
+                type: object
+                nullable: true
+                additionalProperties: true
+              metadata:
+                type: object
+                nullable: true
+                additionalProperties: true
         promotions:
           type: array
           items:
@@ -9428,12 +9599,14 @@ components:
           type: number
         discount_total:
           type: number
+          description: Total discount carried over from cart adjustments (IRR)
         shipping_total:
           type: number
         tax_total:
           type: number
         total:
           type: number
+          description: Net payable/paid order total after discounts plus shipping and tax (IRR)
         promotions:
           type: array
           items:
@@ -9456,6 +9629,7 @@ components:
           properties:
             paid_total:
               type: number
+              description: Actual captured payment amount matching the verified gateway transaction
             refunded_total:
               type: number
             pending_difference:
@@ -9470,6 +9644,30 @@ components:
           type: array
           items:
             type: object
+        shipping_methods:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+                nullable: true
+              amount:
+                type: number
+              shipping_option_id:
+                type: string
+              data:
+                type: object
+                nullable: true
+                additionalProperties: true
+              metadata:
+                type: object
+                nullable: true
+                additionalProperties: true
         shipping_address:
           type: object
           nullable: true
@@ -9479,7 +9677,7 @@ components:
         metadata:
           type: object
           nullable: true
-          description: Custom metadata including order_status, fulfillment_status, tracking_number, status_history, and cancel_reason
+          description: Custom metadata including order_status, fulfillment_status, payment_session (status set to paid upon verification), tracking_number, status_history, and cancel_reason
         created_at:
           type: string
           format: date-time

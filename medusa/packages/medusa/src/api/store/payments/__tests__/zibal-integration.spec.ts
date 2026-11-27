@@ -1114,5 +1114,235 @@ describe("Zibal Payment Platform Integration & Redirect Flow", () => {
       })
       errorSpy.mockRestore()
     })
+
+    it("carries item adjustments, BigNumber shipping_methods, paid payment_session status, and verified capture amount (Order #13 regression)", async () => {
+      const { transport } = await setupTestPlatform({
+        appUrl: "https://shop.example.com/",
+        environment: "sandbox",
+      })
+
+      transport.handlers.set("/v1/request", () => ({
+        trackId: 99887766,
+        result: 100,
+        message: "success",
+      }))
+      transport.handlers.set("/v1/verify", () => ({
+        amount: 299994,
+        result: 100,
+        status: 1,
+        refNumber: 445566,
+        message: "success",
+      }))
+
+      const cart: any = {
+        id: "cart_01M8EE86D1G7VWCSRA64MHSC79",
+        currency_code: "irr",
+        region_id: "reg_1",
+        sales_channel_id: "sc_1",
+        subtotal: 1499970,
+        item_subtotal: 1499970,
+        discount_total: 1199976,
+        item_discount_total: 1199976,
+        shipping_total: 0,
+        tax_total: 0,
+        total: 299994,
+        promotions: [
+          {
+            id: "promo_80",
+            code: "OFF80",
+            is_automatic: false,
+            application_method: {
+              type: "percentage",
+              value: 80,
+              currency_code: null,
+            },
+          },
+        ],
+        items: [
+          {
+            id: "cali_1",
+            title: "Test Tool",
+            quantity: 1,
+            variant_id: "var_1",
+            product_id: "prod_1",
+            unit_price: 1499970,
+            is_discountable: true,
+            // Deliberately omit item.adjustments to also exercise proportional fallback
+          },
+        ],
+        shipping_methods: [
+          {
+            id: "sm_postex_1",
+            name: "ارسال با پست (پستکس)",
+            shipping_option_id: "postex_post",
+            amount: 850000,
+            raw_amount: { value: "850000", precision: 20 },
+            data: { code: "postex_post", to_city_code: 1 },
+          },
+        ],
+        metadata: {},
+      }
+
+      const cartService = {
+        retrieveCart: jest.fn().mockResolvedValue(cart),
+        updateCarts: jest.fn().mockImplementation((_id: string, data: any) => {
+          Object.assign(cart, data)
+          return Promise.resolve(cart)
+        }),
+      }
+
+      const createdOrders: any[] = []
+      const createPaymentCollectionCalls: any[] = []
+      const markPaidCalls: any[] = []
+      const orderService = {
+        createOrders: jest.fn().mockImplementation((inputs: any[]) => {
+          // Even if an adapter computed inflated total initially, capture should use verified Zibal amount 299994
+          const ord = {
+            id: "order_13_fixed",
+            ...inputs[0],
+            total: 1499970,
+          }
+          createdOrders.push(ord)
+          return Promise.resolve([ord])
+        }),
+        retrieveOrder: jest.fn().mockImplementation((id: string) =>
+          Promise.resolve(createdOrders.find((o) => o.id === id) || { id })
+        ),
+        updateOrders: jest.fn().mockImplementation((id: string, data: any) => {
+          const ord = createdOrders.find((o) => o.id === id)
+          if (ord && data?.metadata) {
+            ord.metadata = data.metadata
+          }
+          return Promise.resolve(ord)
+        }),
+      }
+
+      const we = {
+        run: jest.fn().mockImplementation((wfId: string, opts: any) => {
+          if (wfId === completeCartWorkflowId) {
+            return Promise.reject(new Error("shipping option missing"))
+          }
+          if (wfId === createOrderPaymentCollectionWorkflowId) {
+            createPaymentCollectionCalls.push(opts.input)
+            const pc = {
+              id: "paycol_13",
+              amount: opts.input.amount,
+              status: "not_paid",
+              captured_amount: 0,
+            }
+            const ord = createdOrders.find((o) => o.id === opts.input.order_id)
+            if (ord) {
+              ord.payment_collections = [pc]
+            }
+            return Promise.resolve({ result: [pc] })
+          }
+          if (wfId === markPaymentCollectionAsPaidId) {
+            markPaidCalls.push(opts.input)
+            return Promise.resolve({ result: { id: "pay_pc_13" } })
+          }
+          throw new Error(`Unexpected workflow ${wfId}`)
+        }),
+      }
+
+      const query = {
+        graph: jest.fn().mockImplementation(({ entity, filters }: any) => {
+          if (entity === "order") {
+            const ord = createdOrders.find((o) => o.id === filters?.id)
+            return Promise.resolve({ data: ord ? [ord] : [] })
+          }
+          return Promise.resolve({ data: [] })
+        }),
+      }
+
+      const linkService = { create: jest.fn().mockResolvedValue({}) }
+
+      const scope = {
+        resolve: jest.fn((key: string) => {
+          if (key === Modules.CART) return cartService
+          if (key === Modules.ORDER) return orderService
+          if (key === Modules.WORKFLOW_ENGINE) return we
+          if (key === ContainerRegistrationKeys.QUERY) return query
+          if (key === ContainerRegistrationKeys.REMOTE_QUERY) {
+            return async () => [cart]
+          }
+          if (key === ContainerRegistrationKeys.LINK) return linkService
+          return null
+        }),
+      } as any
+
+      // Initiate payment: must update metadata directly via cartService.updateCarts without running updateCartWorkflow
+      const { res: initRes, json: initJson } = makeRes()
+      await initiatePayment(
+        {
+          validatedBody: { cart_id: cart.id, provider: "zibal" },
+          scope,
+        } as any,
+        initRes
+      )
+      expect(cartService.updateCarts).toHaveBeenCalledWith(
+        cart.id,
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            payment_session: expect.objectContaining({
+              status: "pending",
+              amount_irr: 299994,
+            }),
+          }),
+        })
+      )
+      expect(
+        we.run.mock.calls.some((c) => c[0] === updateCartWorkflowId)
+      ).toBe(false)
+
+      const { payment_id, track_id } = initJson.mock.calls[0][0]
+
+      const { res: verRes, status: verStatus, json: verJson } = makeRes()
+      await verifyPayment(
+        {
+          validatedBody: {
+            cart_id: cart.id,
+            payment_id,
+            track_id,
+          },
+          scope,
+        } as any,
+        verRes
+      )
+
+      expect(verStatus).toHaveBeenCalledWith(200)
+      expect(orderService.createOrders).toHaveBeenCalledTimes(1)
+      const orderInput = orderService.createOrders.mock.calls[0][0][0]
+      expect(orderInput.promo_codes).toEqual(["OFF80"])
+      expect(orderInput.items[0].adjustments).toEqual([
+        expect.objectContaining({
+          code: "OFF80",
+          promotion_id: "promo_80",
+          amount: 1199976,
+        }),
+      ])
+      expect(orderInput.shipping_methods).toEqual([
+        expect.objectContaining({
+          name: "ارسال با پست (پستکس)",
+          shipping_option_id: "postex_post",
+          amount: 850000,
+        }),
+      ])
+      expect(orderInput.metadata.payment_session).toMatchObject({
+        payment_id,
+        track_id,
+        amount_irr: 299994,
+        status: "paid",
+      })
+      // Verified Zibal amount (299994) wins over inflated order.total
+      expect(createPaymentCollectionCalls).toEqual([
+        { order_id: "order_13_fixed", amount: 299994 },
+      ])
+      expect(markPaidCalls).toEqual([
+        { order_id: "order_13_fixed", payment_collection_id: "paycol_13" },
+      ])
+      expect(verJson.mock.calls[0][0].order.metadata.payment_session.status).toBe(
+        "paid"
+      )
+    })
   })
 })
