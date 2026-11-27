@@ -87,6 +87,7 @@ export const CreateCampaign = z
     min_purchase_amount: z.number().nonnegative().nullish(),
     max_purchase_amount: z.number().nonnegative().nullish(),
     is_active: z.boolean().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullish(),
   })
   .strict()
 export const AdminCreateCampaign = WithAdditionalData(CreateCampaign)
@@ -103,5 +104,6 @@ export const UpdateCampaign = z.object({
   min_purchase_amount: z.number().nonnegative().nullish(),
   max_purchase_amount: z.number().nonnegative().nullish(),
   is_active: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
 })
 export const AdminUpdateCampaign = WithAdditionalData(UpdateCampaign)

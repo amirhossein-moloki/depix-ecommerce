@@ -1,13 +1,24 @@
+const mockUpdateUsersWorkflowRun = jest.fn()
+
+jest.mock("@medusajs/core-flows", () => {
+  const actual = jest.requireActual("@medusajs/core-flows")
+  return {
+    ...actual,
+    updateUsersWorkflow: jest.fn(() => ({ run: mockUpdateUsersWorkflowRun })),
+  }
+})
+
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { POST as adminLogin } from "../../auth/login/route"
 import { POST as adminLogout } from "../../auth/logout/route"
 import { GET as listUsers, POST as createUser } from "../route"
-import { GET as getMe } from "../me/route"
+import { GET as getMe, PATCH as patchMe } from "../me/route"
 import { DELETE as deleteUser } from "../[id]/route"
 import { enforceAdminRbac, formatAdminUser } from "../rbac"
 import {
   AdminCreateUser,
   AdminGetUsersParams,
+  AdminUpdateMe,
   AdminUpdateUser,
 } from "../validators"
 
@@ -281,6 +292,139 @@ describe("Admin Auth, RBAC & User Management (HAD-19)", () => {
           is_active: true,
         }),
       })
+    })
+
+    it("rejects role/is_active on AdminUpdateMe validator", () => {
+      expect(() =>
+        AdminUpdateMe.parse({ name: "Support", role: "super_admin" })
+      ).toThrow()
+      expect(() =>
+        AdminUpdateMe.parse({ is_active: false })
+      ).toThrow()
+      expect(
+        AdminUpdateMe.parse({
+          name: "New Name",
+          username: "support_ali",
+          email: "ali@depix.ir",
+          phone: "09123456789",
+        })
+      ).toMatchObject({
+        name: "New Name",
+        username: "support_ali",
+        email: "ali@depix.ir",
+        phone: "09123456789",
+      })
+    })
+
+    it("allows non-super_admin (support) through RBAC for PATCH /admin/users/me while updating profile and syncing emailpass", async () => {
+      const supportUser = {
+        id: "usr_support",
+        email: "old@depix.ir",
+        first_name: "Old",
+        last_name: "Support",
+        metadata: {
+          name: "Old Support",
+          username: "old_support",
+          phone: "09120000001",
+          role: "support",
+          is_active: true,
+        },
+      }
+      const next = jest.fn()
+      const userService = {
+        retrieveUser: jest.fn().mockResolvedValue(supportUser),
+        listUsers: jest.fn().mockResolvedValue([]),
+      }
+      await enforceAdminRbac(
+        {
+          path: "/admin/users/me",
+          method: "PATCH",
+          auth_context: { actor_id: "usr_support", actor_type: "user" },
+          scope: { resolve: jest.fn(() => userService) },
+        } as any,
+        makeRes().res,
+        next
+      )
+      expect(next).toHaveBeenCalled()
+
+      // Unauthenticated returns 401
+      const unauth = makeRes()
+      await patchMe(
+        {
+          auth_context: {},
+          validatedBody: { name: "X" },
+          queryConfig: { fields: ["id"] },
+          scope: { resolve: jest.fn() },
+        } as any,
+        unauth.res
+      )
+      expect(unauth.status).toHaveBeenCalledWith(401)
+
+      let currentUser = { ...supportUser }
+      const authService = {
+        listProviderIdentities: jest
+          .fn()
+          .mockResolvedValue([{ id: "pi_1", entity_id: "old@depix.ir" }]),
+        updateProviderIdentities: jest.fn().mockResolvedValue([]),
+        updateProvider: jest.fn().mockResolvedValue({}),
+      }
+      mockUpdateUsersWorkflowRun.mockImplementation(async ({ input }: any) => {
+        const upd = input.updates[0]
+        currentUser = {
+          ...currentUser,
+          ...(upd.email ? { email: upd.email } : {}),
+          metadata: upd.metadata,
+        }
+        return { result: [currentUser] }
+      })
+      const container = {
+        resolve: jest.fn((key: string) => {
+          if (key === ContainerRegistrationKeys.REMOTE_QUERY) {
+            return async () => [currentUser]
+          }
+          if (key === Modules.USER) return userService
+          if (key === Modules.AUTH) return authService
+          return null
+        }),
+      } as any
+
+      const { res, status, json } = makeRes()
+      await patchMe(
+        {
+          auth_context: { actor_id: "usr_support" },
+          validatedBody: {
+            name: "Sara New",
+            username: "sara_new",
+            email: "new@depix.ir",
+            phone: "09391112233",
+            password: "NewPassword123!",
+            metadata: { role: "super_admin", is_active: false, bio: "helper" },
+          },
+          queryConfig: { fields: ["id", "email", "metadata"] },
+          scope: container,
+        } as any,
+        res
+      )
+
+      expect(status).toHaveBeenCalledWith(200)
+      expect(authService.updateProviderIdentities).toHaveBeenCalledWith([
+        { id: "pi_1", entity_id: "new@depix.ir" },
+      ])
+      expect(authService.updateProvider).toHaveBeenCalledWith("emailpass", {
+        entity_id: "new@depix.ir",
+        password: "NewPassword123!",
+      })
+      const payload = json.mock.calls[0][0].user
+      expect(payload).toMatchObject({
+        id: "usr_support",
+        name: "Sara New",
+        username: "sara_new",
+        email: "new@depix.ir",
+        phone: "09391112233",
+        role: "support",
+        is_active: true,
+      })
+      expect(payload.metadata.bio).toBe("helper")
     })
   })
 })

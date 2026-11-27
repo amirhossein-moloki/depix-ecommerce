@@ -29,6 +29,7 @@ export const defaultStoreProductFields = [
   "*tags",
   "*images",
   "*variants",
+  "variants.inventory_quantity",
   "*variants.options",
 ]
 

@@ -6,15 +6,14 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { HttpTypes, IAuthModuleService, UpdateUserDTO } from "@medusajs/framework/types"
+import { HttpTypes, UpdateUserDTO } from "@medusajs/framework/types"
 
 import {
   ContainerRegistrationKeys,
   MedusaError,
-  Modules,
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
-import { refetchUser } from "../helpers"
+import { refetchUser, syncAdminEmailPassCredentials } from "../helpers"
 import { formatAdminUser } from "../rbac"
 import { AdminUpdateUserType } from "../validators"
 
@@ -98,13 +97,11 @@ export const POST = async (
 
   await workflow.run({ input })
 
-  if (password) {
-    const authService: IAuthModuleService = req.scope.resolve(Modules.AUTH)
-    await authService.updateProvider("emailpass", {
-      entity_id: existingUser.email,
-      password,
-    })
-  }
+  await syncAdminEmailPassCredentials(req.scope, {
+    previousEmail: existingUser.email,
+    nextEmail: directFields.email ?? existingUser.email,
+    password,
+  })
 
   const user = await refetchUser(
     req.params.id,

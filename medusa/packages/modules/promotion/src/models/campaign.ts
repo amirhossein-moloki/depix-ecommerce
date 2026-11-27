@@ -12,6 +12,7 @@ const Campaign = model
       campaign_identifier: model.text(),
       starts_at: model.dateTime().nullable(),
       ends_at: model.dateTime().nullable(),
+      metadata: model.json().nullable(),
       budget: model
         .hasOne<() => typeof CampaignBudget>(() => CampaignBudget, {
           mappedBy: "campaign",

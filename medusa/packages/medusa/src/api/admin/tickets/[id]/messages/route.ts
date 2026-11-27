@@ -14,6 +14,11 @@ async function resolveAdminDisplayName(
     const userService = scope.resolve<any>(Modules.USER)
     const user = await userService?.retrieveUser?.(actorId).catch(() => null)
     if (user) {
+      const metaName =
+        typeof user.metadata?.name === "string" ? user.metadata.name.trim() : ""
+      if (metaName) {
+        return metaName
+      }
       const fullName = [user.first_name, user.last_name]
         .filter(Boolean)
         .join(" ")
@@ -36,10 +41,12 @@ export const POST = async (
   const body = req.body as any
   const {
     message,
-    is_internal_note = false,
+    is_internal_note,
+    is_internal,
     attachments = [],
     attachment_ids = [],
   } = body || {}
+  const resolvedInternal = Boolean(is_internal_note ?? is_internal ?? false)
 
   if (!message || !String(message).trim()) {
     throw new MedusaError(
@@ -67,7 +74,7 @@ export const POST = async (
       sender_id: actorId,
       sender_type: "user",
       message,
-      is_internal_note: !!is_internal_note,
+      is_internal_note: resolvedInternal,
       attachments: allAttachments,
       metadata: {
         sender_name: senderName,

@@ -8,6 +8,7 @@ export const defaultAdminCampaignFields = [
   "description",
   "currency",
   "campaign_identifier",
+  "metadata",
   "*budget",
   "starts_at",
   "ends_at",

@@ -1,6 +1,7 @@
 import { addTicketMessageWorkflow } from "@medusajs/core-flows"
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { formatTicketMessage } from "../../../../admin/tickets/helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -46,7 +47,7 @@ export const GET = async (
   )
 
   res.json({
-    messages,
+    messages: (messages ?? []).map(formatTicketMessage),
     count,
     offset,
     limit,

@@ -113,10 +113,7 @@ async function getProductsWithIndexEngine(
   )
 
   if (withInventoryQuantity) {
-    await wrapVariantsWithInventoryQuantityForSalesChannel(
-      req,
-      products.flatMap((product) => product.variants ?? [])
-    )
+    await populateInventoryQuantity(req, products, true)
   }
 
   await wrapProductsWithTaxPrices(req, products)
@@ -204,7 +201,7 @@ async function getProducts(
     )
 
     if (withInventoryQuantity) {
-      await populateInventoryQuantity(req, products, false)
+      await populateInventoryQuantity(req, products, true)
     }
 
     await wrapProductsWithTaxPrices(req, products)

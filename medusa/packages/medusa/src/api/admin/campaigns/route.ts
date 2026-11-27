@@ -7,7 +7,7 @@ import {
   ContainerRegistrationKeys,
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
-import { refetchCampaign } from "./helpers"
+import { enrichCampaignResponse, extractCampaignMetadataFields, refetchCampaign } from "./helpers"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
 export const GET = async (
@@ -28,7 +28,7 @@ export const GET = async (
   const { rows: campaigns, metadata } = await remoteQuery(query)
 
   res.json({
-    campaigns,
+    campaigns: (campaigns || []).map(enrichCampaignResponse),
     count: metadata.count,
     offset: metadata.skip,
     limit: metadata.take,
@@ -42,10 +42,9 @@ export const POST = async (
   >,
   res: MedusaResponse<HttpTypes.AdminCampaignResponse>
 ) => {
-  const { additional_data, product_ids, min_purchase_amount, max_purchase_amount, is_active, ...rest } =
-    req.validatedBody as any
+  const { additional_data, ...rest } = req.validatedBody as any
   const createCampaigns = createCampaignsWorkflow(req.scope)
-  const campaignsData = [rest]
+  const campaignsData = [extractCampaignMetadataFields(rest)] as any
 
   const { result } = await createCampaigns.run({
     input: { campaignsData, additional_data },
@@ -60,5 +59,5 @@ export const POST = async (
     req.queryConfig.fields
   )
 
-  res.status(200).json({ campaign })
+  res.status(200).json({ campaign: enrichCampaignResponse(campaign) })
 }

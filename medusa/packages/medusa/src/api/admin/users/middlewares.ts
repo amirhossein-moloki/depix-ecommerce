@@ -13,6 +13,7 @@ import {
   AdminGetUserRolesParams,
   AdminGetUsersParams,
   AdminRemoveUserRoles,
+  AdminUpdateMe,
   AdminUpdateUser,
 } from "./validators"
 
@@ -70,6 +71,17 @@ export const adminUserRoutesMiddlewares: MiddlewareRoute[] = [
     method: ["GET"],
     matcher: "/admin/users/me",
     middlewares: [
+      validateAndTransformQuery(
+        AdminGetUserParams,
+        QueryConfig.retrieveTransformQueryConfig
+      ),
+    ],
+  },
+  {
+    method: ["PATCH", "POST"],
+    matcher: "/admin/users/me",
+    middlewares: [
+      validateAndTransformBody(AdminUpdateMe),
       validateAndTransformQuery(
         AdminGetUserParams,
         QueryConfig.retrieveTransformQueryConfig

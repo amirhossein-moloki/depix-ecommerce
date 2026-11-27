@@ -4935,6 +4935,10 @@ paths:
                 is_internal:
                   type: boolean
                   default: false
+                is_internal_note:
+                  type: boolean
+                  default: false
+                  description: Alias for is_internal
                 attachment_ids:
                   type: array
                   items:
@@ -5017,10 +5021,19 @@ paths:
               properties:
                 status:
                   type: string
+                  description: Case-insensitive ticket status value
                   enum:
+                  - open
+                  - in_progress
+                  - waiting_for_customer
+                  - answered
+                  - resolved
+                  - closed
                   - OPEN
                   - IN_PROGRESS
                   - WAITING_ON_CUSTOMER
+                  - WAITING_FOR_CUSTOMER
+                  - ANSWERED
                   - RESOLVED
                   - CLOSED
       responses:
@@ -5060,9 +5073,14 @@ paths:
               properties:
                 priority:
                   type: string
+                  description: Case-insensitive ticket priority (MEDIUM maps to normal, URGENT maps to high)
                   enum:
+                  - low
+                  - normal
+                  - high
                   - LOW
                   - MEDIUM
+                  - NORMAL
                   - HIGH
                   - URGENT
       responses:
@@ -7219,6 +7237,26 @@ paths:
                   type: string
                   format: date-time
                   nullable: true
+                product_ids:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                min_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                max_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                is_active:
+                  type: boolean
+                  default: true
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
                 budget:
                   type: object
                   nullable: true
@@ -7308,6 +7346,26 @@ paths:
                 ends_at:
                   type: string
                   format: date-time
+                  nullable: true
+                product_ids:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                min_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                max_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                is_active:
+                  type: boolean
+                  default: true
+                metadata:
+                  type: object
+                  additionalProperties: true
                   nullable: true
                 budget:
                   type: object
@@ -7456,6 +7514,9 @@ paths:
               properties:
                 title:
                   type: string
+                description:
+                  type: string
+                  nullable: true
                 scope:
                   type: string
                   enum:
@@ -7477,31 +7538,21 @@ paths:
                 campaign_id:
                   type: string
                   nullable: true
-                title:
-                  type: string
-                  nullable: true
-                description:
-                  type: string
-                  nullable: true
-                starts_at:
-                  type: string
-                  format: date-time
-                  nullable: true
-                ends_at:
-                  type: string
-                  format: date-time
-                  nullable: true
-                usage_limit:
-                  type: integer
-                  nullable: true
-                metadata:
-                  type: object
-                  additionalProperties: true
-                  nullable: true
                 min_purchase_amount:
                   type: number
                   minimum: 0
                   nullable: true
+                max_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                usage_limit:
+                  type: integer
+                  minimum: 1
+                  nullable: true
+                used_count:
+                  type: integer
+                  minimum: 0
                 starts_at:
                   type: string
                   format: date-time
@@ -7515,6 +7566,7 @@ paths:
                   default: true
                 metadata:
                   type: object
+                  additionalProperties: true
                   nullable: true
       responses:
         '201':
@@ -7576,6 +7628,9 @@ paths:
               properties:
                 title:
                   type: string
+                description:
+                  type: string
+                  nullable: true
                 scope:
                   type: string
                   enum:
@@ -7596,31 +7651,21 @@ paths:
                 campaign_id:
                   type: string
                   nullable: true
-                title:
-                  type: string
-                  nullable: true
-                description:
-                  type: string
-                  nullable: true
-                starts_at:
-                  type: string
-                  format: date-time
-                  nullable: true
-                ends_at:
-                  type: string
-                  format: date-time
-                  nullable: true
-                usage_limit:
-                  type: integer
-                  nullable: true
-                metadata:
-                  type: object
-                  additionalProperties: true
-                  nullable: true
                 min_purchase_amount:
                   type: number
                   minimum: 0
                   nullable: true
+                max_purchase_amount:
+                  type: number
+                  minimum: 0
+                  nullable: true
+                usage_limit:
+                  type: integer
+                  minimum: 1
+                  nullable: true
+                used_count:
+                  type: integer
+                  minimum: 0
                 starts_at:
                   type: string
                   format: date-time
@@ -7633,6 +7678,7 @@ paths:
                   type: boolean
                 metadata:
                   type: object
+                  additionalProperties: true
                   nullable: true
       responses:
         '200':
@@ -7754,6 +7800,66 @@ paths:
                 properties:
                   user:
                     $ref: '#/components/schemas/AdminUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      summary: Update Current Admin User Profile
+      description: Allows any active authenticated admin user to update their own profile fields (name, username, email, phone, password, first_name, last_name, avatar_url, metadata). Role and active status modifications are not allowed on this endpoint.
+      tags:
+      - Admin Authentication & Users
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  nullable: true
+                username:
+                  type: string
+                  nullable: true
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  nullable: true
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                first_name:
+                  type: string
+                  nullable: true
+                last_name:
+                  type: string
+                  nullable: true
+                avatar_url:
+                  type: string
+                  nullable: true
+                metadata:
+                  type: object
+                  nullable: true
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Updated admin user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AdminUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -8868,6 +8974,8 @@ components:
           enum:
           - open
           - in_progress
+          - waiting_for_customer
+          - answered
           - resolved
           - closed
         priority:
@@ -8876,7 +8984,6 @@ components:
           - low
           - normal
           - high
-          - urgent
         order_id:
           type: string
           nullable: true
@@ -9848,9 +9955,15 @@ components:
         sender_id:
           type: string
           nullable: true
+        sender_name:
+          type: string
+          nullable: true
         message:
           type: string
         is_internal:
+          type: boolean
+          default: false
+        is_internal_note:
           type: boolean
           default: false
         attachments:
@@ -10163,6 +10276,34 @@ components:
         campaign_id:
           type: string
           nullable: true
+        title:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        usage_limit:
+          type: integer
+          nullable: true
+        used_count:
+          type: integer
+        limit:
+          type: integer
+          nullable: true
+        used:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
         application_method:
           type: object
           nullable: true
@@ -10195,6 +10336,10 @@ components:
             max_quantity:
               type: integer
               nullable: true
+            target_rules:
+              type: array
+              items:
+                type: object
         rules:
           type: array
           items:
@@ -10224,6 +10369,23 @@ components:
         ends_at:
           type: string
           format: date-time
+          nullable: true
+        product_ids:
+          type: array
+          nullable: true
+          items:
+            type: string
+        min_purchase_amount:
+          type: number
+          nullable: true
+        max_purchase_amount:
+          type: number
+          nullable: true
+        is_active:
+          type: boolean
+        metadata:
+          type: object
+          additionalProperties: true
           nullable: true
         budget:
           type: object
@@ -10260,6 +10422,9 @@ components:
           example: fsr_01J...
         title:
           type: string
+        description:
+          type: string
+          nullable: true
         scope:
           type: string
           enum:
@@ -10283,6 +10448,14 @@ components:
         min_purchase_amount:
           type: number
           nullable: true
+        max_purchase_amount:
+          type: number
+          nullable: true
+        usage_limit:
+          type: integer
+          nullable: true
+        used_count:
+          type: integer
         starts_at:
           type: string
           format: date-time

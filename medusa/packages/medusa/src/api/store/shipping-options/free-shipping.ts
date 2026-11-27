@@ -23,12 +23,36 @@ function isRuleTimeActive(rule: any, now: number): boolean {
   return true
 }
 
-function isRuleScopeMatching(rule: any, cartProductIds: Set<string>): boolean {
+function isRuleWithinUsageLimit(rule: any): boolean {
+  const rawLimit = rule?.usage_limit ?? rule?.metadata?.usage_limit
+  if (rawLimit === null || rawLimit === undefined) {
+    return true
+  }
+  const usageLimit = Number(rawLimit)
+  if (!Number.isFinite(usageLimit) || usageLimit <= 0) {
+    return true
+  }
+  const usedCount = Number(rule?.used_count ?? rule?.metadata?.used_count ?? 0)
+  return (Number.isFinite(usedCount) ? usedCount : 0) < usageLimit
+}
+
+function isRuleScopeMatching(
+  rule: any,
+  cartProductIds: Set<string>,
+  cartCategoryIds: Set<string>,
+  cartCampaignIds: Set<string>
+): boolean {
   if (rule.scope === "store") {
     return true
   }
   if (rule.scope === "products" && Array.isArray(rule.product_ids)) {
     return rule.product_ids.some((pid: string) => cartProductIds.has(pid))
+  }
+  if (rule.scope === "categories" && Array.isArray(rule.category_ids)) {
+    return rule.category_ids.some((cid: string) => cartCategoryIds.has(cid))
+  }
+  if (rule.scope === "campaign" && rule.campaign_id) {
+    return cartCampaignIds.has(String(rule.campaign_id))
   }
   return false
 }
@@ -125,9 +149,13 @@ async function loadCartForFreeShipping(
           "shipping_total",
           "items.id",
           "items.product_id",
+          "items.product.categories.id",
           "items.quantity",
           "items.unit_price",
           "items.adjustments.amount",
+          "promotions.id",
+          "promotions.campaign_id",
+          "promotions.campaign.id",
         ],
       })
       const [queriedCart] = await remoteQuery(queryObj)
@@ -175,7 +203,9 @@ export async function getActiveFreeShippingStatus(
 
     const rules = await promotionService.listFreeShippingRules({ is_active: true })
     const now = Date.now()
-    const activeRules = (rules ?? []).filter((r: any) => isRuleTimeActive(r, now))
+    const activeRules = (rules ?? []).filter(
+      (r: any) => isRuleTimeActive(r, now) && isRuleWithinUsageLimit(r)
+    )
 
     if (activeRules.length === 0) {
       return { status: emptyStatus, activeRules: [] }
@@ -186,15 +216,46 @@ export async function getActiveFreeShippingStatus(
     const cartProductIds = new Set<string>(
       (cart?.items ?? []).map((i: any) => i.product_id).filter(Boolean)
     )
+    const cartCategoryIds = new Set<string>(
+      (cart?.items ?? [])
+        .flatMap((i: any) => [
+          ...(Array.isArray(i?.category_ids) ? i.category_ids : []),
+          ...(Array.isArray(i?.product?.categories)
+            ? i.product.categories.map((c: any) => c?.id)
+            : []),
+        ])
+        .filter(Boolean)
+    )
+    const cartCampaignIds = new Set<string>(
+      (cart?.promotions ?? [])
+        .flatMap((p: any) => [p?.campaign_id, p?.campaign?.id])
+        .filter(Boolean)
+    )
 
     const eligibleRule = cart
       ? activeRules.find((rule: any) => {
-          if (!isRuleScopeMatching(rule, cartProductIds)) {
+          if (
+            !isRuleScopeMatching(
+              rule,
+              cartProductIds,
+              cartCategoryIds,
+              cartCampaignIds
+            )
+          ) {
             return false
           }
           if (
             rule.min_purchase_amount != null &&
             cartPayableAmount < Number(rule.min_purchase_amount)
+          ) {
+            return false
+          }
+          const rawMaxPurchase =
+            rule.max_purchase_amount ?? rule.metadata?.max_purchase_amount
+          if (
+            rawMaxPurchase != null &&
+            Number.isFinite(Number(rawMaxPurchase)) &&
+            cartPayableAmount > Number(rawMaxPurchase)
           ) {
             return false
           }

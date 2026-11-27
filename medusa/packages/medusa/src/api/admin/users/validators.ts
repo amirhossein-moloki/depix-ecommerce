@@ -60,6 +60,21 @@ export const AdminUpdateUser = z.object({
   metadata: z.record(z.string(), z.unknown()).nullish().optional(),
 })
 
+export type AdminUpdateMeType = z.infer<typeof AdminUpdateMe>
+export const AdminUpdateMe = z
+  .object({
+    name: z.string().nullish(),
+    username: z.string().nullish(),
+    email: z.string().email().optional(),
+    phone: z.string().nullish(),
+    password: z.string().min(6).optional(),
+    first_name: z.string().nullish(),
+    last_name: z.string().nullish(),
+    avatar_url: z.string().nullish(),
+    metadata: z.record(z.string(), z.unknown()).nullish().optional(),
+  })
+  .strict()
+
 export type AdminAssignUserRolesType = z.infer<typeof AdminAssignUserRoles>
 export const AdminAssignUserRoles = z.object({
   roles: z.array(z.string().min(1)).min(1),

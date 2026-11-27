@@ -71,11 +71,14 @@ export function formatTicketMessage<T extends Record<string, any>>(msg: T): T {
     msg.sender_type === "user" ? "admin" : msg.sender_type
   const senderName =
     msg.sender_name ?? msg.metadata?.sender_name ?? null
+  const isInternal = Boolean(msg.is_internal_note ?? msg.is_internal ?? false)
 
   return {
     ...msg,
     sender_type: normalizedSenderType,
     sender_name: senderName,
+    is_internal: isInternal,
+    is_internal_note: isInternal,
   }
 }
 

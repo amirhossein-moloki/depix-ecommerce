@@ -7,7 +7,7 @@ import {
   updateCampaignsWorkflow,
 } from "@medusajs/core-flows"
 
-import { refetchCampaign } from "../helpers"
+import { enrichCampaignResponse, extractCampaignMetadataFields, refetchCampaign } from "../helpers"
 import { MedusaError } from "@medusajs/framework/utils"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
@@ -28,7 +28,7 @@ export const GET = async (
     )
   }
 
-  res.status(200).json({ campaign })
+  res.status(200).json({ campaign: enrichCampaignResponse(campaign) })
 }
 
 export const POST = async (
@@ -40,6 +40,7 @@ export const POST = async (
 ) => {
   const existingCampaign = await refetchCampaign(req.params.id, req.scope, [
     "id",
+    "metadata",
   ])
   if (!existingCampaign) {
     throw new MedusaError(
@@ -48,13 +49,12 @@ export const POST = async (
     )
   }
 
-  const { additional_data, product_ids, min_purchase_amount, max_purchase_amount, is_active, ...rest } =
-    req.validatedBody as any
+  const { additional_data, ...rest } = req.validatedBody as any
   const updateCampaigns = updateCampaignsWorkflow(req.scope)
   const campaignsData = [
     {
       id: req.params.id,
-      ...rest,
+      ...extractCampaignMetadataFields(rest, existingCampaign.metadata),
     },
   ]
 
@@ -67,7 +67,7 @@ export const POST = async (
     req.scope,
     req.queryConfig.fields
   )
-  res.status(200).json({ campaign })
+  res.status(200).json({ campaign: enrichCampaignResponse(campaign) })
 }
 
 export const PATCH = POST

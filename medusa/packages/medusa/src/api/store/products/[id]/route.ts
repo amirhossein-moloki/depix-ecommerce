@@ -8,6 +8,7 @@ import {
 import {
   prepareInventoryQuantityFields,
   wrapVariantsWithInventoryQuantityForSalesChannel,
+  wrapVariantsWithTotalInventoryQuantity,
 } from "../../../utils/middlewares"
 import {
   enrichProductsWithBrand,
@@ -74,10 +75,18 @@ export const GET = async (
   }
 
   if (withInventoryQuantity) {
-    await wrapVariantsWithInventoryQuantityForSalesChannel(
-      req,
-      product.variants || []
-    )
+    const variants = product.variants || []
+    const pkChannels = req.publishable_key_context?.sales_channel_ids ?? []
+    const filterChannels = req.filterableFields?.sales_channel_id
+    const hasSingleFilterChannel =
+      (typeof filterChannels === "string" && Boolean(filterChannels)) ||
+      (Array.isArray(filterChannels) && filterChannels.length === 1)
+
+    if (pkChannels.length === 1 || hasSingleFilterChannel) {
+      await wrapVariantsWithInventoryQuantityForSalesChannel(req, variants)
+    } else {
+      await wrapVariantsWithTotalInventoryQuantity(req as any, variants)
+    }
   }
 
   if (includesCategoriesField) {

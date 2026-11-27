@@ -1,5 +1,6 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { formatTicketMessage } from "../../../admin/tickets/helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -37,15 +38,20 @@ export const GET = async (
       (a: any, b: any) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     )
-    .map((msg: any) => ({
-      id: msg.id,
-      ticket_id: msg.ticket_id,
-      sender_id: msg.sender_id,
-      sender_type: msg.sender_type,
-      message: msg.message,
-      attachments: msg.attachments || [],
-      created_at: msg.created_at,
-    }))
+    .map((msg: any) =>
+      formatTicketMessage({
+        id: msg.id,
+        ticket_id: msg.ticket_id,
+        sender_id: msg.sender_id,
+        sender_type: msg.sender_type,
+        sender_name: msg.sender_name,
+        metadata: msg.metadata,
+        message: msg.message,
+        is_internal_note: msg.is_internal_note,
+        attachments: msg.attachments || [],
+        created_at: msg.created_at,
+      })
+    )
 
   const sanitizedTicket = {
     ...ticket,

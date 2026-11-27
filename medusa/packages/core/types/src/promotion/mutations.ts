@@ -1,3 +1,4 @@
+import { MetadataType } from "../common"
 import { CampaignBudgetTypeValues } from "./common"
 
 /**
@@ -99,6 +100,11 @@ export interface CreateCampaignDTO {
    * The associated campaign budget.
    */
   budget?: CreateCampaignBudgetDTO | null
+
+  /**
+   * Holds custom data in key-value pairs.
+   */
+  metadata?: MetadataType
 }
 
 /**
@@ -139,6 +145,11 @@ export interface UpdateCampaignDTO {
    * The budget of the campaign.
    */
   budget?: Omit<UpdateCampaignBudgetDTO, "id">
+
+  /**
+   * Holds custom data in key-value pairs.
+   */
+  metadata?: MetadataType
 }
 
 export interface AddPromotionsToCampaignDTO {

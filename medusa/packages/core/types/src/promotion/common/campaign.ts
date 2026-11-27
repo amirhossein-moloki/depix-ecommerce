@@ -1,3 +1,4 @@
+import { MetadataType } from "../../common"
 import { BaseFilterable } from "../../dal"
 import { CampaignBudgetDTO } from "./campaign-budget"
 import { PromotionDTO } from "./promotion"
@@ -45,6 +46,11 @@ export interface CampaignDTO {
    * The associated promotions.
    */
   promotions?: PromotionDTO[]
+
+  /**
+   * Holds custom data in key-value pairs.
+   */
+  metadata?: MetadataType
 }
 
 /**
