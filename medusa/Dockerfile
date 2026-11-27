@@ -18,7 +18,7 @@ COPY . .
 ENV YARN_ENABLE_IMMUTABLE_INSTALLS=false
 ENV YARN_ENABLE_GLOBAL_CACHE=true
 ENV YARN_GLOBAL_FOLDER=/root/.yarn/berry
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 RUN --mount=type=cache,target=/root/.yarn/berry/cache yarn install
 
@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/app/node_modules/.cache/turbo yarn turbo run buil
     --filter=@medusajs/ticket... \
     --filter=@medusajs/size-guide... \
     --filter=@medusajs/banner... \
-    --no-daemon && \
+    --concurrency=2 --no-daemon && \
     rm -rf /tmp/*
 
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && \
