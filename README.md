@@ -1,62 +1,113 @@
 # Depix E-commerce Workspace
 
-Welcome to the **Depix E-commerce** workspace repository. This workspace houses the Medusa v2 e-commerce backend behind an Nginx reverse proxy with PostgreSQL and Redis infrastructure.
+Welcome to the **Depix E-commerce** workspace repository. This workspace houses the **Medusa v2** e-commerce backend (`medusa/`) and the **Django Blog CMS** (`Blog/` Git submodule) orchestrated through a unified root Docker Compose stack behind a shared **Nginx** reverse proxy, **PostgreSQL 16**, and **Redis 7**.
 
 ---
 
 ## Table of Contents
 
 - [Project Overview](#project-overview)
-- [Architecture & Architecture Diagram](#architecture--architecture-diagram)
+- [Architecture Overview & Diagram](#architecture-overview--diagram)
+- [Service Responsibilities](#service-responsibilities)
+- [Port Assignments](#port-assignments)
 - [Implemented Capabilities](#implemented-capabilities)
 - [Technology Stack](#technology-stack)
 - [Workspace Project Structure](#workspace-project-structure)
 - [Prerequisites](#prerequisites)
 - [Installation & Setup](#installation--setup)
-- [Environment Configuration](#environment-configuration)
-- [Running the Application](#running-the-application)
-- [API Documentation & Routing](#api-documentation--routing)
-- [Database & Data Architecture](#database--data-architecture)
+- [Environment Variables](#environment-variables)
+- [Running & Managing the Unified Stack](#running--managing-the-unified-stack)
+- [Nginx Reverse Proxy Routing](#nginx-reverse-proxy-routing)
+- [API Documentation & Endpoints](#api-documentation--endpoints)
+- [Database, Redis & Persistent Storage](#database-redis--persistent-storage)
+- [Independent Development Workflows](#independent-development-workflows)
+- [Updating the Blog Submodule](#updating-the-blog-submodule)
 - [Testing & Quality Assurance](#testing--quality-assurance)
+- [Troubleshooting](#troubleshooting)
 - [Deployment Overview](#deployment-overview)
 
 ---
 
 ## Project Overview
 
-Depix E-commerce is an enterprise-grade e-commerce workspace designed to deliver robust store operations.
+Depix E-commerce is an enterprise-grade e-commerce workspace designed to run both the commerce engine and the editorial blog platform seamlessly together while keeping their codebases, databases, and development lifecycles decoupled:
 
-- **Medusa Backend (`medusa/`)**: Serves as the core headless e-commerce backend managing catalog, orders, carts, checkout, customer accounts, payment collection, and notification workflows.
-- **Blog (`Blog/`)**: Integrated as an independent Git submodule tracking [`amirhossein-moloki/Blog`](https://github.com/amirhossein-moloki/Blog.git) (Python/Django blog platform).
-- **Nginx Reverse Proxy (`infrastructure/nginx/`)**: Acts as the central gateway routing public and admin traffic to the backend service.
+- **Medusa Backend (`medusa/`)**: Node.js 22 / TypeScript headless e-commerce backend managing catalog, orders, carts, checkout, customer accounts, wallet, payment gateways (Zibal, Zarinpal, Mellat, Saman, Wallet), and notification workflows.
+- **Blog Platform (`Blog/`)**: Integrated as an independent Git submodule tracking [`amirhossein-moloki/Blog`](https://github.com/amirhossein-moloki/Blog.git) — a Python 3.12 / Django 5.2 / Daphne ASGI / Celery / Django Channels CMS managing articles, categories, tags, series, podcasts, media uploads, comments, reactions, and scheduled publishing/backups.
+- **Nginx Reverse Proxy (`infrastructure/nginx/`)**: Central HTTP gateway routing public, API, static, and media traffic for both Medusa and Blog on a single entrypoint (`NGINX_PORT`, default `80`).
+- **PostgreSQL Initializer (`infrastructure/postgres/`)**: Idempotent provisioning script executed on container startup to ensure logical database and role isolation for the Blog service on the shared PostgreSQL 16 instance.
 
 ---
 
-## Architecture & Architecture Diagram
+## Architecture Overview & Diagram
 
 ```text
-                           ┌──────────────┐
-                           │    Nginx     │
-                           │  Port: 80    │
-                           └──────┬───────┘
-                                  │
-                        /api/medusa/ & / (fallback)
-                                  │
-                                  ▼
-                           ┌─────────────┐
-                           │   Medusa    │
-                           │   Backend   │
-                           │  Port: 9000 │
-                           └──────┬──────┘
-                                  │
-                    ┌─────────────┴─────────────┐
-                    │                           │
-                    ▼                           ▼
-             ┌─────────────┐             ┌─────────────┐
-             │ PostgreSQL  │             │    Redis    │
-             │  Port: 5432 │             │  Port: 6379 │
-             └─────────────┘             └─────────────┘
+                                 [ Client / Browser / API Consumer ]
+                                                  │
+                                       Port 80 (${NGINX_PORT})
+                                                  ▼
+                                      ┌───────────────────────┐
+                                      │      depix-nginx      │
+                                      │    (nginx:alpine)     │
+                                      └───────────┬───────────┘
+                                                  │
+          ┌───────────────────────┬───────────────┴───────────────┬──────────────────────┐
+          │ /api/medusa/* & /     │ /blog/*                       │ /blog/static/*       │ /blog/media/*
+          ▼                       ▼                               ▼                      ▼
+┌───────────────────┐   ┌───────────────────┐            ┌──────────────────┐   ┌──────────────────┐
+│   depix-medusa    │   │    depix-blog     │            │ blog_static (ro) │   │ blog_media (ro)  │
+│  Medusa v2 (9000) │   │ Daphne ASGI (8000)│            └──────────────────┘   └──────────────────┘
+└─────────┬─────────┘   └─────────┬─────────┘
+          │                       │          ┌──────────────────────────┐
+          │                       │          │  depix-blog-celery-beat  │
+          │                       │          └────────────┬─────────────┘
+          │                       │                       │ schedules
+          │                       │          ┌────────────▼─────────────┐
+          │                       │          │ depix-blog-celery-worker │
+          │                       │          │(high_priority,default,low│
+          │                       │          └────────────┬─────────────┘
+          │                       │                       │
+          ├───────────────────────┼───────────────────────┤
+          │                       │                       │
+          ▼                       ▼                       ▼
+┌───────────────────────────────────────┐       ┌────────────────────────────────────────┐
+│            depix-postgres             │       │              depix-redis               │
+│          PostgreSQL 16 (5432)         │       │             Redis 7 (6379)             │
+│                                       │       │                                        │
+│  • depix_db   (owner: postgres)       │       │  • DB 0: Blog Celery Broker & Channels │
+│  • blog_db    (owner: blog_user)      │       │  • DB 1: Blog Django Cache             │
+│    ▲ provisioned by depix-db-init     │       │  • DB 2: Medusa Sessions / Cache       │
+└───────────────────────────────────────┘       └────────────────────────────────────────┘
 ```
+
+All services communicate over the shared Docker bridge network `depix-network` (`depix_network`).
+
+---
+
+## Service Responsibilities
+
+| Service | Container Name | Image / Build Context | Responsibility |
+|---|---|---|---|
+| `postgres` | `depix-postgres` | `postgres:16-alpine` | Shared PostgreSQL 16 engine hosting isolated `depix_db` and `blog_db` databases |
+| `db-init` | `depix-db-init` | `postgres:16-alpine` | One-shot idempotent bootstrapper (`init-databases.sh`) creating/updating `blog_user`, `blog_db`, and PostgreSQL 16 `public` schema ownership |
+| `redis` | `depix-redis` | `redis:7-alpine` | Shared Redis 7 instance serving logically isolated DBs `0`, `1`, and `2` |
+| `medusa` | `depix-medusa` | `./medusa/Dockerfile` | Medusa v2 API server (`0.0.0.0:9000`); runs `medusa db:migrate` on startup |
+| `blog` | `depix-blog` | `./Blog/Dockerfile` | Django 5.2 ASGI server (Daphne `0.0.0.0:8000`); runs `migrate` and `collectstatic` on startup |
+| `blog-celery-worker` | `depix-blog-celery-worker` | `./Blog/Dockerfile` | Consolidated Celery worker consuming `high_priority`, `default`, and `low_priority` queues |
+| `blog-celery-beat` | `depix-blog-celery-beat` | `./Blog/Dockerfile` | Celery Beat scheduler for periodic publishing and backup tasks |
+| `nginx` | `depix-nginx` | `nginx:alpine` | Reverse proxy gateway and static/media file server for Medusa and Blog |
+
+---
+
+## Port Assignments
+
+| Host Binding | Container Port | Service | Purpose |
+|---|---|---|---|
+| `0.0.0.0:${NGINX_PORT:-80}` | `80` | `nginx` | Unified HTTP gateway (`/api/medusa/`, `/blog/`, `/blog/static/`, `/blog/media/`, `/`) |
+| `0.0.0.0:${MEDUSA_PORT:-9000}` | `9000` | `medusa` | Direct access to Medusa v2 backend API |
+| `0.0.0.0:${BLOG_PORT:-8000}` | `8000` | `blog` | Direct access to Blog Django/Daphne ASGI server |
+| `127.0.0.1:${POSTGRES_PORT:-5432}` | `5432` | `postgres` | Localhost-bound PostgreSQL 16 access |
+| `127.0.0.1:${REDIS_PORT:-6379}` | `6379` | `redis` | Localhost-bound Redis 7 access |
 
 ---
 
@@ -68,19 +119,24 @@ Depix E-commerce is an enterprise-grade e-commerce workspace designed to deliver
 - **Customer Wallet Module**: Internal customer wallet ledger (`@medusajs/wallet`) and `pp_wallet` payment provider (`@medusajs/payment-wallet`).
 - **SMS & Unified Notifications**: Agnostic SMS notification provider (`@medusajs/notification-sms`) supporting Iranian gateways (`kavenegar`, `smsir`, `melipayamak`, and local `fake` mock mode) with phone normalization (E.164 conversion) and log masking.
 - **Product Video Module**: Custom product video extension (`@medusajs/product-video`) with support for YouTube, Vimeo, and Aparat video extraction and validation.
-- **Customer Feature Suite**: Integrated wishlist management, product comparison, price alerts, stock alerts, support ticketing, size guides, and customer reviews.
+- **Customer Feature Suite**: Integrated wishlist management, product comparison, price alerts, stock alerts, support ticketing, size guides, banners, brands, invoices, and customer reviews.
 - **Structured Data (SEO)**: Store Product JSON-LD serialization (`generateProductJsonLd`, `serializeJsonLd`) supporting `Schema.org/Product` and `Schema.org/VideoObject` via endpoint `GET /store/products/:id/json-ld`.
+
+### Blog CMS (Submodule `Blog/`)
+- **Content & Editorial API**: Articles, categories, tags, series, revisions, author profiles, podcasts, and gallery items with DRF standardized responses and OpenAPI documentation (`/blog/api/schema/swagger-ui/`, `/blog/api/schema/redoc/`).
+- **Rich Text & Media Pipeline**: CKEditor 5 inline media uploads, AVIF/image variant generation via Celery, and local or S3-compatible object storage.
+- **Engagement & Real-time Support**: Comments, reactions, Django Channels WebSocket routing, and Redis-backed caching (`MessagePack` + `Zstd`).
+- **Backup & Disaster Recovery (BDR)**: Scheduled Celery Beat tasks for encrypted database/media/config backups and validation.
 
 ---
 
 ## Technology Stack
 
-- **Runtimes & Tooling**: Node.js v22+, TypeScript, Corepack, Turborepo
-- **Package Manager**: Yarn v3 (Medusa workspace)
-- **E-Commerce Framework**: Medusa v2
-- **Databases**: PostgreSQL 16 (via MikroORM), Redis 7
+- **Medusa Runtime & Tooling**: Node.js v22, TypeScript, Corepack, Yarn v3, Turborepo, MikroORM
+- **Blog Runtime & Tooling**: Python 3.12, Django 5.2, Django REST Framework, Daphne (ASGI), Celery 5.5, Django Channels
+- **Databases & Broker**: PostgreSQL 16 (Alpine), Redis 7 (Alpine)
 - **Reverse Proxy**: Nginx (Alpine)
-- **Containerization**: Docker & Docker Compose
+- **Containerization**: Docker & Docker Compose v2+
 
 ---
 
@@ -88,31 +144,43 @@ Depix E-commerce is an enterprise-grade e-commerce workspace designed to deliver
 
 ```text
 depix-ecommerce/
-├── medusa/                 # Medusa v2 E-Commerce Backend
+├── medusa/                         # Medusa v2 E-Commerce Backend
 │   ├── packages/
-│   │   ├── medusa/         # Core Medusa engine & API routes
-│   │   ├── modules/        # Domain modules (cart, product, order, product-video, etc.)
-│   │   └── plugins/        # Custom Medusa plugins (loyalty, draft-order)
-│   ├── package.json        # Yarn monorepo configuration
-│   └── turbo.json          # Turbo build/test pipeline definitions
-├── Blog/                   # Blog service (Git submodule -> amirhossein-moloki/Blog)
-├── infrastructure/         # Shared Infrastructure Configurations
-│   └── nginx/              # Nginx reverse proxy routing rules
-│       └── nginx.conf
-├── docker-compose.yml      # Local container orchestration
-├── .env.example            # Environment variables template
-├── .gitmodules             # Git submodule configuration
-├── .gitignore              # Git ignore rules
-└── README.md               # Repository documentation
+│   │   ├── medusa/                 # Core Medusa engine & API routes
+│   │   ├── modules/                # Domain modules & providers
+│   │   └── plugins/                # Custom Medusa plugins
+│   ├── Dockerfile
+│   ├── docker-entrypoint.sh
+│   ├── .dockerignore
+│   ├── package.json                # Yarn monorepo configuration
+│   └── turbo.json                  # Turbo build/test pipeline definitions
+├── Blog/                           # Blog CMS (Git submodule -> amirhossein-moloki/Blog)
+│   ├── blog/                       # Django project settings, ASGI, Celery, URLs
+│   ├── Dockerfile
+│   ├── docker-entrypoint.sh
+│   ├── docker-compose.yml          # Standalone Blog compose file (independent workflow)
+│   └── requirements.txt
+├── infrastructure/                 # Shared Infrastructure Configurations
+│   ├── nginx/
+│   │   └── nginx.conf              # Unified reverse proxy routing for Medusa & Blog
+│   └── postgres/
+│       └── init-databases.sh       # Idempotent PostgreSQL role/database bootstrap script
+├── docker-compose.yml              # Unified root container orchestration
+├── .env.example                    # Root Compose & Medusa environment template
+├── .env.blog.example               # Blog application settings template for root Compose
+├── .gitmodules                     # Git submodule configuration
+├── .gitignore                      # Git ignore rules
+└── README.md                       # Repository documentation
 ```
 
 ---
 
 ## Prerequisites
 
-- **Node.js**: v22.x (for local development)
-- **Corepack**: Enabled (`corepack enable`) to manage Yarn v3.
-- **Docker**: Docker Desktop or Docker Engine with Docker Compose v2+.
+- **Docker**: Docker Engine / Docker Desktop with Docker Compose v2+.
+- **Git**: With submodule support (`git submodule`).
+- **Node.js v22.x + Corepack** (optional, for local Medusa development outside Docker).
+- **Python 3.12** (optional, for local Blog development outside Docker).
 
 ---
 
@@ -124,227 +192,270 @@ depix-ecommerce/
    cd depix-ecommerce
    ```
 
-   If you already cloned the repository without `--recursive`, initialize the `Blog` submodule:
+   If you already cloned without `--recursive`, initialize the `Blog` submodule:
    ```bash
    git submodule update --init --recursive
    ```
 
-2. **Configure Environment Variables**:
-   Copy the example environment configuration:
+2. **Configure Environment Files**:
    ```bash
    cp .env.example .env
+   cp .env.blog.example .env.blog
    ```
-   Fill in secrets and database configurations in `.env`.
+   Review `.env` and `.env.blog` and replace placeholder secrets (`MEDUSA_JWT_SECRET`, `MEDUSA_COOKIE_SECRET`, `SECRET_KEY`, `STATIC_API_KEY`, database passwords, payment keys) before production use.
 
-3. **Install Dependencies**:
-
-   For Medusa backend:
+3. **Build and Start the Unified Stack**:
    ```bash
-   cd medusa
-   corepack enable
-   yarn install
-   cd ..
+   docker compose build
+   docker compose up -d
    ```
 
-4. **Blog Submodule (`Blog/`)**:
-   `Blog/` tracks `https://github.com/amirhossein-moloki/Blog.git` (Django/Daphne/Celery/PostgreSQL/Redis/Nginx) as an independent Git submodule.
-   Note that `Blog/docker-compose.yml` binds host port `80` by default; if running the root `depix-ecommerce` and `Blog` Docker Compose stacks simultaneously, set `NGINX_PORT=8080` (or another free port) in the root `.env` and copy `Blog/.env.example` to `Blog/.env`.
+---
+
+## Environment Variables
+
+Configuration is split cleanly so there is no overlap between root infrastructure orchestration and Blog-specific application features:
+
+1. **Root `.env`** (from [`.env.example`](file:///home/amir/github-projects/depix-ecommerce/.env.example)): Controls Docker Compose ports, PostgreSQL credentials, Redis DB isolation URLs, Medusa settings, and Blog infrastructure/subpath variables (`BLOG_*`).
+2. **Root `.env.blog`** (from [`.env.blog.example`](file:///home/amir/github-projects/depix-ecommerce/.env.blog.example), loaded with `required: false` into `blog`, `blog-celery-worker`, and `blog-celery-beat`): Controls Blog-only application secrets and features (`SECRET_KEY`, `STATIC_API_KEY`, `EMAIL_*`, `AWS_*`, `BACKUP_*`, `CORS_*`, `CELERY_*` tuning).
+
+### Root Orchestration, Medusa & Blog Infrastructure Variables (`.env`)
+
+| Variable Name | Purpose | Default Value |
+|---|---|---|
+| `NODE_ENV` | Medusa application mode (`development`, `production`, `test`) | `development` |
+| `NGINX_PORT` | Host port exposed by Nginx reverse proxy | `80` |
+| `POSTGRES_USER` | PostgreSQL superuser username | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL superuser password | `postgres` |
+| `POSTGRES_DB` | Primary PostgreSQL database name for Medusa | `depix_db` |
+| `POSTGRES_PORT` | Localhost port binding for PostgreSQL | `5432` |
+| `MEDUSA_DATABASE_URL` | Medusa PostgreSQL connection string | `postgres://postgres:postgres@postgres:5432/depix_db?sslmode=disable` |
+| `REDIS_PORT` | Localhost port binding for Redis | `6379` |
+| `MEDUSA_REDIS_URL` | Medusa Redis connection URL (DB 2) | `redis://redis:6379/2` |
+| `BLOG_REDIS_URL` | Blog Redis base URL (**omit `/<db>`**; Blog appends `/1` for `CACHES` and uses DB `0` for Celery/Channels) | `redis://redis:6379` |
+| `MEDUSA_PORT` | Host port exposed directly by Medusa | `9000` |
+| `MEDUSA_JWT_SECRET` | Secret key for signing Medusa JWT tokens | `supersecret` |
+| `MEDUSA_COOKIE_SECRET` | Secret key for signing Medusa cookies | `supersecret` |
+| `DISABLE_MEDUSA_ADMIN` | Disable Medusa Admin UI bundle in headless mode | `true` |
+| `SKIP_OTP` | Dev OTP bypass (`'00000'` when `true`/`1`) | `false` |
+| `BLOG_PORT` | Host port exposed directly by Blog | `8000` |
+| `BLOG_DB_NAME` | Isolated PostgreSQL database name for Blog | `blog_db` |
+| `BLOG_DB_USER` | Isolated PostgreSQL role for Blog | `blog_user` |
+| `BLOG_DB_PASSWORD` | Password for `BLOG_DB_USER` | `blog_password` |
+| `BLOG_DATABASE_URL` | Optional override for Blog PostgreSQL URL | Auto-constructed from `BLOG_DB_*` |
+| `BLOG_USE_REDIS` | Enable Redis caching, Celery broker, and Channels for Blog | `True` |
+| `BLOG_DEBUG` | Django `DEBUG` mode for Blog | `True` |
+| `BLOG_ALLOWED_HOSTS` | Comma-separated `ALLOWED_HOSTS` for Blog | `localhost,127.0.0.1,blog` |
+| `BLOG_FORCE_SCRIPT_NAME` | Subpath prefix when mounted behind Nginx | `/blog` |
+| `BLOG_STATIC_URL` | Public URL prefix for Blog static assets | `/blog/static/` |
+| `BLOG_MEDIA_URL` | Public URL prefix for Blog uploaded media | `/blog/media/` |
+| `BLOG_SECURE_SSL_REDIRECT` | Force HTTPS redirect in Django (set `True` behind TLS in production) | `False` |
+| `BLOG_SESSION_COOKIE_SECURE` | Secure session cookie flag (set `True` over HTTPS) | `False` |
+| `BLOG_CSRF_COOKIE_SECURE` | Secure CSRF cookie flag (set `True` over HTTPS) | `False` |
+| `BLOG_CSRF_TRUSTED_ORIGINS` | Trusted origins for Django CSRF verification | `http://localhost,http://127.0.0.1,http://localhost:8000,http://localhost:3000` |
+| `BLOG_CELERY_CONCURRENCY` | Concurrency for the consolidated `blog-celery-worker` container | `2` |
+| `SMS_PROVIDER` / `SMS_*` | SMS provider configuration (`fake`, `kavenegar`, `smsir`, `melipayamak`) | `fake` |
+| `PAYMENT_ENV` / `APP_URL` / `ZIBAL_*` / `ZARINPAL_*` / `MELLAT_*` / `SAMAN_*` | Payment gateway environment, callback URLs, and merchant credentials | `sandbox` |
+
+### Blog Application Variables (`.env.blog`)
+
+See [`.env.blog.example`](file:///home/amir/github-projects/depix-ecommerce/.env.blog.example) for `SECRET_KEY`, `STATIC_API_KEY`, `DOMAIN`, `SITE_NAME`, `FRONTEND_URL`, `CORS_*`, `USE_X_FORWARDED_*`, `STORAGE_BACKEND`, `AWS_*`, `BACKUP_*`, `EMAIL_*`, and `CELERY_*` task limits. For full Blog variable semantics, refer to [`Blog/docs/ENVIRONMENT_VARIABLES.md`](file:///home/amir/github-projects/depix-ecommerce/Blog/docs/ENVIRONMENT_VARIABLES.md).
 
 ---
 
-## Environment Configuration
+## Running & Managing the Unified Stack
 
-All environment configurations are loaded from `.env` in the root workspace directory.
-
-| Variable Name | Purpose | Required | Default Value |
-|---|---|---|---|
-| `NODE_ENV` | Application environment mode (`development`, `production`, `test`) | Optional | `development` |
-| `NGINX_PORT` | Port for Nginx reverse proxy | Optional | `80` |
-| `POSTGRES_USER` | PostgreSQL superuser username | Optional | `postgres` |
-| `POSTGRES_PASSWORD` | PostgreSQL superuser password | Optional | `postgres` |
-| `POSTGRES_DB` | Default database name for PostgreSQL container | Optional | `depix_db` |
-| `POSTGRES_PORT` | PostgreSQL external port binding | Optional | `5432` |
-| `MEDUSA_DB_NAME` | Database name for Medusa engine | Optional | `medusa_db` |
-| `MEDUSA_DATABASE_URL` | Direct connection string for Medusa database | Optional | `postgres://postgres:postgres@postgres:5432/depix_db?sslmode=disable` |
-| `REDIS_PORT` | Redis external port binding | Optional | `6379` |
-| `REDIS_URL` | Redis connection URL | Optional | `redis://redis:6379` |
-| `MEDUSA_PORT` | Port for Medusa server | Optional | `9000` |
-| `MEDUSA_JWT_SECRET` | Secret key for signing Medusa JWT tokens | Optional | `supersecret` |
-| `MEDUSA_COOKIE_SECRET` | Secret key for signing Medusa cookies | Optional | `supersecret` |
-| `DISABLE_MEDUSA_ADMIN` | Disable Medusa Admin bundle in headless server mode | Optional | `true` |
-| `SMS_PROVIDER` | SMS Provider (`kavenegar`, `smsir`, `melipayamak`, `fake`) | Optional | `fake` |
-| `SMS_API_KEY` | API key for the SMS gateway provider | Optional | - |
-| `SMS_SENDER` | Configured SMS sender line or sender ID | Optional | - |
-| `SMS_API_URL` | Gateway API endpoint URL override | Optional | - |
-| `SMS_TIMEOUT` | Request timeout for SMS API dispatches (ms) | Optional | `5000` |
-| `NOTIFICATION_RETRY_LIMIT` | Maximum retry attempts for dispatches | Optional | `3` |
-| `SMS_ORDER_NOTIFICATIONS_ENABLED` | Enable order state SMS notifications | Optional | `true` |
-| `SMS_ENABLE_OTP` | Enable OTP SMS verification dispatches | Optional | `true` |
-| `PAYMENT_ENV` | Payment gateway environment (`sandbox`, `development`, `production`) | Conditional | `sandbox` |
-| `APP_URL` | Frontend application origin for `/payment/success` and `/payment/failed` redirects (`https://` required in production) | Required when Zibal/production enabled | - |
-| `PAYMENT_TIMEOUT_MS` | External payment gateway HTTP timeout (ms) | Optional | `15000` |
-| `MELLAT_TERMINAL_ID` | Terminal ID for Mellat payment gateway | Optional | - |
-| `MELLAT_USERNAME` | Username for Mellat payment gateway | Optional | - |
-| `MELLAT_PASSWORD` | Password for Mellat payment gateway | Optional | - |
-| `MELLAT_CALLBACK_URL` | Callback URL for Mellat payment gateway | Optional | - |
-| `ZIBAL_MERCHANT` | Merchant key for Zibal payment gateway (test `'zibal'` is blocked in `production`) | Conditional | - |
-| `ZIBAL_CALLBACK_URL` | Backend callback URL Zibal calls (`/payment/callback`) | Conditional | - |
-| `ZARINPAL_ACCESS_TOKEN` | Access token for Zarinpal payment gateway | Optional | - |
-| `ZARINPAL_MERCHANT_ID` | Merchant ID for Zarinpal payment gateway | Optional | - |
-| `ZARINPAL_CALLBACK_URL` | Callback URL for Zarinpal payment gateway | Optional | - |
-| `SAMAN_TERMINAL_ID` | Terminal ID for Saman payment gateway | Optional | - |
-| `SAMAN_CALLBACK_URL` | Callback URL for Saman payment gateway | Optional | - |
-
----
-
-## Running the Application
-
-### 1. Docker Compose (Full Backend Stack)
-
-Build and start all backend services (PostgreSQL, Redis, Medusa, and Nginx) in detached mode:
+All commands are executed from the workspace root directory:
 
 ```bash
-docker compose up -d --build
-```
+# Validate and inspect resolved Docker Compose configuration
+docker compose config
 
-View application logs:
-```bash
+# Build (or rebuild) Medusa and Blog images
+docker compose build
+
+# Start all services in detached mode (automatically initializes blog_db & runs migrations)
+docker compose up -d
+
+# Check container status and health checks
+docker compose ps -a
+
+# Stream logs across all services (or filter by service name, e.g. blog medusa nginx)
 docker compose logs -f
-```
 
-Stop all running containers:
-```bash
+# Stop and remove containers while preserving persistent volumes
 docker compose down
 ```
 
-### 2. Local Development (Medusa)
+> [!CAUTION]
+> **Do NOT run `docker compose down -v`** unless you explicitly intend to wipe all PostgreSQL databases (`depix_db` and `blog_db`), Redis data, uploaded media, and backups.
 
-To run Medusa locally:
+---
+
+## Nginx Reverse Proxy Routing
+
+When running through Docker Compose, `depix-nginx` serves traffic on `http://localhost:${NGINX_PORT:-80}`:
+
+| Route Pattern | Target | Behavior / Notes |
+|---|---|---|
+| `GET /health` | Nginx Inline | Returns `200 OK` (`text/plain`) |
+| `/blog/static/*` | `blog_static` volume (`/var/www/blog/staticfiles/`) | Served directly by Nginx with 30-day cache headers |
+| `/blog/media/*` | `blog_media` volume (`/var/www/blog/media/`) | Served directly by Nginx with 7-day cache headers |
+| `/blog` | Redirect (`301`) | Redirects to `/blog/` |
+| `/blog/*` | `blog:8000` (`proxy_pass http://blog_backend/`) | Strips `/blog/` prefix before Daphne while Django uses `FORCE_SCRIPT_NAME=/blog` |
+| `/api/medusa/*` | `medusa:9000` (`proxy_pass http://medusa_backend/`) | Strips `/api/medusa/` prefix for Store & Admin Medusa APIs |
+| `/` | `medusa:9000` (`proxy_pass http://medusa_backend`) | Default fallback route to Medusa backend |
+
+---
+
+## API Documentation & Endpoints
+
+### Blog Endpoints (via Nginx at `/blog/`)
+- **Health Checks**:
+  - `GET /blog/health/cache` (or `http://localhost:8000/health/cache`)
+  - `GET /blog/health/redis` (or `http://localhost:8000/health/redis`)
+  - `GET /blog/health/cache-manager` (or `http://localhost:8000/health/cache-manager`)
+- **API & Schema**:
+  - `GET /blog/api/articles/` — Public articles API
+  - `GET /blog/api/schema/` — OpenAPI schema
+  - `GET /blog/api/schema/swagger-ui/` — Interactive Swagger UI (configured to load `/blog/api/schema/`)
+  - `GET /blog/api/schema/redoc/` — ReDoc UI
+- **Admin Panel**:
+  - `GET /blog/admin/` — Django Unfold Admin
+
+### Medusa Store & Payment Endpoints (via Nginx at `/api/medusa/` or direct `:9000`)
+- `GET /api/medusa/health` — Medusa health check
+- `GET /api/medusa/openapi.json` — OpenAPI v3 specification
+- `GET /api/medusa/store/products`, `/store/products/:id`, `/store/products/:id/json-ld`, `/store/products/:id/videos`
+- `POST /api/medusa/store/carts`, `/store/payments/initiate`, `GET`/`POST /api/medusa/payment/callback`, `POST /api/medusa/store/payments/verify`
+- `GET /api/medusa/store/wishlist`, `/store/comparison`, `/store/notifications`
+
+---
+
+## Database, Redis & Persistent Storage
+
+### PostgreSQL 16 Logical Isolation
+- **Medusa**: Connects to database `depix_db` as `postgres` (default).
+- **Blog**: Connects to database `blog_db` as `blog_user` (`NOSUPERUSER NOCREATEDB NOCREATEROLE`), owning only `blog_db` and its `public` schema. `blog_user` has no permissions on `depix_db`.
+- **`db-init` Service**: Runs [`infrastructure/postgres/init-databases.sh`](file:///home/amir/github-projects/depix-ecommerce/infrastructure/postgres/init-databases.sh) on every `docker compose up -d` and is also mounted into `/docker-entrypoint-initdb.d/01-init-databases.sh` for fresh volumes, ensuring existing PostgreSQL data volumes are upgraded safely without data loss.
+
+### Redis 7 Logical DB Isolation
+Both applications share `depix-redis` (`redis://redis:6379`) using separate Redis logical databases:
+
+| Redis DB | Owner | Purpose |
+|---|---|---|
+| `DB 0` | Blog | Celery task broker/result backend & Django Channels layer (`REDIS_URL=redis://redis:6379`) |
+| `DB 1` | Blog | Django cache (`CACHES` automatically appends `/1` in `Blog/blog/settings.py`) |
+| `DB 2` | Medusa | Medusa Express session store & Redis integrations (`REDIS_URL=redis://redis:6379/2`) |
+
+### Persistent Volumes
+
+| Volume Name | Mounted Path(s) | Purpose |
+|---|---|---|
+| `postgres_data` | `postgres:/var/lib/postgresql/data` | Persistent PostgreSQL 16 data (`depix_db` & `blog_db`) |
+| `redis_data` | `redis:/data` | Persistent Redis 7 state |
+| `medusa_uploads` | `medusa:/app/static` | Medusa static assets |
+| `medusa_media_uploads` | `medusa:/app/uploads` | Medusa media & ticket attachment uploads |
+| `blog_static` | `blog:/app/staticfiles`, `nginx:/var/www/blog/staticfiles:ro` | Collected Django static files |
+| `blog_media` | `blog*:/app/media`, `nginx:/var/www/blog/media:ro` | Blog public media uploads |
+| `blog_private_media` | `blog:/app/private_media`, `blog-celery-worker:/app/private_media` | Blog protected media storage |
+| `blog_backups` | `blog*:/app/backups` | Blog BDR backup archives & manifests |
+| `blog_logs` | `blog*:/app/logs` | Blog application & error logs |
+| `blog_celerybeat` | `blog-celery-beat:/app/celerybeat` | Celery Beat schedule database (`celerybeat-schedule`) |
+
+---
+
+## Independent Development Workflows
+
+Both projects retain full independent development capability:
+
+### Medusa Local Development
 ```bash
 cd medusa
+corepack enable
+yarn install
 yarn start
 ```
 
----
-
-## API Documentation & Routing
-
-### Nginx Service Routes
-
-When running through Docker Compose, Nginx routes incoming requests on port `80`:
-
-| Route Prefix | Target Service | Purpose |
-|---|---|---|
-| `/health` | Nginx Inline (`200 OK`) | Reverse proxy healthcheck endpoint |
-| `/api/medusa/` | Medusa (`http://medusa:9000/`) | Medusa Store & Admin API endpoints |
-| `/` | Medusa (`http://medusa:9000`) | Default backend fallback route |
-
-### API Specification & Documentation UIs (Swagger UI & ReDoc)
-
-The platform provides standard OpenAPI v3 spec generation alongside two complementary API documentation interfaces:
-
-- **OpenAPI v3 Specification**: Available via `GET /api/medusa/openapi.json` for API schema consumers, Postman imports, and SDK generation.
-- **Swagger UI**: Interactive API exploration and testing interface enabling direct request execution (`Try it out`), request header configuration, and live response inspection.
-- **ReDoc UI**: Clean, three-panel responsive documentation interface providing structured schema rendering, search capabilities, and code samples for developer onboarding.
-
-### Key Medusa Store API Endpoints
-
-- **Products & Catalog**:
-  - `GET /store/products` - List products
-  - `GET /store/products/:id` - Get product details
-  - `GET /store/products/:id/json-ld` - Get Schema.org Product & VideoObject JSON-LD
-  - `GET /store/products/:id/videos` - List product video attachments
-- **Carts & Checkout & Zibal Payment Flow**:
-  - `POST /store/carts` - Create cart
-  - `POST /store/carts/:id/line-items` - Add line item to cart
-  - `POST /store/carts/:id/payment-sessions` - Initialize payment session (`provider: "zibal" | "zarinpal"`)
-  - `POST /store/payments/initiate` - Initiate gateway payment and return `redirect_url` + `track_id`
-  - `GET` / `POST /payment/callback` (and `/payment/callback/:gateway`) - Receive Zibal browser/gateway callback, verify transaction server-side with Zibal, complete cart idempotently once, and `302` redirect to `${APP_URL}/payment/success` or `${APP_URL}/payment/failed`
-  - `POST /store/payments/verify` - Verify payment server-side and complete order idempotently
-  - `GET /store/payments/:id/inquiry` - Inquire payment status directly from Zibal
-
-### Zibal Payment Platform Setup (`@amirhossein-moloki/payment-*`)
-
-The backend integrates `@amirhossein-moloki/payment-core`, `@amirhossein-moloki/payment-zibal`, `@amirhossein-moloki/payment-service`, and `@amirhossein-moloki/payment-persistence-postgres` as workspace packages inside `medusa/packages/`.
-
-#### 1. Configure Environment Variables
-
-**Sandbox (Local Development):**
-```env
-APP_URL=http://localhost:3000
-PAYMENT_ENV=sandbox
-ZIBAL_MERCHANT=zibal
-ZIBAL_CALLBACK_URL=http://localhost/api/medusa/payment/callback
-```
-
-**Production (Separate Frontend & API Domains Supported):**
-```env
-APP_URL=https://example.com
-PAYMENT_ENV=production
-ZIBAL_MERCHANT=your_production_merchant
-ZIBAL_CALLBACK_URL=https://api.example.com/payment/callback
-```
-
-> At startup, Medusa validates `APP_URL`, `ZIBAL_MERCHANT`, `ZIBAL_CALLBACK_URL`, and `PAYMENT_ENV`. Using merchant `'zibal'` or non-HTTPS `APP_URL` in `production` fails startup with `ConfigurationError`.
-
-#### 2. Payment Initiation & Server-Side Callback Redirect Flow
-
-```ts
-// Frontend initiates checkout payment:
-const res = await fetch('/api/medusa/store/payments/initiate', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json', 'x-publishable-api-key': PUBLISHABLE_KEY },
-  body: JSON.stringify({ cart_id: cartId, provider: 'zibal' }),
-});
-const { redirect_url } = await res.json();
-window.location.href = redirect_url; // -> https://gateway.zibal.ir/start/{trackId}
-```
-
-After payment, Zibal sends the user back to `ZIBAL_CALLBACK_URL` (`/payment/callback` on Medusa). Medusa parses `trackId` and `success`, verifies directly with Zibal `/v1/verify` (including amount matching and idempotency against `payments` / `transactions` / `idempotency_records`), fulfills the order **at most once**, and redirects (`302`) to:
-- `${APP_URL}/payment/success?payment_id=...&order_id=...&track_id=...&ref_id=...`
-- `${APP_URL}/payment/failed?payment_id=...&track_id=...&reason=...`
-- **Customer Features**:
-  - `GET /store/wishlist` - View customer wishlist
-  - `POST /store/wishlist/items` - Add product variant to wishlist
-  - `GET /store/comparison` - View product comparison list
-  - `GET /store/notifications` - Retrieve customer notification feed
-
-### Authentication Mechanisms
-
-- **Medusa Backend**: Supports JWT bearer tokens and HTTP session cookies (`MEDUSA_JWT_SECRET`, `MEDUSA_COOKIE_SECRET`).
+### Blog Submodule Standalone Development
+- **Local Python virtualenv**:
+  ```bash
+  cd Blog
+  cp .env.example .env
+  python manage.py migrate
+  python manage.py runserver
+  ```
+- **Standalone Blog Docker Compose** (`Blog/docker-compose.yml`):
+  `Blog/docker-compose.yml` defaults to host port `80` for its own Nginx container. If running the standalone `Blog/` stack while the root stack is also running, either stop the root stack (`docker compose down`) first or override `NGINX_PORT` in the root `.env` (e.g., `NGINX_PORT=8080`), and ensure `Blog/.env` exists (`cp Blog/.env.example Blog/.env`).
 
 ---
 
-## Database & Data Architecture
+## Updating the Blog Submodule
 
-- **PostgreSQL 16**: Primary relational database service powering the Medusa e-commerce backend (`MEDUSA_DB_NAME` / `POSTGRES_DB`).
-- **Redis 7**: Used by Medusa for session caching, event bus messaging, and workflow execution states.
+Because `Blog/` is tracked as a Git submodule, updates are pulled explicitly and pinned in the root repository:
+
+```bash
+# 1. Fetch and update Blog to the latest commit on its tracked branch
+git submodule update --remote Blog
+
+# 2. Rebuild the Blog container image and recreate affected services
+docker compose build blog
+docker compose up -d
+
+# 3. Verify health and schema/migrations
+docker compose ps -a
+docker compose logs --tail=30 blog
+
+# 4. Commit the updated submodule pointer in the root repository
+git add Blog
+git commit -m "chore(submodule): update Blog submodule"
+```
 
 ---
 
 ## Testing & Quality Assurance
 
-### Medusa Workspace Commands
+### Root Stack Health Checks
+```bash
+curl -f http://localhost/health
+curl -f http://localhost/api/medusa/health
+curl -f http://localhost/blog/health/cache
+curl -f http://localhost/blog/health/redis
+docker exec depix-blog python manage.py check
+docker exec depix-blog-celery-worker celery -A blog inspect ping
+```
 
+### Medusa Workspace Tests
 ```bash
 cd medusa
-
-# Run static code linting
 yarn lint
-
-# Run Medusa-specific linting configuration
 yarn lint:medusa
-
-# Run unit tests
 yarn test
-
-# Run HTTP integration tests
 yarn test:integration:http
 ```
 
 ---
 
+## Troubleshooting
+
+1. **Blog Redis / Cache Failure (`invalid DB index` or connection error)**:
+   Verify `BLOG_REDIS_URL` in root `.env` is `redis://redis:6379` **without** a trailing `/0` or `/1`. `Blog/blog/settings.py` appends `/1` directly to `REDIS_URL` for Django `CACHES`; adding `/0` produces an invalid `redis://redis:6379/0/1` URL.
+2. **`blog_db` missing or `permission denied for schema public` on an existing `postgres_data` volume**:
+   Docker's `/docker-entrypoint-initdb.d/` runs only on brand-new volumes. Run `docker compose up -d db-init` (or `docker compose up -d`) so `depix-db-init` executes [`infrastructure/postgres/init-databases.sh`](file:///home/amir/github-projects/depix-ecommerce/infrastructure/postgres/init-databases.sh) idempotently against the live PostgreSQL container.
+3. **Port `80`, `8000`, `9000`, `5432`, or `6379` already in use**:
+   Ensure `Blog/docker-compose.yml` or local services are not already bound to those ports, or override `NGINX_PORT`, `BLOG_PORT`, `MEDUSA_PORT`, `POSTGRES_PORT`, or `REDIS_PORT` in root `.env`.
+4. **Blog static files returning 404 via Nginx**:
+   Check `docker compose logs blog` to confirm `python manage.py collectstatic --no-input` completed and `blog_static` is mounted into both `depix-blog` (`/app/staticfiles`) and `depix-nginx` (`/var/www/blog/staticfiles:ro`).
+5. **Celery worker or beat unhealthy**:
+   Inspect logs via `docker compose logs blog-celery-worker blog-celery-beat` and verify queue consumption with `docker exec depix-blog-celery-worker celery -A blog inspect active_queues`.
+6. **Django `DisallowedHost` or `403 CSRF verification failed` on custom domains**:
+   Add your domain/origin to `BLOG_ALLOWED_HOSTS` and `BLOG_CSRF_TRUSTED_ORIGINS` in root `.env`, and update `DOMAIN` / `CORS_ALLOWED_ORIGINS` in `.env.blog`.
+
+---
+
 ## Deployment Overview
 
-- **Production Docker Strategy**: The included `docker-compose.yml` provides containerized orchestration using a custom Node 22 Medusa image, PostgreSQL 16 Alpine, Redis 7 Alpine, and Nginx Alpine.
-- **Environment Isolation**: Production deployments require establishing proper `DATABASE_URL` values, secure secrets (`MEDUSA_JWT_SECRET`, `MEDUSA_COOKIE_SECRET`), and binding Nginx to SSL/TLS certificates (port `443`).
+- **Production Docker Strategy**: Root [`docker-compose.yml`](file:///home/amir/github-projects/depix-ecommerce/docker-compose.yml) orchestrates Node 22 Medusa, Python 3.12 Django/Daphne Blog + Celery Worker/Beat, PostgreSQL 16 Alpine, Redis 7 Alpine, and Nginx Alpine.
+- **Production Hardening Checklist**:
+  - Set `NODE_ENV=production`, `BLOG_DEBUG=False`, strong secrets (`MEDUSA_JWT_SECRET`, `MEDUSA_COOKIE_SECRET`, `SECRET_KEY`, `STATIC_API_KEY`, `POSTGRES_PASSWORD`, `BLOG_DB_PASSWORD`), and restrict `BLOG_ALLOWED_HOSTS` / `CORS_ALLOWED_ORIGINS` / `BLOG_CSRF_TRUSTED_ORIGINS` to production domains.
+  - Terminate TLS/SSL (port `443`) at Nginx or an upstream load balancer and set `BLOG_SECURE_SSL_REDIRECT=True`, `BLOG_SESSION_COOKIE_SECURE=True`, and `BLOG_CSRF_COOKIE_SECURE=True`.
