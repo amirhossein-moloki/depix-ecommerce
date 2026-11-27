@@ -107,5 +107,32 @@ export function applyOrderStatusMetadata<T extends Record<string, any>>(
     ;(order as any).fulfillment_status = metaFulfillment
   }
 
+  // Hydrate immutable financial snapshot & promotions from order.metadata if not already populated
+  const snapshot = order.metadata?.financial_snapshot
+  if (snapshot && typeof snapshot === "object") {
+    if (order.subtotal === undefined || order.subtotal === null) {
+      ;(order as any).subtotal = Number(snapshot.subtotal ?? 0)
+    }
+    if (order.discount_total === undefined || order.discount_total === null) {
+      ;(order as any).discount_total = Number(snapshot.discount_total ?? 0)
+    }
+    if (order.shipping_total === undefined || order.shipping_total === null) {
+      ;(order as any).shipping_total = Number(snapshot.shipping_total ?? 0)
+    }
+    if (order.tax_total === undefined || order.tax_total === null) {
+      ;(order as any).tax_total = Number(snapshot.tax_total ?? 0)
+    }
+    if (order.total === undefined || order.total === null) {
+      ;(order as any).total = Number(snapshot.total ?? 0)
+    }
+  }
+
+  if (
+    (!Array.isArray(order.promotions) || order.promotions.length === 0) &&
+    Array.isArray(order.metadata?.promotions)
+  ) {
+    ;(order as any).promotions = order.metadata.promotions
+  }
+
   return order
 }

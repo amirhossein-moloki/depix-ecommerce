@@ -1,8 +1,8 @@
-import { GET as getProductInventory } from "../route"
-import { POST as adjustProductInventory } from "../adjustments/route"
-import { GET as getProductInventoryHistory } from "../history/route"
-import { GET as getLowStock } from "../../../../inventory/low-stock/route"
-import { GET as getGlobalHistory } from "../../../../inventory/history/route"
+import { GET as getProductInventory } from "../../products/[id]/inventory/route"
+import { POST as adjustProductInventory } from "../../products/[id]/inventory/adjustments/route"
+import { GET as getProductInventoryHistory } from "../../products/[id]/inventory/history/route"
+import { GET as getLowStock } from "../low-stock/route"
+import { GET as getGlobalHistory } from "../history/route"
 import { MedusaError } from "@medusajs/framework/utils"
 
 describe("Inventory Management and History API Routes", () => {

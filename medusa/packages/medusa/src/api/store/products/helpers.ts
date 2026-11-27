@@ -388,5 +388,46 @@ export async function applyActiveAutomaticPromotionsToProducts(
       product.finalPrice = bestFinal
       product.discount = Math.round(((basePrice - bestFinal) / basePrice) * 100)
     }
+
+    // Also update variants[].calculated_price in-memory without mutating DB prices
+    for (const variant of product?.variants ?? []) {
+      const cp = variant?.calculated_price
+      if (!cp || typeof cp !== "object") {
+        continue
+      }
+      const variantOriginal = Number(
+        cp.original_amount ?? cp.calculated_amount ?? 0
+      )
+      if (!Number.isFinite(variantOriginal) || variantOriginal <= 0) {
+        continue
+      }
+      let variantBestFinal = Number(cp.calculated_amount ?? variantOriginal)
+      for (const promo of activePromos) {
+        if (!doesPromotionMatchProduct(promo, product.id)) {
+          continue
+        }
+        const methodType = promo.application_method?.type
+        const methodValue = Number(promo.application_method?.value ?? 0)
+        if (!Number.isFinite(methodValue) || methodValue <= 0) {
+          continue
+        }
+        let candidate = variantOriginal
+        if (methodType === "percentage") {
+          candidate = Math.max(
+            0,
+            Math.round(variantOriginal * (1 - methodValue / 100))
+          )
+        } else if (methodType === "fixed") {
+          candidate = Math.max(0, Math.round(variantOriginal - methodValue))
+        }
+        if (candidate < variantBestFinal) {
+          variantBestFinal = candidate
+        }
+      }
+      if (variantBestFinal < variantOriginal) {
+        cp.original_amount = variantOriginal
+        cp.calculated_amount = variantBestFinal
+      }
+    }
   }
 }

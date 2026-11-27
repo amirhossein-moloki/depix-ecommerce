@@ -72,8 +72,21 @@ export const GET = async (
   if (productId) filters.product_id = productId
   if (variantId) filters.variant_id = variantId
   if (locationId) filters.location_id = locationId
-  if (type) filters.type = type
   if (reason) filters.reason = reason
+  if (type) {
+    const normalizedType = String(type).trim().toLowerCase()
+    if (normalizedType === "increase" || normalizedType === "decrease") {
+      filters.type = normalizedType
+    } else if (
+      ["sale", "return", "cancellation", "adjustment"].includes(normalizedType) &&
+      !reason
+    ) {
+      filters.reason =
+        normalizedType === "adjustment" ? "manual_adjustment" : normalizedType
+    } else {
+      filters.type = type
+    }
+  }
   if (referenceId) filters.reference_id = referenceId
   if (createdBy) filters.created_by = createdBy
 

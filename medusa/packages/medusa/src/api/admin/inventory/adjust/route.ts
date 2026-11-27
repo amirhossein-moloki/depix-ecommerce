@@ -125,6 +125,17 @@ export const POST = async (
     )
   }
 
+  if (variant.manage_inventory === false) {
+    try {
+      const productService = req.scope.resolve<any>(Modules.PRODUCT)
+      await productService?.updateProductVariants?.(variant.id, {
+        manage_inventory: true,
+      })
+    } catch {
+      // Product service may be absent in isolated unit test scopes
+    }
+  }
+
   let inventoryItemId: string | undefined =
     variant.inventory_items?.[0]?.inventory_item_id ||
     variant.inventory_items?.[0]?.inventory?.id

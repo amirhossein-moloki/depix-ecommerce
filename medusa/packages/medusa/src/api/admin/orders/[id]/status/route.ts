@@ -16,6 +16,7 @@ import {
   normalizeOrderStatus,
 } from "../../../../utils/order-status"
 import { AdminUpdateOrderStatusType } from "../../validators"
+import { restoreInventoryForCanceledOrder } from "../../../../store/payments/inventory-deduction"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest<
@@ -82,6 +83,11 @@ export const POST = async (
         canceled_by: req.auth_context?.actor_id,
       },
     })
+    await restoreInventoryForCanceledOrder(
+      req.scope,
+      id,
+      req.auth_context?.actor_id
+    )
     await orderService.updateOrders(id, {
       metadata: nextMetadata,
     })

@@ -35,6 +35,7 @@ module.exports = defineJestConfig({
     "^@medusajs/brand": path.resolve(__dirname, "../modules/brand/src"),
     "^@medusajs/media": path.resolve(__dirname, "../modules/media/src"),
     "^@medusajs/size-guide": path.resolve(__dirname, "../modules/size-guide/src"),
+    "^@medusajs/banner": path.resolve(__dirname, "../modules/banner/src"),
     "^@amirhossein-moloki/payment-core$": path.resolve(__dirname, "../payment-core/dist/index.js"),
     "^@amirhossein-moloki/payment-zibal$": path.resolve(__dirname, "../payment-zibal/dist/index.js"),
     "^@amirhossein-moloki/payment-service$": path.resolve(__dirname, "../payment-service/dist/index.js"),

@@ -16,6 +16,314 @@ security:
 - bearerAuth: []
 - cookieAuth: []
 paths:
+  /store/banners:
+    get:
+      summary: List Active Storefront Banners
+      operationId: storeListBanners
+      description: Returns active storefront banners ordered by `sort_order ASC, created_at ASC`. When `placement` is omitted, returns all active banners.
+      tags:
+      - Store Banners
+      security: []
+      parameters:
+      - name: placement
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - hero_main
+          - hero_secondary
+      responses:
+        '200':
+          description: List of active banners.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - banners
+                properties:
+                  banners:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Banner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /admin/banners:
+    get:
+      summary: List All Banners (Admin)
+      operationId: adminListBanners
+      tags:
+      - Admin Banners
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: placement
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - hero_main
+          - hero_secondary
+      responses:
+        '200':
+          description: List of all banners sorted by `sort_order ASC`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - banners
+                properties:
+                  banners:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Banner'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create Banner
+      operationId: adminCreateBanner
+      tags:
+      - Admin Banners
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - image_url
+              properties:
+                title:
+                  type: string
+                  nullable: true
+                placement:
+                  type: string
+                  enum:
+                  - hero_main
+                  - hero_secondary
+                  default: hero_main
+                image_url:
+                  type: string
+                link_url:
+                  type: string
+                  nullable: true
+                  description: Internal path starting with `/` (not `//`) or `http(s)://` URL.
+                sort_order:
+                  type: integer
+                  default: 0
+                is_active:
+                  type: boolean
+                  default: true
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+      responses:
+        '201':
+          description: Banner created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - banner
+                properties:
+                  banner:
+                    $ref: '#/components/schemas/Banner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/banners/reorder:
+    post:
+      summary: Reorder Banners
+      operationId: adminReorderBanners
+      tags:
+      - Admin Banners
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: array
+                items:
+                  type: object
+                  required:
+                  - id
+                  - sort_order
+                  properties:
+                    id:
+                      type: string
+                    sort_order:
+                      type: integer
+              - type: object
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - sort_order
+                      properties:
+                        id:
+                          type: string
+                        sort_order:
+                          type: integer
+      responses:
+        '200':
+          description: Reordered banners.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - banners
+                properties:
+                  banners:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Banner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/banners/{id}:
+    get:
+      summary: Get Banner by ID
+      operationId: adminGetBanner
+      tags:
+      - Admin Banners
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Banner details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - banner
+                properties:
+                  banner:
+                    $ref: '#/components/schemas/Banner'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Banner
+      operationId: adminUpdateBanner
+      tags:
+      - Admin Banners
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  nullable: true
+                placement:
+                  type: string
+                  enum:
+                  - hero_main
+                  - hero_secondary
+                image_url:
+                  type: string
+                link_url:
+                  type: string
+                  nullable: true
+                sort_order:
+                  type: integer
+                is_active:
+                  type: boolean
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+      responses:
+        '200':
+          description: Banner updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - banner
+                properties:
+                  banner:
+                    $ref: '#/components/schemas/Banner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Banner
+      operationId: adminDeleteBanner
+      tags:
+      - Admin Banners
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Banner deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                  deleted:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /store/brands:
     get:
       summary: List Public Brands
@@ -1362,20 +1670,57 @@ paths:
         schema:
           type: integer
           default: 0
+      - name: product_id
+        in: query
+        schema:
+          type: string
+      - name: variant_id
+        in: query
+        schema:
+          type: string
       - name: location_id
         in: query
         schema:
           type: string
       - name: type
         in: query
+        description: Filter by balance direction (`increase` or `decrease`). Legacy reason aliases (`adjustment`, `sale`, `return`, `cancellation`) are also accepted.
         schema:
           type: string
           enum:
-          - adjustment
+          - increase
+          - decrease
+      - name: reason
+        in: query
+        schema:
+          type: string
+          enum:
+          - initial_stock
+          - purchase
           - sale
+          - cancellation
           - return
-          - transfer
-          - reservation
+          - damaged
+          - manual_adjustment
+          - inventory_count
+      - name: reference_id
+        in: query
+        schema:
+          type: string
+      - name: created_by
+        in: query
+        schema:
+          type: string
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date-time
       responses:
         '200':
           description: Paginated transaction list.
@@ -1384,12 +1729,12 @@ paths:
               schema:
                 type: object
                 required:
-                - transactions
+                - history
                 - count
                 - offset
                 - limit
                 properties:
-                  transactions:
+                  history:
                     type: array
                     items:
                       $ref: '#/components/schemas/InventoryTransaction'
@@ -8633,8 +8978,33 @@ components:
           type: string
         fulfillment_status:
           type: string
+        subtotal:
+          type: number
+        discount_total:
+          type: number
+        shipping_total:
+          type: number
+        tax_total:
+          type: number
         total:
           type: number
+        promotions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              code:
+                type: string
+              type:
+                type: string
+                nullable: true
+              value:
+                type: number
+                nullable: true
+              is_automatic:
+                type: boolean
         summary:
           type: object
           properties:
@@ -9439,6 +9809,44 @@ components:
         canceled_at:
           type: string
           format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Banner:
+      type: object
+      required:
+      - id
+      - placement
+      - image_url
+      - sort_order
+      - is_active
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        placement:
+          type: string
+          enum:
+          - hero_main
+          - hero_secondary
+        image_url:
+          type: string
+        link_url:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        metadata:
+          type: object
+          additionalProperties: true
           nullable: true
         created_at:
           type: string

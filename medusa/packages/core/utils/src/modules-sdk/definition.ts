@@ -43,6 +43,7 @@ export const Modules = {
   BRAND: "brand",
   MEDIA: "media",
   SIZE_GUIDE: "size_guide",
+  BANNER: "banner",
 } as const
 
 export const MODULE_PACKAGE_NAMES = {
@@ -90,6 +91,7 @@ export const MODULE_PACKAGE_NAMES = {
   [Modules.BRAND]: "@medusajs/brand",
   [Modules.MEDIA]: "@medusajs/media",
   [Modules.SIZE_GUIDE]: "@medusajs/size-guide",
+  [Modules.BANNER]: "@medusajs/banner",
 }
 
 export const REVERSED_MODULE_PACKAGE_NAMES = Object.entries(

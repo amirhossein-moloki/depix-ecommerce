@@ -99,6 +99,7 @@ import { adminMarginReportRoutesMiddlewares } from "./admin/reports/margin/middl
 import { adminTicketRoutesMiddlewares } from "./admin/tickets/middlewares"
 import { adminBrandRoutesMiddlewares } from "./admin/brands/middlewares"
 import { adminSizeGuideRoutesMiddlewares } from "./admin/size-guides/middlewares"
+import { adminBannerRoutesMiddlewares } from "./admin/banners/middlewares"
 import { storeBrandRoutesMiddlewares } from "./store/brands/middlewares"
 import { adminCategoryRoutesMiddlewares } from "./admin/categories/middlewares"
 import { storeCategoryRoutesMiddlewares } from "./store/categories/middlewares"
@@ -113,6 +114,7 @@ export default defineMiddlewares([
   ...storeBrandRoutesMiddlewares,
   ...adminBrandRoutesMiddlewares,
   ...adminSizeGuideRoutesMiddlewares,
+  ...adminBannerRoutesMiddlewares,
   ...storeCategoryRoutesMiddlewares,
   ...adminCategoryRoutesMiddlewares,
   ...adminMediaRoutesMiddlewares,

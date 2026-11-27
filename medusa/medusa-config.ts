@@ -45,6 +45,10 @@ module.exports = defineConfig({
       resolve: "@medusajs/size-guide",
     },
     {
+      key: "banner",
+      resolve: "@medusajs/banner",
+    },
+    {
       key: "payment",
       resolve: "@medusajs/payment",
       options: {

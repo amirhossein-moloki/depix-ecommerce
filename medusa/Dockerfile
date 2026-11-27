@@ -35,6 +35,7 @@ RUN --mount=type=cache,target=/app/node_modules/.cache/turbo yarn turbo run buil
     --filter=@medusajs/price-alert... \
     --filter=@medusajs/ticket... \
     --filter=@medusajs/size-guide... \
+    --filter=@medusajs/banner... \
     --no-daemon && \
     rm -rf /tmp/*
 

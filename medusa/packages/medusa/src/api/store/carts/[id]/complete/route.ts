@@ -9,6 +9,7 @@ import {
 } from "@medusajs/framework/utils"
 import { refetchCart } from "../../helpers"
 import { defaultStoreCartFields } from "../../query-config"
+import { deductInventoryForCompletedOrder } from "../../../payments/inventory-deduction"
 
 export const POST = async (
   req: MedusaRequest<{}, HttpTypes.SelectParams>,
@@ -71,6 +72,12 @@ export const POST = async (
       },
     })
     return
+  }
+
+  if (result?.id) {
+    await deductInventoryForCompletedOrder(req.scope, result.id).catch(
+      () => undefined
+    )
   }
 
   const { data } = await query.graph({

@@ -27,6 +27,7 @@ import {
   buildSuccessRedirectUrl,
 } from "./config"
 import { getPaymentPlatform, PaymentPlatformRuntime } from "./platform"
+import { deductInventoryForCompletedOrder } from "./inventory-deduction"
 
 export interface InitiatePaymentInput {
   cartId: string
@@ -340,6 +341,72 @@ function stripAddressIds(addr: any): Record<string, unknown> | undefined {
   return rest
 }
 
+function buildOrderPromotionsSnapshot(cart: any): Array<{
+  id?: string
+  code: string
+  type: string | null
+  value: number | null
+  is_automatic?: boolean
+}> {
+  return (cart?.promotions ?? [])
+    .filter((p: any) => p?.code)
+    .map((p: any) => ({
+      ...(p.id ? { id: p.id } : {}),
+      code: p.code,
+      type: p?.application_method?.type ?? p?.type ?? null,
+      value:
+        p?.application_method?.value != null
+          ? Number(p.application_method.value)
+          : p?.value != null
+            ? Number(p.value)
+            : null,
+      ...(p.is_automatic !== undefined ? { is_automatic: Boolean(p.is_automatic) } : {}),
+    }))
+}
+
+function buildCartFinancialSnapshot(cart: any): {
+  subtotal: number
+  discount_total: number
+  shipping_total: number
+  tax_total: number
+  total: number
+} {
+  const itemsSubtotal = Array.isArray(cart?.items) && cart.items.length > 0
+    ? cart.items.reduce(
+        (sum: number, item: any) =>
+          sum + Number(item?.unit_price ?? 0) * Number(item?.quantity ?? 0),
+        0
+      )
+    : Number(cart?.subtotal ?? 0)
+  const subtotal = Math.round(Number(cart?.subtotal ?? itemsSubtotal))
+  const discountTotal = Math.round(Number(cart?.discount_total ?? 0))
+  const shippingTotal = Math.round(
+    cart?.shipping_total !== undefined && cart?.shipping_total !== null
+      ? Number(cart.shipping_total)
+      : (cart?.shipping_methods ?? []).reduce(
+          (sum: number, sm: any) => sum + Number(sm?.amount ?? 0),
+          0
+        )
+  )
+  const taxTotal = Math.round(Number(cart?.tax_total ?? 0))
+  const total = Math.max(
+    0,
+    Math.round(
+      cart?.total !== undefined && cart?.total !== null
+        ? Number(cart.total)
+        : subtotal - discountTotal + taxTotal + shippingTotal
+    )
+  )
+
+  return {
+    subtotal,
+    discount_total: discountTotal,
+    shipping_total: shippingTotal,
+    tax_total: taxTotal,
+    total,
+  }
+}
+
 async function createOrderFromCartFallback(
   scope: MedusaContainer,
   cart: any,
@@ -385,6 +452,9 @@ async function createOrderFromCartFallback(
     metadata: sm.metadata ?? undefined,
   }))
 
+  const promotionsSnapshot = buildOrderPromotionsSnapshot(cart)
+  const financialSnapshot = buildCartFinancialSnapshot(cart)
+
   const orderInput = {
     region_id: cart.region_id ?? undefined,
     customer_id: cart.customer_id ?? params.customerId ?? undefined,
@@ -405,6 +475,8 @@ async function createOrderFromCartFallback(
       track_id: params.trackId,
       ref_id: params.refId,
       payment_status: "paid",
+      promotions: promotionsSnapshot,
+      financial_snapshot: financialSnapshot,
     },
   }
 
@@ -447,16 +519,7 @@ async function completeCartIdempotently(
 
   const task = (async () => {
     const cartService = scope.resolve<any>(Modules.CART)
-    const cart = await cartService
-      .retrieveCart(params.cartId, {
-        relations: [
-          "items",
-          "shipping_address",
-          "billing_address",
-          "shipping_methods",
-        ],
-      })
-      .catch(() => cartService.retrieveCart(params.cartId).catch(() => null))
+    const cart = await retrieveFullCartForPayment(scope, params.cartId)
 
     if (!cart) {
       throw new MedusaError(
@@ -554,6 +617,37 @@ async function completeCartIdempotently(
         orderId,
         amount: params.amount ?? Number(order?.total ?? cart.total ?? 0),
       })
+
+      // Ensure promotions & financial snapshot are persisted on order.metadata even when completeCartWorkflow ran
+      if (!usedFallback) {
+        try {
+          const orderService = scope.resolve<any>(Modules.ORDER)
+          const existingMeta = (order?.metadata ?? {}) as Record<string, any>
+          const promotionsSnapshot = buildOrderPromotionsSnapshot(cart)
+          const financialSnapshot = buildCartFinancialSnapshot(cart)
+          if (
+            orderService?.updateOrders &&
+            (!existingMeta.financial_snapshot ||
+              (promotionsSnapshot.length > 0 && !existingMeta.promotions))
+          ) {
+            await orderService.updateOrders(orderId, {
+              metadata: {
+                ...existingMeta,
+                ...(promotionsSnapshot.length > 0
+                  ? { promotions: promotionsSnapshot }
+                  : {}),
+                financial_snapshot:
+                  existingMeta.financial_snapshot ?? financialSnapshot,
+              },
+            })
+          }
+        } catch {
+          // Optional metadata sync
+        }
+      }
+
+      await deductInventoryForCompletedOrder(scope, orderId, cart)
+
       const hydratedOrder = await resolveExistingOrder(scope, orderId)
       if (hydratedOrder && Object.keys(hydratedOrder).length > 1) {
         order = hydratedOrder
@@ -683,12 +777,15 @@ async function retrieveFullCartForPayment(
           "shipping_total",
           "metadata",
           "shipping_address.*",
-          "items.id",
-          "items.quantity",
-          "items.unit_price",
-          "shipping_methods.id",
-          "shipping_methods.amount",
-          "shipping_methods.data",
+          "billing_address.*",
+          "items.*",
+          "shipping_methods.*",
+          "promotions.id",
+          "promotions.code",
+          "promotions.is_automatic",
+          "promotions.application_method.type",
+          "promotions.application_method.value",
+          "promotions.application_method.currency_code",
         ],
       })
       const [cart] = await remoteQuery(queryObject)
@@ -1195,10 +1292,42 @@ export const verifyGatewayPayment = async (
     await attachAuthenticatedCustomerToCart(scope, cart.id, customerId)
   }
 
+  const fullCart = (await retrieveFullCartForPayment(scope, cart.id)) ?? cart
+
   const we = scope.resolve<any>(Modules.WORKFLOW_ENGINE)
   const { result: order } = await we.run(completeCartWorkflowId, {
     input: { id: cart.id },
   })
+
+  const completedOrderId = order?.id ? String(order.id) : undefined
+  if (completedOrderId) {
+    try {
+      const orderService = scope.resolve<any>(Modules.ORDER)
+      const existingMeta = (order?.metadata ?? {}) as Record<string, any>
+      const promotionsSnapshot = buildOrderPromotionsSnapshot(fullCart)
+      const financialSnapshot = buildCartFinancialSnapshot(fullCart)
+      if (
+        orderService?.updateOrders &&
+        (!existingMeta.financial_snapshot ||
+          (promotionsSnapshot.length > 0 && !existingMeta.promotions))
+      ) {
+        await orderService.updateOrders(completedOrderId, {
+          metadata: {
+            ...existingMeta,
+            ...(promotionsSnapshot.length > 0
+              ? { promotions: promotionsSnapshot }
+              : {}),
+            financial_snapshot:
+              existingMeta.financial_snapshot ?? financialSnapshot,
+          },
+        })
+      }
+    } catch {
+      // Optional metadata sync
+    }
+
+    await deductInventoryForCompletedOrder(scope, completedOrderId, fullCart)
+  }
 
   return {
     verified: true,

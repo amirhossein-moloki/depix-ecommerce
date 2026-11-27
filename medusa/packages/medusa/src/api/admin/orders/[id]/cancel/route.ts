@@ -8,6 +8,7 @@ import {
   ContainerRegistrationKeys,
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
+import { restoreInventoryForCanceledOrder } from "../../../../store/payments/inventory-deduction"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest<{}, HttpTypes.AdminGetOrderParams>,
@@ -25,6 +26,12 @@ export const POST = async (
   await cancelOrderWorkflow(req.scope).run({
     input,
   })
+
+  await restoreInventoryForCanceledOrder(
+    req.scope,
+    req.params.id,
+    req.auth_context.actor_id
+  )
 
   const queryObject = remoteQueryObjectFromString({
     entryPoint: "order",

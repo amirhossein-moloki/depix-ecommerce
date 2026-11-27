@@ -15,6 +15,7 @@ import {
 } from "../../../../utils/order-status"
 import { defaultStoreRetrieveOrderFields } from "../../query-config"
 import { StoreCancelOrderType } from "../../validators"
+import { restoreInventoryForCanceledOrder } from "../../../payments/inventory-deduction"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest<
@@ -128,6 +129,8 @@ export const POST = async (
       canceled_by: customerId,
     },
   })
+
+  await restoreInventoryForCanceledOrder(req.scope, id, customerId)
 
   const nextMetadata: Record<string, unknown> = {
     ...((existing.metadata as Record<string, unknown> | undefined) ?? {}),
