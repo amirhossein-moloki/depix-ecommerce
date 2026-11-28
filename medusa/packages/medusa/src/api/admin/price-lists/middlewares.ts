@@ -83,7 +83,7 @@ export const adminPriceListsRoutesMiddlewares: MiddlewareRoute[] = [
     ],
   },
   {
-    method: ["POST"],
+    method: ["POST", "PATCH"],
     matcher: "/admin/price-lists/:id",
     middlewares: [
       validateAndTransformBody(AdminUpdatePriceList),

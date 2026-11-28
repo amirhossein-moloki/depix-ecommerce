@@ -9,13 +9,17 @@ import {
 } from "./validators"
 
 export function formatCategory(cat: any) {
-  if (!cat) return null
-  const metadata = cat.metadata || {}
+  const record = Array.isArray(cat) ? cat[0] : cat
+  if (!record || typeof record !== "object") return null
+  const metadata = record.metadata || {}
   return {
-    ...cat,
-    slug: cat.handle || metadata.slug || (cat.name ? toHandle(cat.name) : null),
-    image_id: metadata.image_id || cat.image || null,
-    display_order: cat.rank ?? 0,
+    ...record,
+    slug:
+      record.handle ||
+      metadata.slug ||
+      (record.name ? toHandle(record.name) : null),
+    image_id: metadata.image_id || record.image || null,
+    display_order: record.rank ?? 0,
   }
 }
 
@@ -128,5 +132,9 @@ export const POST = async (
     metadata: mergedMetadata,
   })
 
-  res.status(201).json({ category: formatCategory(newCategory) })
+  const createdCategory = Array.isArray(newCategory)
+    ? newCategory[0]
+    : newCategory
+
+  res.status(201).json({ category: formatCategory(createdCategory) })
 }

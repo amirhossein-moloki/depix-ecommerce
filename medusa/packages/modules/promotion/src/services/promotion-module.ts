@@ -77,6 +77,57 @@ type InjectedDependencies = {
   campaignBudgetUsageService: ModulesSdkTypes.IMedusaInternalService<any>
 }
 
+export function isPromotionActiveForApplication(
+  promo: any,
+  nowMs = Date.now()
+): boolean {
+  if (!promo) {
+    return false
+  }
+  if (promo.status !== undefined && promo.status !== PromotionStatus.ACTIVE) {
+    return false
+  }
+  if (promo.deleted_at) {
+    return false
+  }
+
+  const metaStarts = promo.metadata?.starts_at
+  if (metaStarts) {
+    const ts = new Date(metaStarts).getTime()
+    if (Number.isFinite(ts) && ts > nowMs) {
+      return false
+    }
+  }
+
+  const metaEnds = promo.metadata?.ends_at
+  if (metaEnds) {
+    const ts = new Date(metaEnds).getTime()
+    if (Number.isFinite(ts) && ts <= nowMs) {
+      return false
+    }
+  }
+
+  if (promo.campaign) {
+    if (promo.campaign.metadata?.is_active === false) {
+      return false
+    }
+    if (promo.campaign.starts_at) {
+      const ts = new Date(promo.campaign.starts_at).getTime()
+      if (Number.isFinite(ts) && ts > nowMs) {
+        return false
+      }
+    }
+    if (promo.campaign.ends_at) {
+      const ts = new Date(promo.campaign.ends_at).getTime()
+      if (Number.isFinite(ts) && ts <= nowMs) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
 export default class PromotionModuleService
   extends MedusaService<{
     Promotion: { dto: PromotionTypes.PromotionDTO }
@@ -196,10 +247,15 @@ export default class PromotionModuleService
       ],
     }
 
-    return await this.promotionService_.list(
+    const promotions = await this.promotionService_.list(
       activeFilters,
       config,
       sharedContext
+    )
+
+    const nowMs = now.getTime()
+    return promotions.filter((promo) =>
+      isPromotionActiveForApplication(promo, nowMs)
     )
   }
 
@@ -770,7 +826,10 @@ export default class PromotionModuleService
       if (rulePrefilteringFilters) {
         const promotions = await this.promotionService_.list(
           {
-            $and: [{ is_automatic: true }, rulePrefilteringFilters],
+            $and: [
+              { is_automatic: true, status: PromotionStatus.ACTIVE },
+              rulePrefilteringFilters,
+            ],
           },
           { select: ["id"] },
           sharedContext

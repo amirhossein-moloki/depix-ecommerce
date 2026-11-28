@@ -86,6 +86,7 @@ interface NormalizedVariant {
   upc?: string | null
   priceIrr: number
   compareAtIrr: number | null
+  hasExplicitCompareAt: boolean
   hasExplicitStock: boolean
   stock: number
   manageInventory: boolean
@@ -186,6 +187,9 @@ function normalizeVariant(
 
   const priceIrr = normalizePriceToIrr(rawPrice, priceUnit)
 
+  const hasExplicitCompareAt =
+    variant.compare_at_price_irr !== undefined ||
+    variant.compare_at_price !== undefined
   const rawCompareAt =
     variant.compare_at_price_irr ?? variant.compare_at_price ?? null
   const compareAtIrr =
@@ -223,6 +227,7 @@ function normalizeVariant(
     ...(variant.upc !== undefined ? { upc: variant.upc } : {}),
     priceIrr,
     compareAtIrr,
+    hasExplicitCompareAt,
     hasExplicitStock,
     stock,
     manageInventory: variant.manage_inventory ?? true,
@@ -1117,6 +1122,19 @@ export async function bulkImportProducts(
                 typeof existingVariant.metadata === "object"
                   ? existingVariant.metadata
                   : {}
+              const mergedVariantMeta: Record<string, unknown> = {
+                ...existingMeta,
+                ...incoming.metadata,
+                ...(incoming.hasExplicitStock
+                  ? { initial_stock: incoming.stock }
+                  : {}),
+              }
+              if (
+                incoming.hasExplicitCompareAt &&
+                (incoming.compareAtIrr === null || incoming.compareAtIrr <= 0)
+              ) {
+                mergedVariantMeta.compare_at_price = null
+              }
               return {
                 id: existingVariant.id,
                 title: incoming.title,
@@ -1130,13 +1148,7 @@ export async function bulkImportProducts(
                 allow_backorder: incoming.allowBackorder,
                 options: incoming.options,
                 prices: [{ amount: incoming.priceIrr, currency_code: "irr" }],
-                metadata: {
-                  ...existingMeta,
-                  ...incoming.metadata,
-                  ...(incoming.hasExplicitStock
-                    ? { initial_stock: incoming.stock }
-                    : {}),
-                },
+                metadata: mergedVariantMeta,
               }
             }),
           },

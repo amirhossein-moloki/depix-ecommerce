@@ -13,8 +13,8 @@ export const GET = async (
 
   const queryParams = (req.validatedQuery || {}) as any
   const options = {
-    from: queryParams.from,
-    to: queryParams.to,
+    from: queryParams.from ?? queryParams.start_date,
+    to: queryParams.to ?? queryParams.end_date,
     group_by: queryParams.group_by,
     order_status: queryParams.order_status,
     product_id: queryParams.product_id,

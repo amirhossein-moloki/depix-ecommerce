@@ -7,7 +7,12 @@ import {
   updateCampaignsWorkflow,
 } from "@medusajs/core-flows"
 
-import { enrichCampaignResponse, extractCampaignMetadataFields, refetchCampaign } from "../helpers"
+import {
+  enrichCampaignResponse,
+  extractCampaignMetadataFields,
+  refetchCampaign,
+} from "../helpers"
+import { reconcileCartsForPromotionChange } from "../../promotions/reconcile-carts"
 import { MedusaError } from "@medusajs/framework/utils"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
@@ -41,6 +46,8 @@ export const POST = async (
   const existingCampaign = await refetchCampaign(req.params.id, req.scope, [
     "id",
     "metadata",
+    "promotions.id",
+    "promotions.code",
   ])
   if (!existingCampaign) {
     throw new MedusaError(
@@ -67,6 +74,18 @@ export const POST = async (
     req.scope,
     req.queryConfig.fields
   )
+
+  const promotionIds = (existingCampaign.promotions ?? [])
+    .map((p: any) => p?.id)
+    .filter((pid: unknown): pid is string => Boolean(pid))
+  const promotionCodes = (existingCampaign.promotions ?? [])
+    .map((p: any) => p?.code)
+    .filter((code: unknown): code is string => Boolean(code))
+  await reconcileCartsForPromotionChange(req.scope, {
+    promotionIds,
+    promotionCodes,
+  }).catch(() => undefined)
+
   res.status(200).json({ campaign: enrichCampaignResponse(campaign) })
 }
 
@@ -77,11 +96,27 @@ export const DELETE = async (
   res: MedusaResponse<HttpTypes.AdminCampaignDeleteResponse>
 ) => {
   const id = req.params.id
+  const existingCampaign = await refetchCampaign(id, req.scope, [
+    "id",
+    "promotions.id",
+    "promotions.code",
+  ]).catch(() => null)
   const deleteCampaigns = deleteCampaignsWorkflow(req.scope)
 
   await deleteCampaigns.run({
     input: { ids: [id] },
   })
+
+  const promotionIds = (existingCampaign?.promotions ?? [])
+    .map((p: any) => p?.id)
+    .filter((pid: unknown): pid is string => Boolean(pid))
+  const promotionCodes = (existingCampaign?.promotions ?? [])
+    .map((p: any) => p?.code)
+    .filter((code: unknown): code is string => Boolean(code))
+  await reconcileCartsForPromotionChange(req.scope, {
+    promotionIds,
+    promotionCodes,
+  }).catch(() => undefined)
 
   res.status(200).json({
     id,

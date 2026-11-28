@@ -63,7 +63,9 @@ const AdminGetOrdersParamsBase = createFindParams({
       .optional(),
     sales_channel_id: z.array(z.string()).optional(),
     region_id: z.union([z.string(), z.array(z.string())]).optional(),
-    customer_id: z.union([z.string(), z.array(z.string())]).optional(),
+    customer_id: z
+      .union([z.string(), z.array(z.string()), createOperatorMap()])
+      .optional(),
     q: z.string().optional(),
     created_at: createOperatorMap().optional(),
     updated_at: createOperatorMap().optional(),
@@ -74,9 +76,29 @@ const AdminGetOrdersParamsBase = createFindParams({
 type AdminGetOrdersParamsInput = z.infer<typeof AdminGetOrdersParamsBase>
 
 const AdminGetOrdersParamsTransform = (v: AdminGetOrdersParamsInput) => {
-  const { total, ...rest } = v
+  const { total, customer_id, ...rest } = v
+  let normalizedCustomerId: typeof customer_id = undefined
+  if (typeof customer_id === "string") {
+    const trimmed = customer_id.trim()
+    if (trimmed) {
+      normalizedCustomerId = trimmed
+    }
+  } else if (Array.isArray(customer_id)) {
+    const cleaned = customer_id
+      .map((id) => (typeof id === "string" ? id.trim() : ""))
+      .filter(Boolean)
+    if (cleaned.length > 0) {
+      normalizedCustomerId = cleaned
+    }
+  } else if (customer_id && typeof customer_id === "object") {
+    normalizedCustomerId = customer_id
+  }
+
   return {
     ...rest,
+    ...(normalizedCustomerId !== undefined
+      ? { customer_id: normalizedCustomerId }
+      : {}),
     ...(total ? { summary: { totals: { current_order_total: total } } } : {}),
   }
 }

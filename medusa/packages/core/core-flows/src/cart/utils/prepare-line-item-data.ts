@@ -106,13 +106,26 @@ export function prepareLineItemData(data: PrepareLineItemDataInput) {
     )
   }
 
-  let compareAtUnitPrice = item?.compare_at_unit_price
+  let compareAtUnitPrice: BigNumberInput | null | undefined =
+    item?.compare_at_unit_price
 
   const isSalePrice =
     variant?.calculated_price?.calculated_price?.price_list_type ===
     PriceListType.SALE
 
-  if (
+  if (!isCustomPrice && variant?.calculated_price) {
+    if (
+      isSalePrice &&
+      !MathBN.eq(
+        variant.calculated_price?.original_amount,
+        variant.calculated_price?.calculated_amount
+      )
+    ) {
+      compareAtUnitPrice = variant.calculated_price.original_amount
+    } else if (!isSalePrice) {
+      compareAtUnitPrice = null
+    }
+  } else if (
     !isPresent(compareAtUnitPrice) &&
     isSalePrice &&
     !MathBN.eq(

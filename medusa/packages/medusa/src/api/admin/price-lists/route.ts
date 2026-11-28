@@ -8,6 +8,7 @@ import {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { fetchPriceList, transformPriceList } from "./helpers"
+import { invalidateStorePricingAndPromotionCache } from "../promotions/reconcile-carts"
 import { HttpTypes } from "@medusajs/framework/types"
 
 export const GET = async (
@@ -46,6 +47,8 @@ export const POST = async (
   const { result } = await workflow.run({
     input: { price_lists_data: [req.validatedBody] },
   })
+
+  await invalidateStorePricingAndPromotionCache(req.scope)
 
   const price_list = await fetchPriceList(
     result[0].id,

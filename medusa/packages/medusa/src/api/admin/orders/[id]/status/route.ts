@@ -16,6 +16,7 @@ import {
   normalizeOrderStatus,
 } from "../../../../utils/order-status"
 import { AdminUpdateOrderStatusType } from "../../validators"
+import { defaultAdminRetrieveOrderFields } from "../../query-config"
 import { restoreInventoryForCanceledOrder } from "../../../../store/payments/inventory-deduction"
 
 export const POST = async (
@@ -115,15 +116,7 @@ export const POST = async (
     const workflow = getOrderDetailWorkflow(req.scope)
     const { result } = await workflow.run({
       input: {
-        fields: req.queryConfig?.fields ?? [
-          "id",
-          "status",
-          "metadata",
-          "summary",
-          "total",
-          "created_at",
-          "updated_at",
-        ],
+        fields: req.queryConfig?.fields ?? defaultAdminRetrieveOrderFields,
         order_id: id,
       },
     })

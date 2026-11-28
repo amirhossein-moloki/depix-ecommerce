@@ -7,6 +7,7 @@ import {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { fetchPriceList } from "../helpers"
+import { reconcileOpenCartsForPriceListChange } from "../../promotions/reconcile-carts"
 import { HttpTypes } from "@medusajs/framework/types"
 
 export const GET = async (
@@ -36,10 +37,14 @@ export const POST = async (
     input: { price_lists_data: [{ ...req.validatedBody, id }] },
   })
 
+  await reconcileOpenCartsForPriceListChange(req.scope).catch(() => undefined)
+
   const price_list = await fetchPriceList(id, req.scope, req.queryConfig.fields)
 
   res.status(200).json({ price_list })
 }
+
+export const PATCH = POST
 
 export const DELETE = async (
   req: AuthenticatedMedusaRequest,
@@ -51,6 +56,8 @@ export const DELETE = async (
   await workflow.run({
     input: { ids: [id] },
   })
+
+  await reconcileOpenCartsForPriceListChange(req.scope).catch(() => undefined)
 
   res.status(200).json({
     id,

@@ -1,6 +1,9 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
-import { formatTicketMessage } from "../../../admin/tickets/helpers"
+import {
+  enrichTicketWithCustomer,
+  formatTicketMessage,
+} from "../../../admin/tickets/helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -53,8 +56,10 @@ export const GET = async (
       })
     )
 
+  const enrichedTicket = await enrichTicketWithCustomer(req.scope, ticket)
+
   const sanitizedTicket = {
-    ...ticket,
+    ...enrichedTicket,
     messages: safeMessages,
   }
 

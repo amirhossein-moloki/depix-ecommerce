@@ -1,7 +1,11 @@
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
-import { MedusaError } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  MedusaError,
+  Modules,
+} from "@medusajs/framework/utils"
 
 export type NormalizedTicketStatus =
   | "open"
@@ -163,4 +167,209 @@ export function resolveStagedAttachments(
   }
 
   return resolved
+}
+
+function safeResolve<T = any>(scope: any, key: string): T | null {
+  try {
+    return scope?.resolve?.(key) ?? null
+  } catch {
+    return null
+  }
+}
+
+function extractCustomerRows(res: any): any[] {
+  if (Array.isArray(res)) {
+    return res
+  }
+  if (Array.isArray(res?.rows)) {
+    return res.rows
+  }
+  return []
+}
+
+function extractCustomerName(customer: any): string | null {
+  if (!customer || typeof customer !== "object") {
+    return null
+  }
+  const fullName = [customer.first_name, customer.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+  if (fullName) {
+    return fullName
+  }
+  const metaFullName =
+    typeof customer.metadata?.full_name === "string"
+      ? customer.metadata.full_name.trim()
+      : ""
+  if (metaFullName) {
+    return metaFullName
+  }
+  const metaName =
+    typeof customer.metadata?.name === "string"
+      ? customer.metadata.name.trim()
+      : ""
+  if (metaName) {
+    return metaName
+  }
+  const companyName =
+    typeof customer.company_name === "string" ? customer.company_name.trim() : ""
+  if (companyName) {
+    return companyName
+  }
+  return null
+}
+
+function extractCustomerPhone(customer: any): string | null {
+  if (!customer || typeof customer !== "object") {
+    return null
+  }
+  const phone =
+    typeof customer.phone === "string" ? customer.phone.trim() : ""
+  if (phone) {
+    return phone
+  }
+  const metaPhone =
+    typeof customer.metadata?.phone === "string"
+      ? customer.metadata.phone.trim()
+      : ""
+  if (metaPhone) {
+    return metaPhone
+  }
+  const metaMobile =
+    typeof customer.metadata?.mobile === "string"
+      ? customer.metadata.mobile.trim()
+      : ""
+  if (metaMobile) {
+    return metaMobile
+  }
+  return null
+}
+
+/**
+ * Batch-enriches tickets with `customer_id`, `customer_name`, `customer_phone`,
+ * and `assigned_to_id` without N+1 queries.
+ */
+export async function enrichTicketsWithCustomer<T extends Record<string, any>>(
+  scope: any,
+  tickets: T[]
+): Promise<T[]> {
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    return []
+  }
+
+  const customerIds = Array.from(
+    new Set(
+      tickets
+        .map((ticket) => {
+          const cid = ticket?.customer_id ?? ticket?.user_id
+          return typeof cid === "string" ? cid.trim() : ""
+        })
+        .filter(Boolean)
+    )
+  )
+
+  const customerMap = new Map<string, any>()
+  const customerService = safeResolve<any>(scope, Modules.CUSTOMER)
+
+  if (customerIds.length > 0 && customerService) {
+    if (typeof customerService.listCustomers === "function") {
+      try {
+        const customers = extractCustomerRows(
+          await customerService.listCustomers(
+            { id: customerIds },
+            { take: customerIds.length }
+          )
+        )
+        for (const customer of customers) {
+          if (customer?.id) {
+            customerMap.set(customer.id, customer)
+          }
+        }
+      } catch {
+        // Ignore and try query fallback below
+      }
+    } else if (typeof customerService.retrieveCustomer === "function") {
+      const retrieved = await Promise.all(
+        customerIds.map((id) =>
+          customerService.retrieveCustomer(id).catch(() => null)
+        )
+      )
+      for (const customer of retrieved) {
+        if (customer?.id) {
+          customerMap.set(customer.id, customer)
+        }
+      }
+    }
+  }
+
+  const missingIds = customerIds.filter((id) => !customerMap.has(id))
+  if (missingIds.length > 0) {
+    const query = safeResolve<any>(scope, ContainerRegistrationKeys.QUERY)
+    if (typeof query?.graph === "function") {
+      try {
+        const result = await query.graph({
+          entity: "customer",
+          fields: [
+            "id",
+            "first_name",
+            "last_name",
+            "phone",
+            "email",
+            "company_name",
+            "metadata",
+          ],
+          filters: { id: missingIds },
+        })
+        const customers = Array.isArray(result?.data) ? result.data : []
+        for (const customer of customers) {
+          if (customer?.id) {
+            customerMap.set(customer.id, customer)
+          }
+        }
+      } catch {
+        // Ignore customer lookup errors when query graph cannot resolve customer
+      }
+    }
+  }
+
+  return tickets.map((ticket) => {
+    const rawCustomerId = ticket?.customer_id ?? ticket?.user_id ?? null
+    const resolvedCustomerId =
+      typeof rawCustomerId === "string"
+        ? rawCustomerId.trim() || null
+        : rawCustomerId
+    const customer = resolvedCustomerId
+      ? customerMap.get(resolvedCustomerId)
+      : undefined
+    const metaName =
+      typeof ticket?.metadata?.customer_name === "string"
+        ? ticket.metadata.customer_name.trim() || null
+        : null
+    const metaPhone =
+      typeof ticket?.metadata?.customer_phone === "string"
+        ? ticket.metadata.customer_phone.trim() || null
+        : null
+
+    return {
+      ...ticket,
+      customer_id: resolvedCustomerId,
+      customer_name:
+        ticket?.customer_name ?? extractCustomerName(customer) ?? metaName,
+      customer_phone:
+        ticket?.customer_phone ?? extractCustomerPhone(customer) ?? metaPhone,
+      assigned_to_id: ticket?.assigned_to_id ?? ticket?.assigned_to ?? null,
+    }
+  })
+}
+
+export async function enrichTicketWithCustomer<T extends Record<string, any>>(
+  scope: any,
+  ticket: T
+): Promise<T> {
+  if (!ticket || typeof ticket !== "object") {
+    return ticket
+  }
+  const [enriched] = await enrichTicketsWithCustomer(scope, [ticket])
+  return enriched
 }

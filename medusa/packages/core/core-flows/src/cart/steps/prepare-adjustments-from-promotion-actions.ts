@@ -136,14 +136,11 @@ export const prepareAdjustmentsFromPromotionActionsStep = createStep(
       } as PrepareAdjustmentsFromPromotionActionsStepOutput)
     }
 
-    const { data: promotions } = await query.graph(
-      {
-        entity: "promotion",
-        fields: ["id", "code"],
-        filters: { code: actions.map((a) => a.code) },
-      },
-      { cache: { enable: true } }
-    )
+    const { data: promotions } = await query.graph({
+      entity: "promotion",
+      fields: ["id", "code"],
+      filters: { code: actions.map((a) => a.code) },
+    })
 
     const promotionsMap = new Map<string, PromotionDTO>(
       promotions.map((promotion) => [promotion.code!, promotion])

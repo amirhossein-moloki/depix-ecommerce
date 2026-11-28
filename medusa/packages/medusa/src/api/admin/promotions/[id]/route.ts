@@ -16,6 +16,7 @@ import {
   extractPromotionMetadataFields,
   refetchPromotion,
 } from "../helpers"
+import { reconcileCartsForPromotionChange } from "../reconcile-carts"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
 export const GET = async (
@@ -54,7 +55,7 @@ export const POST = async (
   const existing = await refetchPromotion(
     req.params.id,
     req.scope,
-    ["id", "metadata"]
+    ["id", "code", "status", "metadata"]
   ).catch(() => null)
 
   const updatePromotions = updatePromotionsWorkflow(req.scope)
@@ -75,6 +76,14 @@ export const POST = async (
     req.queryConfig.fields
   )
 
+  const promotionCodes = [existing?.code, promotion?.code].filter(
+    (code): code is string => Boolean(code)
+  )
+  await reconcileCartsForPromotionChange(req.scope, {
+    promotionIds: [req.params.id],
+    promotionCodes,
+  }).catch(() => undefined)
+
   res.status(200).json({ promotion: enrichPromotionResponse(promotion) })
 }
 
@@ -85,11 +94,19 @@ export const DELETE = async (
   res: MedusaResponse<HttpTypes.AdminPromotionDeleteResponse>
 ) => {
   const id = req.params.id
+  const existing = await refetchPromotion(id, req.scope, ["id", "code"]).catch(
+    () => null
+  )
   const deletePromotions = deletePromotionsWorkflow(req.scope)
 
   await deletePromotions.run({
     input: { ids: [id] },
   })
+
+  await reconcileCartsForPromotionChange(req.scope, {
+    promotionIds: [id],
+    promotionCodes: existing?.code ? [existing.code] : [],
+  }).catch(() => undefined)
 
   res.status(200).json({
     id,

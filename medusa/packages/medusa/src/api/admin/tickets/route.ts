@@ -1,5 +1,6 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
+import { enrichTicketsWithCustomer } from "./helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -12,8 +13,8 @@ export const GET = async (
   const status = req.query.status as string
   const category_id = req.query.category_id as string
   const priority = req.query.priority as string
-  const assigned_to = req.query.assigned_to as string
-  const user_id = req.query.user_id as string
+  const assigned_to = (req.query.assigned_to_id || req.query.assigned_to) as string
+  const user_id = (req.query.customer_id || req.query.user_id) as string
   const q = req.query.q as string
 
   const filters: Record<string, any> = {}
@@ -39,8 +40,13 @@ export const GET = async (
     relations: ["category"],
   })
 
+  const enrichedTickets = await enrichTicketsWithCustomer(
+    req.scope,
+    tickets || []
+  )
+
   res.json({
-    tickets,
+    tickets: enrichedTickets,
     count,
     offset,
     limit,

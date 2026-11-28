@@ -1,63 +1,106 @@
+import createKnex, { Knex } from "knex"
+import { validateAndTransformQuery } from "@medusajs/framework/http"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { GET as getMarginReport } from "../route"
 import { MarginReportingService } from "../margin-reporting.service"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { AdminGetMarginReportParams } from "../validators"
 
-describe("Margin Reporting System Unit & Integration Tests", () => {
+describe("Margin Reporting System Unit & SQL Compilation Tests", () => {
+  const createdKnexInstances: Knex[] = []
+
+  const createPgSqlCapturingKnex = (
+    responder: (sql: string, bindings: readonly unknown[], isFirst: boolean) => any
+  ) => {
+    const capturedSql: string[] = []
+    const knexInstance = createKnex({ client: "pg" })
+    createdKnexInstances.push(knexInstance)
+
+    knexInstance.client.runner = function (builder: any) {
+      return {
+        run() {
+          const compiled = builder.toSQL()
+          const queries = Array.isArray(compiled) ? compiled : [compiled]
+          const primary = queries[0]
+          for (const q of queries) {
+            capturedSql.push(q.sql)
+          }
+          const isFirst = builder._method === "first"
+          return Promise.resolve(
+            responder(primary?.sql ?? "", primary?.bindings ?? [], isFirst)
+          )
+        },
+      }
+    }
+
+    return { knex: knexInstance, capturedSql }
+  }
+
+  const assertValidOrderSchemaSql = (sqlStatements: string[]) => {
+    expect(sqlStatements.length).toBeGreaterThan(0)
+    for (const sql of sqlStatements) {
+      expect(sql).not.toMatch(/order_line_item_tax_line[^;]*\.\s*"?amount"?/i)
+      expect(sql).not.toMatch(/order_shipping_method_tax_line[^;]*\.\s*"?amount"?/i)
+      expect(sql).not.toMatch(/"?order_shipping_method"?\s+as\s+"?osm"?[^;]*\bosm\."?order_id"?/i)
+      expect(sql).not.toMatch(/from\s+"order_shipping_method"[^;]*\b"order_id"/i)
+      expect(sql).not.toMatch(/\bosm\."?order_id"?/i)
+      expect(sql).not.toMatch(/\bosmtl\."?amount"?/i)
+    }
+  }
+
+  afterEach(async () => {
+    while (createdKnexInstances.length > 0) {
+      const k = createdKnexInstances.pop()
+      await k?.destroy()
+    }
+  })
+
   describe("MarginReportingService Financial Aggregations", () => {
     it("should aggregate revenue, COGS, gross profit, and gross margin % correctly for single currency", async () => {
-      let callCount = 0
-      const mockKnex: any = jest.fn((tableName: string) => {
-        callCount++
-        const currentCall = callCount
-
-        const queryBuilder: any = {
-          select: jest.fn().mockReturnThis(),
-          from: jest.fn().mockReturnThis(),
-          distinct: jest.fn().mockReturnThis(),
-          whereNull: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          whereRaw: jest.fn().mockReturnThis(),
-          whereExists: jest.fn().mockReturnThis(),
-          join: jest.fn().mockReturnThis(),
-          leftJoin: jest.fn().mockReturnThis(),
-          countDistinct: jest.fn().mockReturnThis(),
-          groupBy: jest.fn().mockReturnThis(),
-          groupByRaw: jest.fn().mockReturnThis(),
-          orderByRaw: jest.fn().mockReturnThis(),
-          as: jest.fn().mockReturnThis(),
-          first: jest.fn().mockImplementation(() => {
-            if (currentCall === 4) return Promise.resolve({ count: 5 })
-            if (currentCall === 5)
-              return Promise.resolve({
-                items_sold: 10,
-                gross_sales: 1000,
-                discounts: 100,
-                cogs: 400,
-                items_with_missing_cost: 0,
-                orders_with_missing_cost: 0,
-              })
-            if (currentCall === 6) return Promise.resolve({ item_tax: 50 })
-            if (currentCall === 8) return Promise.resolve({ shipping: 50 })
-            if (currentCall === 10) return Promise.resolve({ shipping_tax: 5 })
-            if (currentCall === 11) return Promise.resolve({ refund_amount: 20 })
-            if (currentCall === 12) return Promise.resolve({ cancelled_amount: 0 })
-            return Promise.resolve({})
-          }),
-          then: jest.fn((resolve) => resolve([{ currency_code: "usd" }])),
+      const { knex, capturedSql } = createPgSqlCapturingKnex((sql, _bindings, isFirst) => {
+        if (!isFirst && sql.includes("select distinct LOWER(o.currency_code) as currency_code")) {
+          return [{ currency_code: "usd" }]
         }
-
-        return queryBuilder
+        if (isFirst && sql.includes('count(distinct "o"."id")')) {
+          return { count: 5 }
+        }
+        if (isFirst && sql.includes("as cogs")) {
+          return {
+            items_sold: 10,
+            gross_sales: 1000,
+            discounts: 100,
+            cogs: 400,
+            items_with_missing_cost: 0,
+            orders_with_missing_cost: 0,
+          }
+        }
+        if (isFirst && sql.includes("as item_tax")) {
+          return { item_tax: 50, exclusive_item_tax: 50 }
+        }
+        if (isFirst && sql.includes("as shipping") && !sql.includes("shipping_tax")) {
+          return { shipping: 50 }
+        }
+        if (isFirst && sql.includes("as shipping_tax")) {
+          return { shipping_tax: 5, exclusive_shipping_tax: 5 }
+        }
+        if (isFirst && sql.includes("as refund_amount")) {
+          return { refund_amount: 20 }
+        }
+        if (isFirst && sql.includes("as cancelled_amount")) {
+          return { cancelled_amount: 0 }
+        }
+        return isFirst ? {} : []
       })
-
-      mockKnex.raw = (sql: string) => sql
-      mockKnex.from = (sub: any) => mockKnex(sub)
 
       const service = new MarginReportingService({
-        [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+        [ContainerRegistrationKeys.PG_CONNECTION]: knex,
       })
 
-      const report = await service.getMarginReport({ from: "2026-01-01", to: "2026-01-31" })
+      const report = await service.getMarginReport({
+        from: "2026-01-01",
+        to: "2026-01-31",
+      })
 
+      assertValidOrderSchemaSql(capturedSql)
       expect(report.currencies).toEqual(["usd"])
       expect(report.summary).not.toBeNull()
       expect(report.summary?.currency_code).toBe("usd")
@@ -79,115 +122,84 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
       expect(report.summary?.orders_with_missing_cost).toBe(0)
     })
 
-    it("should handle missing costs without defaulting to zero and report missing cost indicators", async () => {
-      let callCount = 0
-      const mockKnex: any = jest.fn((tableName: string) => {
-        callCount++
-        const currentCall = callCount
-
-        const queryBuilder: any = {
-          select: jest.fn().mockReturnThis(),
-          from: jest.fn().mockReturnThis(),
-          distinct: jest.fn().mockReturnThis(),
-          whereNull: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          whereRaw: jest.fn().mockReturnThis(),
-          whereExists: jest.fn().mockReturnThis(),
-          join: jest.fn().mockReturnThis(),
-          leftJoin: jest.fn().mockReturnThis(),
-          countDistinct: jest.fn().mockReturnThis(),
-          groupBy: jest.fn().mockReturnThis(),
-          groupByRaw: jest.fn().mockReturnThis(),
-          orderByRaw: jest.fn().mockReturnThis(),
-          as: jest.fn().mockReturnThis(),
-          first: jest.fn().mockImplementation(() => {
-            if (currentCall === 4) return Promise.resolve({ count: 2 })
-            if (currentCall === 5)
-              return Promise.resolve({
-                items_sold: 4,
-                gross_sales: 400,
-                discounts: 0,
-                cogs: 100, // COGS only for items with known cost
-                items_with_missing_cost: 2,
-                orders_with_missing_cost: 1,
-              })
-            if (currentCall === 6) return Promise.resolve({ item_tax: 0 })
-            if (currentCall === 8) return Promise.resolve({ shipping: 0 })
-            if (currentCall === 10) return Promise.resolve({ shipping_tax: 0 })
-            if (currentCall === 11) return Promise.resolve({ refund_amount: 0 })
-            if (currentCall === 12) return Promise.resolve({ cancelled_amount: 0 })
-            return Promise.resolve({})
-          }),
-          then: jest.fn((resolve) => resolve([{ currency_code: "usd" }])),
+    it("should handle missing costs without defaulting to zero and guard metadata numeric casts", async () => {
+      const { knex, capturedSql } = createPgSqlCapturingKnex((sql, _bindings, isFirst) => {
+        if (!isFirst && sql.includes("select distinct LOWER(o.currency_code) as currency_code")) {
+          return [{ currency_code: "usd" }]
         }
-
-        return queryBuilder
+        if (isFirst && sql.includes('count(distinct "o"."id")')) {
+          return { count: 2 }
+        }
+        if (isFirst && sql.includes("as cogs")) {
+          return {
+            items_sold: 4,
+            gross_sales: 400,
+            discounts: 0,
+            cogs: 100,
+            items_with_missing_cost: 2,
+            orders_with_missing_cost: 1,
+          }
+        }
+        return isFirst
+          ? {
+              item_tax: 0,
+              exclusive_item_tax: 0,
+              shipping: 0,
+              shipping_tax: 0,
+              exclusive_shipping_tax: 0,
+              refund_amount: 0,
+              cancelled_amount: 0,
+            }
+          : []
       })
 
-      mockKnex.raw = (sql: string) => sql
-      mockKnex.from = (sub: any) => mockKnex(sub)
-
       const service = new MarginReportingService({
-        [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+        [ContainerRegistrationKeys.PG_CONNECTION]: knex,
       })
 
       const report = await service.getMarginReport()
 
+      assertValidOrderSchemaSql(capturedSql)
+      const cogsSql = capturedSql.find((s) => s.includes("as cogs"))
+      expect(cogsSql).toContain("~ '^-?[0-9]+(\\.[0-9]+)?$'")
       expect(report.summary?.items_with_missing_cost).toBe(2)
       expect(report.summary?.orders_with_missing_cost).toBe(1)
       expect(report.summary?.cogs).toBe(100)
     })
 
     it("should compute negative margins correctly when COGS exceeds net sales", async () => {
-      let callCount = 0
-      const mockKnex: any = jest.fn((tableName: string) => {
-        callCount++
-        const currentCall = callCount
-
-        const queryBuilder: any = {
-          select: jest.fn().mockReturnThis(),
-          from: jest.fn().mockReturnThis(),
-          distinct: jest.fn().mockReturnThis(),
-          whereNull: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          whereRaw: jest.fn().mockReturnThis(),
-          whereExists: jest.fn().mockReturnThis(),
-          join: jest.fn().mockReturnThis(),
-          leftJoin: jest.fn().mockReturnThis(),
-          countDistinct: jest.fn().mockReturnThis(),
-          groupBy: jest.fn().mockReturnThis(),
-          groupByRaw: jest.fn().mockReturnThis(),
-          orderByRaw: jest.fn().mockReturnThis(),
-          as: jest.fn().mockReturnThis(),
-          first: jest.fn().mockImplementation(() => {
-            if (currentCall === 4) return Promise.resolve({ count: 1 })
-            if (currentCall === 5)
-              return Promise.resolve({
-                items_sold: 1,
-                gross_sales: 100,
-                discounts: 20,
-                cogs: 120, // COGS = 120 > Net Sales = 80
-                items_with_missing_cost: 0,
-                orders_with_missing_cost: 0,
-              })
-            if (currentCall === 6) return Promise.resolve({ item_tax: 0 })
-            if (currentCall === 8) return Promise.resolve({ shipping: 0 })
-            if (currentCall === 10) return Promise.resolve({ shipping_tax: 0 })
-            if (currentCall === 11) return Promise.resolve({ refund_amount: 0 })
-            if (currentCall === 12) return Promise.resolve({ cancelled_amount: 0 })
-            return Promise.resolve({})
-          }),
-          then: jest.fn((resolve) => resolve([{ currency_code: "usd" }])),
+      const { knex } = createPgSqlCapturingKnex((sql, _bindings, isFirst) => {
+        if (!isFirst && sql.includes("select distinct LOWER(o.currency_code) as currency_code")) {
+          return [{ currency_code: "usd" }]
         }
-
-        return queryBuilder
+        if (isFirst && sql.includes('count(distinct "o"."id")')) {
+          return { count: 1 }
+        }
+        if (isFirst && sql.includes("as cogs")) {
+          return {
+            items_sold: 1,
+            gross_sales: 100,
+            discounts: 20,
+            cogs: 120,
+            items_with_missing_cost: 0,
+            orders_with_missing_cost: 0,
+          }
+        }
+        return isFirst
+          ? {
+              item_tax: 0,
+              exclusive_item_tax: 0,
+              shipping: 0,
+              shipping_tax: 0,
+              exclusive_shipping_tax: 0,
+              refund_amount: 0,
+              cancelled_amount: 0,
+            }
+          : []
       })
 
-      mockKnex.raw = (sql: string) => sql
-      mockKnex.from = (sub: any) => mockKnex(sub)
-
       const service = new MarginReportingService({
-        [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+        [ContainerRegistrationKeys.PG_CONNECTION]: knex,
       })
 
       const report = await service.getMarginReport()
@@ -199,55 +211,32 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
     })
 
     it("should handle zero net sales without division-by-zero or NaN errors", async () => {
-      let callCount = 0
-      const mockKnex: any = jest.fn((tableName: string) => {
-        callCount++
-        const currentCall = callCount
-
-        const queryBuilder: any = {
-          select: jest.fn().mockReturnThis(),
-          from: jest.fn().mockReturnThis(),
-          distinct: jest.fn().mockReturnThis(),
-          whereNull: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          whereRaw: jest.fn().mockReturnThis(),
-          whereExists: jest.fn().mockReturnThis(),
-          join: jest.fn().mockReturnThis(),
-          leftJoin: jest.fn().mockReturnThis(),
-          countDistinct: jest.fn().mockReturnThis(),
-          groupBy: jest.fn().mockReturnThis(),
-          groupByRaw: jest.fn().mockReturnThis(),
-          orderByRaw: jest.fn().mockReturnThis(),
-          as: jest.fn().mockReturnThis(),
-          first: jest.fn().mockImplementation(() => {
-            if (currentCall === 4) return Promise.resolve({ count: 0 })
-            if (currentCall === 5)
-              return Promise.resolve({
-                items_sold: 0,
-                gross_sales: 0,
-                discounts: 0,
-                cogs: 0,
-                items_with_missing_cost: 0,
-                orders_with_missing_cost: 0,
-              })
-            if (currentCall === 6) return Promise.resolve({ item_tax: 0 })
-            if (currentCall === 8) return Promise.resolve({ shipping: 0 })
-            if (currentCall === 10) return Promise.resolve({ shipping_tax: 0 })
-            if (currentCall === 11) return Promise.resolve({ refund_amount: 0 })
-            if (currentCall === 12) return Promise.resolve({ cancelled_amount: 0 })
-            return Promise.resolve({})
-          }),
-          then: jest.fn((resolve) => resolve([{ currency_code: "usd" }])),
+      const { knex } = createPgSqlCapturingKnex((sql, _bindings, isFirst) => {
+        if (!isFirst && sql.includes("select distinct LOWER(o.currency_code) as currency_code")) {
+          return [{ currency_code: "usd" }]
         }
-
-        return queryBuilder
+        return isFirst
+          ? {
+              count: 0,
+              items_sold: 0,
+              gross_sales: 0,
+              discounts: 0,
+              cogs: 0,
+              items_with_missing_cost: 0,
+              orders_with_missing_cost: 0,
+              item_tax: 0,
+              exclusive_item_tax: 0,
+              shipping: 0,
+              shipping_tax: 0,
+              exclusive_shipping_tax: 0,
+              refund_amount: 0,
+              cancelled_amount: 0,
+            }
+          : []
       })
 
-      mockKnex.raw = (sql: string) => sql
-      mockKnex.from = (sub: any) => mockKnex(sub)
-
       const service = new MarginReportingService({
-        [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+        [ContainerRegistrationKeys.PG_CONNECTION]: knex,
       })
 
       const report = await service.getMarginReport()
@@ -259,75 +248,56 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
     })
 
     it("should isolate multi-currency aggregations safely", async () => {
-      let callCount = 0
-      const mockKnex: any = jest.fn((tableName: string) => {
-        callCount++
-        const currentCall = callCount
-
-        const queryBuilder: any = {
-          select: jest.fn().mockReturnThis(),
-          distinct: jest.fn().mockReturnThis(),
-          whereNull: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          whereRaw: jest.fn().mockReturnThis(),
-          whereExists: jest.fn().mockReturnThis(),
-          join: jest.fn().mockReturnThis(),
-          leftJoin: jest.fn().mockReturnThis(),
-          countDistinct: jest.fn().mockReturnThis(),
-          groupBy: jest.fn().mockReturnThis(),
-          groupByRaw: jest.fn().mockReturnThis(),
-          orderByRaw: jest.fn().mockReturnThis(),
-          as: jest.fn().mockReturnThis(),
-          first: jest.fn().mockImplementation(() => {
-            // USD
-            if (currentCall === 4) return Promise.resolve({ count: 2 })
-            if (currentCall === 5)
-              return Promise.resolve({
+      const { knex, capturedSql } = createPgSqlCapturingKnex((sql, bindings, isFirst) => {
+        if (!isFirst && sql.includes("select distinct LOWER(o.currency_code) as currency_code")) {
+          return [{ currency_code: "usd" }, { currency_code: "eur" }]
+        }
+        const curr = bindings.includes("eur") ? "eur" : "usd"
+        if (isFirst && sql.includes('count(distinct "o"."id")')) {
+          return { count: curr === "usd" ? 2 : 3 }
+        }
+        if (isFirst && sql.includes("as cogs")) {
+          return curr === "usd"
+            ? {
                 items_sold: 4,
                 gross_sales: 200,
                 discounts: 20,
                 cogs: 80,
                 items_with_missing_cost: 0,
                 orders_with_missing_cost: 0,
-              })
-            if (currentCall === 6) return Promise.resolve({ item_tax: 10 })
-            if (currentCall === 8) return Promise.resolve({ shipping: 10 })
-            if (currentCall === 10) return Promise.resolve({ shipping_tax: 1 })
-            if (currentCall === 11) return Promise.resolve({ refund_amount: 0 })
-            if (currentCall === 12) return Promise.resolve({ cancelled_amount: 0 })
-            // EUR
-            if (currentCall === 15) return Promise.resolve({ count: 3 })
-            if (currentCall === 16)
-              return Promise.resolve({
+              }
+            : {
                 items_sold: 6,
                 gross_sales: 300,
                 discounts: 30,
                 cogs: 150,
                 items_with_missing_cost: 0,
                 orders_with_missing_cost: 0,
-              })
-            if (currentCall === 17) return Promise.resolve({ item_tax: 15 })
-            if (currentCall === 19) return Promise.resolve({ shipping: 15 })
-            if (currentCall === 21) return Promise.resolve({ shipping_tax: 1.5 })
-            if (currentCall === 22) return Promise.resolve({ refund_amount: 0 })
-            if (currentCall === 23) return Promise.resolve({ cancelled_amount: 0 })
-            return Promise.resolve({})
-          }),
-          then: jest.fn((resolve) => resolve([{ currency_code: "usd" }, { currency_code: "eur" }])),
+              }
         }
-
-        return queryBuilder
+        if (isFirst && sql.includes("as item_tax")) {
+          return curr === "usd"
+            ? { item_tax: 10, exclusive_item_tax: 10 }
+            : { item_tax: 15, exclusive_item_tax: 15 }
+        }
+        if (isFirst && sql.includes("as shipping") && !sql.includes("shipping_tax")) {
+          return { shipping: curr === "usd" ? 10 : 15 }
+        }
+        if (isFirst && sql.includes("as shipping_tax")) {
+          return curr === "usd"
+            ? { shipping_tax: 1, exclusive_shipping_tax: 1 }
+            : { shipping_tax: 1.5, exclusive_shipping_tax: 1.5 }
+        }
+        return isFirst ? { refund_amount: 0, cancelled_amount: 0 } : []
       })
 
-      mockKnex.raw = (sql: string) => sql
-      mockKnex.from = (sub: any) => mockKnex(sub)
-
       const service = new MarginReportingService({
-        [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+        [ContainerRegistrationKeys.PG_CONNECTION]: knex,
       })
 
       const report = await service.getMarginReport()
 
+      assertValidOrderSchemaSql(capturedSql)
       expect(report.currencies).toEqual(["usd", "eur"])
       expect(report.summary).toBeNull() // Safe multi-currency protection
       expect(report.summary_by_currency?.usd?.net_sales).toBe(201)
@@ -336,54 +306,50 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
       expect(report.summary_by_currency?.eur?.gross_profit).toBe(151.5) // 301.5 - 150
     })
 
-    it("should compute product breakdown with profit and margin %", async () => {
-      const mockKnex: any = jest.fn((tableName: any) => {
-        const queryBuilder: any = {
-          select: jest.fn().mockReturnThis(),
-          from: jest.fn().mockReturnThis(),
-          distinct: jest.fn().mockReturnThis(),
-          whereNull: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          whereRaw: jest.fn().mockReturnThis(),
-          whereExists: jest.fn().mockReturnThis(),
-          join: jest.fn().mockReturnThis(),
-          leftJoin: jest.fn().mockReturnThis(),
-          countDistinct: jest.fn().mockReturnThis(),
-          groupBy: jest.fn().mockReturnThis(),
-          groupByRaw: jest.fn().mockReturnThis(),
-          orderByRaw: jest.fn().mockReturnThis(),
-          limit: jest.fn().mockReturnThis(),
-          offset: jest.fn().mockReturnThis(),
-          clone: jest.fn().mockReturnThis(),
-          as: jest.fn().mockReturnThis(),
-          count: jest.fn().mockReturnThis(),
-          first: jest.fn().mockResolvedValue({ count: 1 }),
-          then: jest.fn((resolve) => {
-            if (tableName === "order_line_item as oli") {
-              return resolve([
-                {
-                  product_id: "prod_1",
-                  product_title: "Headphones",
-                  units_sold: 2,
-                  gross_sales: 200,
-                  discounts: 20,
-                  cogs: 100,
-                  items_with_missing_cost: 0,
-                },
-              ])
-            }
-            return resolve([{ currency_code: "usd" }])
-          }),
+    it("should compute product breakdown and compile valid PG SQL across all group_by modes", async () => {
+      const { knex, capturedSql } = createPgSqlCapturingKnex((sql, _bindings, isFirst) => {
+        if (!isFirst && sql.includes("select distinct LOWER(o.currency_code) as currency_code")) {
+          return [{ currency_code: "usd" }]
         }
-
-        return queryBuilder
+        if (isFirst && sql.includes('count(*) as "count"')) {
+          return { count: 1 }
+        }
+        if (isFirst) {
+          return {
+            count: 1,
+            items_sold: 2,
+            gross_sales: 200,
+            discounts: 20,
+            cogs: 100,
+            items_with_missing_cost: 0,
+            orders_with_missing_cost: 0,
+            item_tax: 0,
+            exclusive_item_tax: 0,
+            shipping: 0,
+            shipping_tax: 0,
+            exclusive_shipping_tax: 0,
+            refund_amount: 0,
+            cancelled_amount: 0,
+          }
+        }
+        if (sql.includes('"oli"."product_id"')) {
+          return [
+            {
+              product_id: "prod_1",
+              product_title: "Headphones",
+              units_sold: 2,
+              gross_sales: 200,
+              discounts: 20,
+              cogs: 100,
+              items_with_missing_cost: 0,
+            },
+          ]
+        }
+        return []
       })
 
-      mockKnex.raw = (sql: string) => sql
-      mockKnex.from = (sub: any) => mockKnex(sub)
-
       const service = new MarginReportingService({
-        [ContainerRegistrationKeys.PG_CONNECTION]: mockKnex,
+        [ContainerRegistrationKeys.PG_CONNECTION]: knex,
       })
 
       const report = await service.getMarginReport({ group_by: "product" })
@@ -401,31 +367,65 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
         gross_margin_percentage: 44.44, // (80 / 180) * 100
         items_with_missing_cost: 0,
       })
+
+      for (const group_by of [
+        "day",
+        "week",
+        "month",
+        "year",
+        "product",
+        "variant",
+        "category",
+        "currency",
+      ] as const) {
+        await service.getMarginReport({ group_by })
+      }
+
+      assertValidOrderSchemaSql(capturedSql)
     })
   })
 
-  describe("GET /admin/reports/margin API Route Handler", () => {
-    it("should return 200 OK with margin report payload", async () => {
-      let callCount = 0
-      const mockKnex: any = jest.fn(() => {
-        callCount++
-        const currentCall = callCount
+  describe("GET /admin/reports/margin Middleware & Route Handler", () => {
+    const runValidation = async (query: Record<string, any>) => {
+      const middleware = validateAndTransformQuery(AdminGetMarginReportParams, {
+        defaults: [
+          "from",
+          "to",
+          "start_date",
+          "end_date",
+          "group_by",
+          "order_status",
+          "product_id",
+          "variant_id",
+          "category_id",
+          "customer_id",
+          "currency",
+          "limit",
+          "offset",
+        ],
+        isList: true,
+      })
 
-        return {
-          select: jest.fn().mockReturnThis(),
-          distinct: jest.fn().mockReturnThis(),
-          whereNull: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          whereRaw: jest.fn().mockReturnThis(),
-          whereExists: jest.fn().mockReturnThis(),
-          join: jest.fn().mockReturnThis(),
-          leftJoin: jest.fn().mockReturnThis(),
-          countDistinct: jest.fn().mockReturnThis(),
-          groupBy: jest.fn().mockReturnThis(),
-          groupByRaw: jest.fn().mockReturnThis(),
-          orderByRaw: jest.fn().mockReturnThis(),
-          as: jest.fn().mockReturnThis(),
-          first: jest.fn().mockResolvedValue({
+      const req: any = { query, allowed: [] }
+      await new Promise<void>((resolve, reject) => {
+        middleware(req, {} as any, (err?: unknown) => {
+          if (err) {
+            reject(err)
+            return
+          }
+          resolve()
+        })
+      })
+      return req
+    }
+
+    it("should return 200 OK with empty query params and with start_date/end_date", async () => {
+      const { knex, capturedSql } = createPgSqlCapturingKnex((sql, _bindings, isFirst) => {
+        if (!isFirst && sql.includes("select distinct LOWER(o.currency_code) as currency_code")) {
+          return [{ currency_code: "usd" }]
+        }
+        if (isFirst) {
+          return {
             count: 1,
             items_sold: 2,
             gross_sales: 100,
@@ -434,53 +434,65 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
             items_with_missing_cost: 0,
             orders_with_missing_cost: 0,
             item_tax: 5,
+            exclusive_item_tax: 5,
             shipping: 5,
             shipping_tax: 0,
+            exclusive_shipping_tax: 0,
             refund_amount: 0,
             cancelled_amount: 0,
-          }),
-          then: jest.fn((resolve) => {
-            if (currentCall === 1) return resolve([{ currency_code: "usd" }])
-            return resolve([
-              {
-                date: "2026-01-01",
-                orders: 1,
-                items_sold: 2,
-                gross_sales: 100,
-                discounts: 10,
-                shipping: 5,
-                cogs: 40,
-              },
-            ])
-          }),
+          }
         }
+        if (sql.includes("DATE_TRUNC('day'")) {
+          return [
+            {
+              date: "2026-01-01",
+              orders: 1,
+              items_sold: 2,
+              gross_sales: 100,
+              discounts: 10,
+              shipping: 5,
+              cogs: 40,
+            },
+          ]
+        }
+        return []
       })
-      mockKnex.raw = (sql: string) => sql
-      mockKnex.from = (sub: any) => mockKnex(sub)
 
-      const req: any = {
-        scope: {
-          resolve: jest.fn((key: string) =>
-            key === ContainerRegistrationKeys.PG_CONNECTION ? mockKnex : undefined
-          ),
-        },
-        validatedQuery: {
-          from: "2026-01-01",
-          to: "2026-01-31",
-          group_by: "day",
-          limit: 20,
-          offset: 0,
-        },
+      const emptyReq = await runValidation({})
+      emptyReq.scope = {
+        resolve: jest.fn((key: string) =>
+          key === ContainerRegistrationKeys.PG_CONNECTION ? knex : undefined
+        ),
       }
+      const emptyStatus = jest.fn().mockReturnThis()
+      const emptyJson = jest.fn()
+      await getMarginReport(emptyReq, { status: emptyStatus, json: emptyJson } as any)
+      expect(emptyStatus).toHaveBeenCalledWith(200)
+      expect(emptyJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currencies: ["usd"],
+          summary: expect.objectContaining({
+            currency_code: "usd",
+            gross_sales: 100,
+            cogs: 40,
+            gross_profit: 60,
+            gross_margin_percentage: 60,
+          }),
+          breakdown: [],
+        })
+      )
 
+      const rangeReq = await runValidation({
+        start_date: "2026-01-01",
+        end_date: "2026-01-31",
+        group_by: "day",
+        limit: "20",
+        offset: "0",
+      })
+      rangeReq.scope = emptyReq.scope
       const statusMock = jest.fn().mockReturnThis()
       const jsonMock = jest.fn()
-      const res: any = {
-        status: statusMock,
-        json: jsonMock,
-      }
-
-      await getMarginReport(req, res)
+      await getMarginReport(rangeReq, { status: statusMock, json: jsonMock } as any)
 
       expect(statusMock).toHaveBeenCalledWith(200)
       expect(jsonMock).toHaveBeenCalledWith(
@@ -490,12 +502,19 @@ describe("Margin Reporting System Unit & Integration Tests", () => {
             currency_code: "usd",
             gross_sales: 100,
             cogs: 40,
-            gross_profit: 60, // (100 - 10 + 5 + 5 - 0) - 40 = 100 - 40 = 60
-            gross_margin_percentage: 60, // (60 / 100) * 100
+            gross_profit: 60,
+            gross_margin_percentage: 60,
           }),
-          breakdown: expect.any(Array),
+          breakdown: [
+            expect.objectContaining({
+              date: "2026-01-01",
+              gross_profit: 55,
+            }),
+          ],
         })
       )
+
+      assertValidOrderSchemaSql(capturedSql)
     })
   })
 })

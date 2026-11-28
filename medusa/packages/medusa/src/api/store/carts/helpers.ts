@@ -1,4 +1,7 @@
-import { transferCartCustomerWorkflowId } from "@medusajs/core-flows"
+import {
+  refreshCartItemsWorkflowId,
+  transferCartCustomerWorkflowId,
+} from "@medusajs/core-flows"
 import { MedusaContainer } from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
@@ -8,6 +11,10 @@ import {
   Modules,
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
+import {
+  cleanupCartPromotionFallback,
+  isPromotionRecordActive,
+} from "../../admin/promotions/reconcile-carts"
 
 /**
  * Attaches an authenticated customer to a guest cart if the cart has not already been claimed or completed.
@@ -186,6 +193,160 @@ export async function enrichCartItemsWithInventoryQuantity(
   }
 }
 
+/**
+ * Verifies that all promotions referenced by an open cart remain active and undeleted.
+ * If any referenced promotion was deactivated, soft-deleted, expired, or its campaign
+ * was deactivated, refreshes the cart to drop stale discounts and returns `true`.
+ */
+export async function reconcileStaleCartPromotions(
+  scope: MedusaContainer,
+  cart: any
+): Promise<boolean> {
+  if (!cart || !cart.id || cart.completed_at) {
+    return false
+  }
+
+  const referencedIds = new Set<string>()
+  const referencedCodes = new Set<string>()
+  const staleIds = new Set<string>()
+  const staleCodes = new Set<string>()
+  let hasExplicitInactiveOnCart = false
+
+  const hiddenStalePromos = Array.isArray((cart as any).__stalePromotions)
+    ? (cart as any).__stalePromotions
+    : []
+  for (const promo of [...(cart.promotions ?? []), ...hiddenStalePromos]) {
+    if (promo?.id) referencedIds.add(String(promo.id))
+    if (promo?.code) referencedCodes.add(String(promo.code))
+    if ((promo?.status && promo.status !== "active") || promo?.deleted_at) {
+      hasExplicitInactiveOnCart = true
+      if (promo?.id) staleIds.add(String(promo.id))
+      if (promo?.code) staleCodes.add(String(promo.code))
+    }
+  }
+
+  for (const item of cart.items ?? []) {
+    for (const adj of item?.adjustments ?? []) {
+      if (adj?.promotion_id) referencedIds.add(String(adj.promotion_id))
+      if (adj?.code) referencedCodes.add(String(adj.code))
+    }
+  }
+
+  for (const sm of cart.shipping_methods ?? []) {
+    for (const adj of sm?.adjustments ?? []) {
+      if (adj?.promotion_id) referencedIds.add(String(adj.promotion_id))
+      if (adj?.code) referencedCodes.add(String(adj.code))
+    }
+  }
+
+  if (referencedIds.size === 0 && referencedCodes.size === 0) {
+    return false
+  }
+
+  let remoteQuery: any = null
+  try {
+    remoteQuery = scope.resolve<any>(ContainerRegistrationKeys.REMOTE_QUERY, {
+      allowUnregistered: true,
+    })
+  } catch {
+    remoteQuery = null
+  }
+
+  if (typeof remoteQuery === "function") {
+    const orFilters: Record<string, any>[] = []
+    if (referencedIds.size > 0) {
+      orFilters.push({ id: Array.from(referencedIds) })
+    }
+    if (referencedCodes.size > 0) {
+      orFilters.push({ code: Array.from(referencedCodes) })
+    }
+
+    try {
+      const result = await remoteQuery(
+        remoteQueryObjectFromString({
+          entryPoint: "promotion",
+          variables: {
+            filters: { $or: orFilters },
+          },
+          fields: [
+            "id",
+            "code",
+            "status",
+            "deleted_at",
+            "metadata",
+            "campaign.starts_at",
+            "campaign.ends_at",
+            "campaign.metadata",
+          ],
+        })
+      )
+      const promos = Array.isArray(result) ? result : result?.rows ?? []
+      const isMockCartEcho = promos.some(
+        (row: any) => row && row.id === cart.id && row.code === undefined
+      )
+      if (!isMockCartEcho) {
+        const activeIds = new Set<string>()
+        const activeCodes = new Set<string>()
+        for (const promo of promos) {
+          if (isPromotionRecordActive(promo)) {
+            if (promo?.id) activeIds.add(String(promo.id))
+            if (promo?.code) activeCodes.add(String(promo.code))
+          }
+        }
+
+        for (const id of referencedIds) {
+          if (!activeIds.has(id)) {
+            staleIds.add(id)
+          }
+        }
+        for (const code of referencedCodes) {
+          if (!activeCodes.has(code)) {
+            staleCodes.add(code)
+          }
+        }
+      }
+    } catch {
+      // Ignore query error and avoid spurious mutations
+    }
+  }
+
+  const needsReconcile =
+    hasExplicitInactiveOnCart || staleIds.size > 0 || staleCodes.size > 0
+  if (!needsReconcile) {
+    return false
+  }
+
+  let refreshed = false
+  try {
+    const we = scope.resolve<any>(Modules.WORKFLOW_ENGINE, {
+      allowUnregistered: true,
+    })
+    if (we && typeof we.run === "function") {
+      await we.run(refreshCartItemsWorkflowId, {
+        input: {
+          cart_id: cart.id,
+          force_refresh: true,
+        },
+      })
+      refreshed = true
+    }
+  } catch {
+    refreshed = false
+  }
+
+  if (!refreshed) {
+    const hasSpecificStale = staleIds.size > 0 || staleCodes.size > 0
+    await cleanupCartPromotionFallback(
+      scope,
+      cart.id,
+      hasSpecificStale ? Array.from(staleIds) : Array.from(referencedIds),
+      hasSpecificStale ? Array.from(staleCodes) : Array.from(referencedCodes)
+    )
+  }
+
+  return true
+}
+
 export const refetchCart = async (
   id: string,
   scope: MedusaContainer,
@@ -212,14 +373,31 @@ export const refetchCart = async (
   }
 
   if (Array.isArray(cart.promotions)) {
-    cart.promotions = cart.promotions.map((promo: any) => ({
-      ...promo,
-      type: promo?.application_method?.type ?? promo?.type ?? null,
-      value:
-        promo?.application_method?.value != null
-          ? Number(promo.application_method.value)
-          : (promo?.value ?? null),
-    }))
+    const stalePromos: any[] = []
+    const activePromos: any[] = []
+    for (const promo of cart.promotions) {
+      if ((promo?.status && promo.status !== "active") || promo?.deleted_at) {
+        stalePromos.push(promo)
+      } else {
+        activePromos.push({
+          ...promo,
+          type: promo?.application_method?.type ?? promo?.type ?? null,
+          value:
+            promo?.application_method?.value != null
+              ? Number(promo.application_method.value)
+              : (promo?.value ?? null),
+        })
+      }
+    }
+
+    if (stalePromos.length > 0) {
+      Object.defineProperty(cart, "__stalePromotions", {
+        value: stalePromos,
+        enumerable: false,
+        configurable: true,
+      })
+    }
+    cart.promotions = activePromos
   }
 
   await enrichCartItemsWithInventoryQuantity(scope, cart)

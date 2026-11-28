@@ -1,28 +1,43 @@
-import { z } from "zod"
+import { z } from "@medusajs/framework/zod"
+import { createFindParams } from "../../../utils/validators"
 
-export const AdminGetMarginReportParams = z.object({
-  from: z.string().optional(),
-  to: z.string().optional(),
-  group_by: z
-    .enum([
-      "day",
-      "week",
-      "month",
-      "product",
-      "variant",
-      "category",
-      "currency",
-    ])
-    .optional(),
-  order_status: z.string().optional(),
-  product_id: z.string().optional(),
-  variant_id: z.string().optional(),
-  category_id: z.string().optional(),
-  customer_id: z.string().optional(),
-  currency: z.string().optional(),
-  limit: z.coerce.number().optional().default(50),
-  offset: z.coerce.number().optional().default(0),
-})
+const emptyToUndefined = (val: unknown) =>
+  typeof val === "string" && val.trim() === "" ? undefined : val
+
+const optionalString = z.preprocess(emptyToUndefined, z.string().optional())
+
+export const AdminGetMarginReportParams = createFindParams({
+  offset: 0,
+  limit: 50,
+}).merge(
+  z.object({
+    from: optionalString,
+    to: optionalString,
+    start_date: optionalString,
+    end_date: optionalString,
+    group_by: z.preprocess(
+      emptyToUndefined,
+      z
+        .enum([
+          "day",
+          "week",
+          "month",
+          "year",
+          "product",
+          "variant",
+          "category",
+          "currency",
+        ])
+        .optional()
+    ),
+    order_status: optionalString,
+    product_id: optionalString,
+    variant_id: optionalString,
+    category_id: optionalString,
+    customer_id: optionalString,
+    currency: optionalString,
+  })
+)
 
 export type AdminGetMarginReportParamsType = z.infer<
   typeof AdminGetMarginReportParams

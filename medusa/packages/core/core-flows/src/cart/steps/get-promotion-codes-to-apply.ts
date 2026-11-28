@@ -2,8 +2,54 @@ import {
   ContainerRegistrationKeys,
   MedusaError,
   PromotionActions,
+  PromotionStatus,
 } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+
+export function isPromotionCurrentlyActive(
+  promo: any,
+  nowMs = Date.now()
+): boolean {
+  if (!promo || promo.status !== PromotionStatus.ACTIVE || promo.deleted_at) {
+    return false
+  }
+
+  const metaStarts = promo.metadata?.starts_at
+  if (metaStarts) {
+    const ts = new Date(metaStarts).getTime()
+    if (Number.isFinite(ts) && ts > nowMs) {
+      return false
+    }
+  }
+
+  const metaEnds = promo.metadata?.ends_at
+  if (metaEnds) {
+    const ts = new Date(metaEnds).getTime()
+    if (Number.isFinite(ts) && ts <= nowMs) {
+      return false
+    }
+  }
+
+  if (promo.campaign) {
+    if (promo.campaign.metadata?.is_active === false) {
+      return false
+    }
+    if (promo.campaign.starts_at) {
+      const ts = new Date(promo.campaign.starts_at).getTime()
+      if (Number.isFinite(ts) && ts > nowMs) {
+        return false
+      }
+    }
+    if (promo.campaign.ends_at) {
+      const ts = new Date(promo.campaign.ends_at).getTime()
+      if (Number.isFinite(ts) && ts <= nowMs) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
 
 /**
  * The details of the promotion codes to apply on a cart.
@@ -96,30 +142,41 @@ export const getPromotionCodesToApply = createStep(
       action === PromotionActions.REPLACE
     ) {
       const query = container.resolve(ContainerRegistrationKeys.QUERY)
-      const validPromoCodes: Set<string> = new Set(
-        promo_codes.length
-          ? (
-              await query.graph(
-                {
-                  entity: "promotion",
-                  fields: ["id", "code"],
-                  filters: { code: promo_codes },
-                },
-                {
-                  cache: {
-                    enable: true,
-                  },
-                }
-              )
-            ).data.map((p) => p.code!)
-          : []
+      const promotions = promo_codes.length
+        ? (
+            await query.graph({
+              entity: "promotion",
+              fields: [
+                "id",
+                "code",
+                "status",
+                "deleted_at",
+                "metadata",
+                "campaign.starts_at",
+                "campaign.ends_at",
+                "campaign.metadata",
+              ],
+              filters: { code: promo_codes },
+            })
+          ).data
+        : []
+
+      const promotionsByCode = new Map<string, any>(
+        promotions.map((p: any) => [p.code!, p])
       )
 
       promo_codes.forEach((code) => {
-        if (!validPromoCodes.has(code)) {
+        const promo = promotionsByCode.get(code)
+        if (!promo) {
           throw new MedusaError(
             MedusaError.Types.INVALID_DATA,
             `The promotion code ${code} is invalid`
+          )
+        }
+        if (!isPromotionCurrentlyActive(promo)) {
+          throw new MedusaError(
+            MedusaError.Types.INVALID_DATA,
+            `The promotion code ${code} is inactive or expired`
           )
         }
         promotionCodesToApply.add(code)

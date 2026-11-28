@@ -40,6 +40,7 @@ export const defaultStoreCartFields = [
   "sales_channel_id",
   "promotions.id",
   "promotions.code",
+  "promotions.status",
   "promotions.is_automatic",
   "promotions.is_tax_inclusive",
   "promotions.application_method.value",

@@ -669,3 +669,424 @@ describe("Support Ticketing System Comprehensive Test Suite", () => {
     ])
   })
 })
+
+describe("Ticket Customer Enrichment (customer_name / customer_phone / customer_id)", () => {
+  let mockTicketService: any
+  let mockCustomerService: any
+  let mockQuery: any
+  let mockEventBus: any
+  let container: any
+
+  const baseTickets = [
+    {
+      id: "tkt_1",
+      ticket_number: "TKT-2026-000101",
+      user_id: "cust_1",
+      category_id: "tktcat_1",
+      order_id: "ord_1",
+      product_id: null,
+      subject: "پیگیری سفارش اول",
+      status: "open",
+      priority: "normal",
+      assigned_to: "usr_1",
+      messages: [],
+      history: [],
+    },
+    {
+      id: "tkt_2",
+      ticket_number: "TKT-2026-000102",
+      user_id: "cust_2",
+      category_id: "tktcat_1",
+      order_id: null,
+      product_id: null,
+      subject: "سوال بدون نام مشتری",
+      status: "in_progress",
+      priority: "high",
+      assigned_to: null,
+      messages: [],
+      history: [],
+    },
+  ]
+
+  beforeEach(() => {
+    mockTicketService = {
+      generateTicketNumber: jest.fn().mockResolvedValue("TKT-2026-999001"),
+      listTicketCategories: jest.fn().mockResolvedValue([
+        { id: "tktcat_1", name: "سفارش", slug: "orders", is_active: true },
+      ]),
+      createTickets: jest.fn().mockImplementation((data) =>
+        Promise.resolve(
+          data.map((item: any, idx: number) => ({
+            id: `tkt_new_${idx + 1}`,
+            ...item,
+          }))
+        )
+      ),
+      createTicketMessages: jest.fn().mockImplementation((data) =>
+        Promise.resolve(
+          data.map((item: any, idx: number) => ({
+            id: `tktmsg_new_${idx + 1}`,
+            ...item,
+            created_at: new Date(),
+          }))
+        )
+      ),
+      createTicketAttachments: jest.fn().mockResolvedValue([]),
+      createTicketHistories: jest.fn().mockResolvedValue([]),
+      listTickets: jest.fn().mockResolvedValue([baseTickets[0]]),
+      listAndCountTickets: jest
+        .fn()
+        .mockResolvedValue([baseTickets, baseTickets.length]),
+      updateTickets: jest.fn().mockImplementation((data) =>
+        Promise.resolve(
+          data.map((item: any) => ({
+            ...baseTickets[0],
+            ...item,
+          }))
+        )
+      ),
+    }
+
+    mockCustomerService = {
+      listCustomers: jest.fn().mockResolvedValue([
+        {
+          id: "cust_1",
+          first_name: "Ali",
+          last_name: "Rezaei",
+          phone: "09123456789",
+          email: "ali@example.com",
+        },
+        {
+          id: "cust_2",
+          first_name: null,
+          last_name: null,
+          phone: "+989120000002",
+          email: "cust2@example.com",
+        },
+      ]),
+    }
+
+    mockQuery = {
+      graph: jest.fn().mockImplementation(({ entity, filters }) => {
+        if (entity === "order") {
+          return Promise.resolve({
+            data: [
+              {
+                id: filters?.id || "ord_1",
+                display_id: 101,
+                status: "pending",
+                total: 500000,
+                currency_code: "irr",
+              },
+            ],
+          })
+        }
+        return Promise.resolve({ data: [] })
+      }),
+    }
+
+    mockEventBus = {
+      emit: jest.fn().mockResolvedValue(undefined),
+      releaseGroupedEvents: jest.fn().mockResolvedValue(undefined),
+      clearGroupedEvents: jest.fn().mockResolvedValue(undefined),
+    }
+
+    container = createMedusaContainer()
+    container.register({
+      [Modules.TICKET]: asValue(mockTicketService),
+      [Modules.CUSTOMER]: asValue(mockCustomerService),
+      [Modules.EVENT_BUS]: asValue(mockEventBus),
+      [ContainerRegistrationKeys.QUERY]: asValue(mockQuery),
+    })
+  })
+
+  it("batches customer lookup and enriches GET /admin/tickets with customer_id, customer_name, customer_phone, and assigned_to_id", async () => {
+    const req: any = {
+      query: {},
+      scope: container,
+    }
+    const res: any = { json: jest.fn() }
+
+    await listAdminTickets(req, res)
+
+    expect(mockCustomerService.listCustomers).toHaveBeenCalledTimes(1)
+    expect(mockCustomerService.listCustomers).toHaveBeenCalledWith(
+      { id: ["cust_1", "cust_2"] },
+      { take: 2 }
+    )
+    expect(res.json).toHaveBeenCalledWith({
+      tickets: [
+        expect.objectContaining({
+          id: "tkt_1",
+          user_id: "cust_1",
+          customer_id: "cust_1",
+          customer_name: "Ali Rezaei",
+          customer_phone: "09123456789",
+          assigned_to_id: "usr_1",
+        }),
+        expect.objectContaining({
+          id: "tkt_2",
+          user_id: "cust_2",
+          customer_id: "cust_2",
+          customer_name: null,
+          customer_phone: "+989120000002",
+          assigned_to_id: null,
+        }),
+      ],
+      count: 2,
+      offset: 0,
+      limit: 20,
+    })
+  })
+
+  it("supports customer_id and assigned_to_id query filters on GET /admin/tickets", async () => {
+    const req: any = {
+      query: { customer_id: "cust_1", assigned_to_id: "usr_9" },
+      scope: container,
+    }
+    const res: any = { json: jest.fn() }
+
+    await listAdminTickets(req, res)
+
+    expect(mockTicketService.listAndCountTickets).toHaveBeenCalledWith(
+      {
+        user_id: "cust_1",
+        assigned_to: "usr_9",
+      },
+      expect.any(Object)
+    )
+  })
+
+  it("enriches GET /admin/tickets/:id with customer_id, customer_name, and customer_phone alongside messages, history, and order", async () => {
+    const req: any = {
+      params: { id: "tkt_1" },
+      scope: container,
+    }
+    const res: any = { json: jest.fn() }
+
+    await getAdminTicket(req, res)
+
+    expect(mockCustomerService.listCustomers).toHaveBeenCalledWith(
+      { id: ["cust_1"] },
+      { take: 1 }
+    )
+    expect(res.json).toHaveBeenCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_1",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+        assigned_to_id: "usr_1",
+        messages: [],
+        history: [],
+        order: expect.objectContaining({ id: "ord_1" }),
+      }),
+    })
+  })
+
+  it("enriches admin ticket mutation routes (/status, /priority, /assign, /close, /reopen) with customer fields", async () => {
+    const res: any = { json: jest.fn() }
+
+    await updateAdminStatus(
+      {
+        params: { id: "tkt_1" },
+        auth_context: { actor_id: "usr_admin" },
+        body: { status: "in_progress" },
+        scope: container,
+      } as any,
+      res
+    )
+    expect(res.json).toHaveBeenLastCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_1",
+        status: "in_progress",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+      }),
+    })
+
+    await updateAdminPriority(
+      {
+        params: { id: "tkt_1" },
+        auth_context: { actor_id: "usr_admin" },
+        body: { priority: "high" },
+        scope: container,
+      } as any,
+      res
+    )
+    expect(res.json).toHaveBeenLastCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_1",
+        priority: "high",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+      }),
+    })
+
+    await assignAdminTicket(
+      {
+        params: { id: "tkt_1" },
+        auth_context: { actor_id: "usr_admin" },
+        body: { user_id: "usr_2" },
+        scope: container,
+      } as any,
+      res
+    )
+    expect(res.json).toHaveBeenLastCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_1",
+        assigned_to: "usr_2",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+      }),
+    })
+
+    await closeAdminTicket(
+      {
+        params: { id: "tkt_1" },
+        auth_context: { actor_id: "usr_admin" },
+        scope: container,
+      } as any,
+      res
+    )
+    expect(res.json).toHaveBeenLastCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_1",
+        status: "closed",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+      }),
+    })
+
+    mockTicketService.listTickets.mockResolvedValueOnce([
+      { ...baseTickets[0], status: "closed" },
+    ])
+    await reopenAdminTicket(
+      {
+        params: { id: "tkt_1" },
+        auth_context: { actor_id: "usr_admin" },
+        scope: container,
+      } as any,
+      res
+    )
+    expect(res.json).toHaveBeenLastCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_1",
+        status: "open",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+      }),
+    })
+  })
+
+  it("enriches store ticket routes (GET list, POST create, GET detail) with customer fields", async () => {
+    const listRes: any = { json: jest.fn() }
+    await listStoreTickets(
+      {
+        auth_context: { actor_id: "cust_1" },
+        query: {},
+        scope: container,
+      } as any,
+      listRes
+    )
+    expect(listRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tickets: expect.arrayContaining([
+          expect.objectContaining({
+            id: "tkt_1",
+            customer_id: "cust_1",
+            customer_name: "Ali Rezaei",
+            customer_phone: "09123456789",
+          }),
+        ]),
+      })
+    )
+
+    const createRes: any = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    }
+    await createStoreTicket(
+      {
+        auth_context: { actor_id: "cust_1" },
+        body: {
+          category_id: "tktcat_1",
+          subject: "عنوان تیکت جدید مشتری",
+          message: "این متن کامل پیام تیکت برای تست می‌باشد.",
+        },
+        scope: container,
+      } as any,
+      createRes
+    )
+    expect(createRes.status).toHaveBeenCalledWith(201)
+    expect(createRes.json).toHaveBeenCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_new_1",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+      }),
+    })
+
+    const detailRes: any = { json: jest.fn() }
+    await getStoreTicket(
+      {
+        auth_context: { actor_id: "cust_1" },
+        params: { id: "tkt_1" },
+        scope: container,
+      } as any,
+      detailRes
+    )
+    expect(detailRes.json).toHaveBeenCalledWith({
+      ticket: expect.objectContaining({
+        id: "tkt_1",
+        customer_id: "cust_1",
+        customer_name: "Ali Rezaei",
+        customer_phone: "09123456789",
+      }),
+    })
+  })
+
+  it("falls back gracefully when Customer module is unavailable without throwing", async () => {
+    const minimalContainer = createMedusaContainer()
+    minimalContainer.register({
+      [Modules.TICKET]: asValue(mockTicketService),
+      [ContainerRegistrationKeys.QUERY]: asValue({
+        graph: jest.fn().mockResolvedValue({ data: [] }),
+      }),
+    })
+
+    const res: any = { json: jest.fn() }
+    await listAdminTickets(
+      {
+        query: {},
+        scope: minimalContainer,
+      } as any,
+      res
+    )
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tickets: [
+          expect.objectContaining({
+            id: "tkt_1",
+            customer_id: "cust_1",
+            customer_name: null,
+            customer_phone: null,
+          }),
+          expect.objectContaining({
+            id: "tkt_2",
+            customer_id: "cust_2",
+            customer_name: null,
+            customer_phone: null,
+          }),
+        ],
+      })
+    )
+  })
+})

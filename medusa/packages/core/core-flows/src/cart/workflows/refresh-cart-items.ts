@@ -1,5 +1,9 @@
 import type { AdditionalData } from "@medusajs/framework/types"
-import { isDefined, PromotionActions } from "@medusajs/framework/utils"
+import {
+  isDefined,
+  PromotionActions,
+  PromotionStatus,
+} from "@medusajs/framework/utils"
 import {
   createHook,
   createWorkflow,
@@ -233,9 +237,49 @@ export const refreshCartItemsWorkflow = createWorkflow(
       ({ refetchedCart, input }) => {
         if (isDefined(input.promo_codes)) {
           return input.promo_codes
-        } else {
-          return refetchedCart.promotions.map((p) => p?.code).filter(Boolean)
         }
+        const nowMs = Date.now()
+        return (refetchedCart.promotions ?? [])
+          .filter((p: any) => {
+            if (!p?.code) {
+              return false
+            }
+            if (p.status && p.status !== PromotionStatus.ACTIVE) {
+              return false
+            }
+            if (p.deleted_at) {
+              return false
+            }
+            if (p.metadata?.starts_at) {
+              const ts = new Date(p.metadata.starts_at).getTime()
+              if (Number.isFinite(ts) && ts > nowMs) {
+                return false
+              }
+            }
+            if (p.metadata?.ends_at) {
+              const ts = new Date(p.metadata.ends_at).getTime()
+              if (Number.isFinite(ts) && ts <= nowMs) {
+                return false
+              }
+            }
+            if (p.campaign?.metadata?.is_active === false) {
+              return false
+            }
+            if (p.campaign?.starts_at) {
+              const ts = new Date(p.campaign.starts_at).getTime()
+              if (Number.isFinite(ts) && ts > nowMs) {
+                return false
+              }
+            }
+            if (p.campaign?.ends_at) {
+              const ts = new Date(p.campaign.ends_at).getTime()
+              if (Number.isFinite(ts) && ts <= nowMs) {
+                return false
+              }
+            }
+            return true
+          })
+          .map((p: any) => p.code)
       }
     )
 

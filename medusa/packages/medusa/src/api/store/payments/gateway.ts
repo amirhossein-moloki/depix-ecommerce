@@ -20,7 +20,10 @@ import {
 } from "@medusajs/framework/utils"
 import crypto from "crypto"
 import { applyOrderStatusMetadata } from "../../utils/order-status"
-import { attachAuthenticatedCustomerToCart } from "../carts/helpers"
+import {
+  attachAuthenticatedCustomerToCart,
+  reconcileStaleCartPromotions,
+} from "../carts/helpers"
 import { defaultStoreRetrieveOrderFields } from "../orders/query-config"
 import {
   buildFailedRedirectUrl,
@@ -1047,6 +1050,7 @@ async function retrieveFullCartForPayment(
           "shipping_methods.tax_lines.*",
           "promotions.id",
           "promotions.code",
+          "promotions.status",
           "promotions.is_automatic",
           "promotions.application_method.type",
           "promotions.application_method.value",
@@ -1066,6 +1070,8 @@ async function retrieveFullCartForPayment(
   return await cartService
     .retrieveCart(cartId, {
       relations: [
+        "shipping_address",
+        "billing_address",
         "items",
         "items.adjustments",
         "items.tax_lines",
@@ -1076,7 +1082,14 @@ async function retrieveFullCartForPayment(
     })
     .catch(() =>
       cartService
-        .retrieveCart(cartId, { relations: ["items", "shipping_methods"] })
+        .retrieveCart(cartId, {
+          relations: [
+            "shipping_address",
+            "billing_address",
+            "items",
+            "shipping_methods",
+          ],
+        })
         .catch(() => cartService.retrieveCart(cartId).catch(() => null))
     )
 }
@@ -1098,6 +1111,13 @@ export const initiateGatewayPayment = async (
       MedusaError.Types.NOT_FOUND,
       `سبد خرید با شناسه '${cartId}' یافت نشد.`
     )
+  }
+
+  const reconciled = await reconcileStaleCartPromotions(scope, cart).catch(
+    () => false
+  )
+  if (reconciled) {
+    cart = (await retrieveFullCartForPayment(scope, cartId)) ?? cart
   }
 
   if (customerId && !cart.customer_id) {

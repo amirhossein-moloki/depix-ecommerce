@@ -6,6 +6,7 @@ import {
   ContainerRegistrationKeys,
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
+import { enrichInventoryHistory } from "../utils/enrich-inventory-history"
 
 /**
  * @oas [get] /admin/inventory/history
@@ -120,15 +121,17 @@ export const GET = async (
       "reference_type",
       "reference_id",
       "created_by",
+      "metadata",
       "created_at",
     ],
   })
 
   const { rows: history, metadata } = await remoteQuery(historyQuery)
+  const enrichedHistory = await enrichInventoryHistory(req.scope, history || [])
 
   res.status(200).json({
-    history: history || [],
-    count: metadata?.count || (history || []).length,
+    history: enrichedHistory,
+    count: metadata?.count || enrichedHistory.length,
     offset,
     limit,
   })

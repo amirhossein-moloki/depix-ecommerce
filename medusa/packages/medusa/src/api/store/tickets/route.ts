@@ -1,6 +1,10 @@
 import { createTicketWorkflow } from "@medusajs/core-flows"
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
+import {
+  enrichTicketsWithCustomer,
+  enrichTicketWithCustomer,
+} from "../../admin/tickets/helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -47,8 +51,13 @@ export const GET = async (
     relations: ["category"],
   })
 
+  const enrichedTickets = await enrichTicketsWithCustomer(
+    req.scope,
+    tickets || []
+  )
+
   res.json({
-    tickets,
+    tickets: enrichedTickets,
     count,
     offset,
     limit,
@@ -91,5 +100,7 @@ export const POST = async (
     },
   })
 
-  res.status(201).json({ ticket })
+  res.status(201).json({
+    ticket: await enrichTicketWithCustomer(req.scope, ticket),
+  })
 }

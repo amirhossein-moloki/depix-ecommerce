@@ -2,6 +2,7 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
+import { ProductTypes } from "@medusajs/framework/types"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import { AdminUpdateCategoryType } from "../validators"
 import { formatCategory } from "../route"
@@ -126,9 +127,7 @@ export const PUT = async (
     }
   }
 
-  const updateData: Record<string, any> = {
-    id: existing.id,
-  }
+  const updateData: ProductTypes.UpdateProductCategoryDTO = {}
 
   if (name !== undefined) updateData.name = name
   if (slug !== undefined) updateData.handle = slug.toLowerCase()
@@ -141,16 +140,55 @@ export const PUT = async (
     updateData.parent_category_id = parent_category_id
   }
 
-  const mergedMetadata = {
-    ...(existing.metadata || {}),
-    ...(metadata || {}),
-    ...(image_id !== undefined ? { image_id } : {}),
+  if (metadata !== undefined || image_id !== undefined) {
+    updateData.metadata =
+      metadata === null && image_id === undefined
+        ? null
+        : {
+            ...(metadata === null ? {} : existing.metadata || {}),
+            ...(metadata || {}),
+            ...(image_id !== undefined ? { image_id } : {}),
+          }
   }
-  updateData.metadata = mergedMetadata
 
-  const updated = await (productService as any).updateProductCategories(updateData)
+  const updatedResult = await productService.updateProductCategories(
+    existing.id,
+    updateData
+  )
 
-  res.json({ category: formatCategory(updated) })
+  let updatedCategory: any = Array.isArray(updatedResult)
+    ? updatedResult.find((item: any) => item?.id === existing.id) ??
+      updatedResult[0]
+    : updatedResult
+
+  if (
+    !updatedCategory ||
+    typeof updatedCategory !== "object" ||
+    !updatedCategory.id
+  ) {
+    const refetched = await productService
+      .retrieveProductCategory(existing.id)
+      .catch(() => null)
+
+    if (refetched && refetched.id) {
+      updatedCategory = refetched
+    } else {
+      const partial =
+        updatedCategory &&
+        typeof updatedCategory === "object" &&
+        !Array.isArray(updatedCategory)
+          ? updatedCategory
+          : {}
+      updatedCategory = {
+        ...existing,
+        ...updateData,
+        ...partial,
+        id: existing.id,
+      }
+    }
+  }
+
+  res.json({ category: formatCategory(updatedCategory) })
 }
 
 export const DELETE = async (

@@ -670,4 +670,63 @@ describe("POST /admin/products/bulk-import", () => {
     expect(body.results[0].status).toBe("failed")
     expect(body.results[0].errors[0]).toContain("mode=create_only")
   })
+
+  it("clears previously stored metadata.compare_at_price when upserting compare_at_price_irr: null", async () => {
+    productsDb.push({
+      id: "prod_clear_compare",
+      handle: "clear-compare-product",
+      title: "Clear Compare Product",
+      options: [{ id: "opt_1", title: "نوع", values: [{ value: "استاندارد" }] }],
+      variants: [
+        {
+          id: "var_clear_1",
+          sku: "CLR-CMP-1",
+          options: [{ option_id: "opt_1", value: "استاندارد" }],
+          metadata: {
+            initial_stock: 5,
+            compare_at_price: 25000000,
+          },
+        },
+      ],
+      metadata: {},
+    })
+
+    req.validatedBody = AdminBulkImportProducts.parse({
+      mode: "upsert",
+      products: [
+        {
+          title: "Clear Compare Product",
+          handle: "clear-compare-product",
+          price_irr: 20000000,
+          compare_at_price_irr: null,
+          stock: 7,
+          sku: "CLR-CMP-1",
+        },
+      ],
+    })
+
+    await bulkImportHandler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(200)
+    const body = res.json.mock.calls[0][0]
+    expect(body.results[0]).toMatchObject({
+      status: "updated",
+      variants_updated: 1,
+    })
+
+    expect(mockUpdateVariantsRun).toHaveBeenCalledWith({
+      input: {
+        product_variants: [
+          expect.objectContaining({
+            id: "var_clear_1",
+            prices: [{ amount: 20000000, currency_code: "irr" }],
+            metadata: expect.objectContaining({
+              initial_stock: 7,
+              compare_at_price: null,
+            }),
+          }),
+        ],
+      },
+    })
+  })
 })

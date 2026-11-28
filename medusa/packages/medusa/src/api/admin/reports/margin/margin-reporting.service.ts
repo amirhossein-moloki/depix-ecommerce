@@ -1,10 +1,18 @@
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { Knex } from "knex"
 
 export interface MarginReportOptions {
   from?: string | Date
   to?: string | Date
-  group_by?: "day" | "week" | "month" | "product" | "variant" | "category" | "currency"
+  group_by?:
+    | "day"
+    | "week"
+    | "month"
+    | "year"
+    | "product"
+    | "variant"
+    | "category"
+    | "currency"
   order_status?: string
   product_id?: string
   variant_id?: string
@@ -56,10 +64,118 @@ export class MarginReportingService {
     if (val instanceof Date) return val
 
     if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-      return isEnd ? new Date(`${val}T23:59:59.999Z`) : new Date(`${val}T00:00:00.000Z`)
+      return isEnd
+        ? new Date(`${val}T23:59:59.999Z`)
+        : new Date(`${val}T00:00:00.000Z`)
     }
     const d = new Date(val)
     return isNaN(d.getTime()) ? null : d
+  }
+
+  private buildItemAdjustmentsSubquery(alias: string) {
+    return this.knex_("order_line_item_adjustment")
+      .select(
+        "item_id",
+        "version",
+        this.knex_.raw("COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as discount_amount")
+      )
+      .whereNull("deleted_at")
+      .groupBy("item_id", "version")
+      .as(alias)
+  }
+
+  private buildItemTaxRateSubquery(alias: string) {
+    return this.knex_("order_line_item_tax_line")
+      .select(
+        "item_id",
+        this.knex_.raw("COALESCE(SUM(CAST(rate AS NUMERIC)), 0) as tax_rate")
+      )
+      .whereNull("deleted_at")
+      .groupBy("item_id")
+      .as(alias)
+  }
+
+  private buildShippingAdjustmentsSubquery(alias: string) {
+    return this.knex_("order_shipping_method_adjustment")
+      .select(
+        "shipping_method_id",
+        "version",
+        this.knex_.raw("COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as discount_amount")
+      )
+      .whereNull("deleted_at")
+      .groupBy("shipping_method_id", "version")
+      .as(alias)
+  }
+
+  private buildOrderShippingSubquery(alias: string, adjAlias = `${alias}_adj`) {
+    return this.knex_("order_shipping as os")
+      .join("order_shipping_method as osm", "os.shipping_method_id", "osm.id")
+      .leftJoin(this.buildShippingAdjustmentsSubquery(adjAlias), function () {
+        this.on(`${adjAlias}.shipping_method_id`, "=", "osm.id").andOn(
+          `${adjAlias}.version`,
+          "=",
+          "os.version"
+        )
+      })
+      .select(
+        "os.order_id",
+        "os.version",
+        this.knex_.raw(
+          `COALESCE(SUM(GREATEST(0, CAST(osm.amount AS NUMERIC) - COALESCE(CAST(${adjAlias}.discount_amount AS NUMERIC), 0))), 0) as shipping_amount`
+        )
+      )
+      .whereNull("os.deleted_at")
+      .whereNull("osm.deleted_at")
+      .whereNull("os.return_id")
+      .whereNull("os.exchange_id")
+      .whereNull("os.claim_id")
+      .groupBy("os.order_id", "os.version")
+      .as(alias)
+  }
+
+  private buildOrderShippingTaxSubquery(alias: string) {
+    const taxRateAlias = `${alias}_rate`
+    const adjAlias = `${alias}_adj`
+
+    const shippingTaxRateSubquery = this.knex_("order_shipping_method_tax_line")
+      .select(
+        "shipping_method_id",
+        this.knex_.raw("COALESCE(SUM(CAST(rate AS NUMERIC)), 0) as tax_rate")
+      )
+      .whereNull("deleted_at")
+      .groupBy("shipping_method_id")
+      .as(taxRateAlias)
+
+    const taxableExpr = `GREATEST(0, CAST(osm.amount AS NUMERIC) - COALESCE(CAST(${adjAlias}.discount_amount AS NUMERIC), 0))`
+    const rateExpr = `COALESCE(CAST(${taxRateAlias}.tax_rate AS NUMERIC), 0)`
+
+    return this.knex_("order_shipping as os")
+      .join("order_shipping_method as osm", "os.shipping_method_id", "osm.id")
+      .join(shippingTaxRateSubquery, `${taxRateAlias}.shipping_method_id`, "osm.id")
+      .leftJoin(this.buildShippingAdjustmentsSubquery(adjAlias), function () {
+        this.on(`${adjAlias}.shipping_method_id`, "=", "osm.id").andOn(
+          `${adjAlias}.version`,
+          "=",
+          "os.version"
+        )
+      })
+      .select(
+        "os.order_id",
+        "os.version",
+        this.knex_.raw(
+          `COALESCE(SUM(CASE WHEN COALESCE(osm.is_tax_inclusive, false) THEN CASE WHEN ${rateExpr} > 0 THEN (${taxableExpr}) * (${rateExpr} / (100 + ${rateExpr})) ELSE 0 END ELSE (${taxableExpr}) * (${rateExpr} / 100.0) END), 0) as shipping_tax_amount`
+        ),
+        this.knex_.raw(
+          `COALESCE(SUM(CASE WHEN COALESCE(osm.is_tax_inclusive, false) THEN 0 ELSE (${taxableExpr}) * (${rateExpr} / 100.0) END), 0) as exclusive_shipping_tax_amount`
+        )
+      )
+      .whereNull("os.deleted_at")
+      .whereNull("osm.deleted_at")
+      .whereNull("os.return_id")
+      .whereNull("os.exchange_id")
+      .whereNull("os.claim_id")
+      .groupBy("os.order_id", "os.version")
+      .as(alias)
   }
 
   private applyBaseOrderFilters(query: Knex.QueryBuilder, options: MarginReportOptions) {
@@ -93,6 +209,7 @@ export class MarginReportingService {
           .from("order_item as oi_p")
           .join("order_line_item as oli_p", "oi_p.item_id", "oli_p.id")
           .whereRaw("oi_p.order_id = o.id")
+          .whereRaw("oi_p.version = o.version")
           .where("oli_p.product_id", options.product_id)
           .whereNull("oi_p.deleted_at")
           .whereNull("oli_p.deleted_at")
@@ -105,6 +222,7 @@ export class MarginReportingService {
           .from("order_item as oi_v")
           .join("order_line_item as oli_v", "oi_v.item_id", "oli_v.id")
           .whereRaw("oi_v.order_id = o.id")
+          .whereRaw("oi_v.version = o.version")
           .where("oli_v.variant_id", options.variant_id)
           .whereNull("oi_v.deleted_at")
           .whereNull("oli_v.deleted_at")
@@ -118,6 +236,7 @@ export class MarginReportingService {
           .join("order_line_item as oli_c", "oi_c.item_id", "oli_c.id")
           .join("product_category_product as pcp_c", "oli_c.product_id", "pcp_c.product_id")
           .whereRaw("oi_c.order_id = o.id")
+          .whereRaw("oi_c.version = o.version")
           .where("pcp_c.product_category_id", options.category_id)
           .whereNull("oi_c.deleted_at")
           .whereNull("oli_c.deleted_at")
@@ -125,27 +244,38 @@ export class MarginReportingService {
     }
   }
 
+  private safeNumericJsonField(expr: string): string {
+    return `CASE WHEN (${expr}) ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN CAST(${expr} AS NUMERIC) ELSE NULL END`
+  }
+
   private getUnitCostExpression(): string {
     return `COALESCE(
-      CAST(oli.metadata->>'raw_cost' AS NUMERIC),
-      CAST(oli.metadata->>'cost_price' AS NUMERIC),
-      CAST(oli.metadata->>'unit_cost' AS NUMERIC),
-      CAST(pv.metadata->>'raw_cost' AS NUMERIC),
-      CAST(pv.metadata->>'cost_price' AS NUMERIC),
-      CAST(pv.metadata->>'unit_cost' AS NUMERIC),
-      CAST(ii.metadata->>'raw_cost' AS NUMERIC),
-      CAST(ii.metadata->>'cost_price' AS NUMERIC)
+      ${this.safeNumericJsonField("oli.metadata->>'raw_cost'")},
+      ${this.safeNumericJsonField("oli.metadata->>'cost_price'")},
+      ${this.safeNumericJsonField("oli.metadata->>'unit_cost'")},
+      ${this.safeNumericJsonField("pv.metadata->>'raw_cost'")},
+      ${this.safeNumericJsonField("pv.metadata->>'cost_price'")},
+      ${this.safeNumericJsonField("pv.metadata->>'unit_cost'")},
+      ${this.safeNumericJsonField("ii.metadata->>'raw_cost'")},
+      ${this.safeNumericJsonField("ii.metadata->>'cost_price'")}
     )`
   }
 
   public async getMarginReport(options: MarginReportOptions = {}) {
+    if (!this.knex_) {
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        "Database connection is not available for margin reporting"
+      )
+    }
+
     const limit = Math.min(options.limit ?? 50, 250)
     const offset = options.offset ?? 0
 
     // 1. Determine active currencies
-    const currencyQuery = this.knex_("order as o").select(
-      this.knex_.raw("LOWER(o.currency_code) as currency_code")
-    ).distinct()
+    const currencyQuery = this.knex_("order as o")
+      .select(this.knex_.raw("LOWER(o.currency_code) as currency_code"))
+      .distinct()
     this.applyBaseOrderFilters(currencyQuery, options)
 
     const currencyRows = await currencyQuery
@@ -164,20 +294,6 @@ export class MarginReportingService {
         }
       }
 
-      // Pre-aggregated adjustments subquery
-      const adjustmentsSubquery = this.knex_("order_line_item_adjustment")
-        .select("item_id", this.knex_.raw("COALESCE(SUM(amount), 0) as discount_amount"))
-        .whereNull("deleted_at")
-        .groupBy("item_id")
-        .as("adj")
-
-      // Line item tax subquery
-      const itemTaxSubquery = this.knex_("order_line_item_tax_line")
-        .select("item_id", this.knex_.raw("COALESCE(SUM(amount), 0) as tax_amount"))
-        .whereNull("deleted_at")
-        .groupBy("item_id")
-        .as("itax")
-
       // Order count
       const orderCountQuery = this.knex_("order as o").countDistinct("o.id as count")
       nonCanceledFilter(orderCountQuery)
@@ -188,11 +304,15 @@ export class MarginReportingService {
       const unitCostSql = this.getUnitCostExpression()
 
       const lineItemsQuery = this.knex_("order as o")
-        .join("order_item as oi", "oi.order_id", "o.id")
+        .join("order_item as oi", function () {
+          this.on("oi.order_id", "=", "o.id").andOn("oi.version", "=", "o.version")
+        })
         .join("order_line_item as oli", "oi.item_id", "oli.id")
         .leftJoin("product_variant as pv", "oli.variant_id", "pv.id")
         .leftJoin("inventory_item as ii", "oli.variant_sku", "ii.sku")
-        .leftJoin(adjustmentsSubquery, "adj.item_id", "oli.id")
+        .leftJoin(this.buildItemAdjustmentsSubquery("adj"), function () {
+          this.on("adj.item_id", "=", "oli.id").andOn("adj.version", "=", "oi.version")
+        })
         .select(
           this.knex_.raw("COALESCE(SUM(CAST(oi.quantity AS NUMERIC)), 0) as items_sold"),
           this.knex_.raw(
@@ -221,54 +341,86 @@ export class MarginReportingService {
       const itemsWithMissingCost = Number(lineItemsRes?.items_with_missing_cost ?? 0)
       const ordersWithMissingCost = Number(lineItemsRes?.orders_with_missing_cost ?? 0)
 
-      // Line item taxes
+      // Line item taxes via order_line_item_tax_line.rate
+      const itemTaxableExpr =
+        "GREATEST(0, CAST(oi.quantity AS NUMERIC) * CAST(COALESCE(oi.unit_price, oli.unit_price, 0) AS NUMERIC) - COALESCE(CAST(adj_tax.discount_amount AS NUMERIC), 0))"
+      const itemRateExpr = "COALESCE(CAST(itax.tax_rate AS NUMERIC), 0)"
+
       const itemTaxQuery = this.knex_("order as o")
-        .join("order_item as oi", "oi.order_id", "o.id")
+        .join("order_item as oi", function () {
+          this.on("oi.order_id", "=", "o.id").andOn("oi.version", "=", "o.version")
+        })
         .join("order_line_item as oli", "oi.item_id", "oli.id")
-        .join(itemTaxSubquery, "itax.item_id", "oli.id")
-        .select(this.knex_.raw("COALESCE(SUM(CAST(itax.tax_amount AS NUMERIC)), 0) as item_tax"))
+        .leftJoin(this.buildItemAdjustmentsSubquery("adj_tax"), function () {
+          this.on("adj_tax.item_id", "=", "oli.id").andOn(
+            "adj_tax.version",
+            "=",
+            "oi.version"
+          )
+        })
+        .join(this.buildItemTaxRateSubquery("itax"), "itax.item_id", "oli.id")
+        .select(
+          this.knex_.raw(
+            `COALESCE(SUM(CASE WHEN COALESCE(oli.is_tax_inclusive, false) THEN CASE WHEN ${itemRateExpr} > 0 THEN (${itemTaxableExpr}) * (${itemRateExpr} / (100 + ${itemRateExpr})) ELSE 0 END ELSE (${itemTaxableExpr}) * (${itemRateExpr} / 100.0) END), 0) as item_tax`
+          ),
+          this.knex_.raw(
+            `COALESCE(SUM(CASE WHEN COALESCE(oli.is_tax_inclusive, false) THEN 0 ELSE (${itemTaxableExpr}) * (${itemRateExpr} / 100.0) END), 0) as exclusive_item_tax`
+          )
+        )
         .whereNull("oi.deleted_at")
         .whereNull("oli.deleted_at")
       nonCanceledFilter(itemTaxQuery)
       const itemTaxRes = await itemTaxQuery.first()
       const itemTax = Number(itemTaxRes?.item_tax ?? 0)
+      const addedItemTax =
+        itemTaxRes?.exclusive_item_tax !== undefined
+          ? Number(itemTaxRes.exclusive_item_tax)
+          : itemTax
 
-      // Shipping revenue
-      const shippingSubquery = this.knex_("order_shipping_method")
-        .select("order_id", this.knex_.raw("COALESCE(SUM(amount), 0) as shipping_amount"))
-        .whereNull("deleted_at")
-        .groupBy("order_id")
-        .as("ship")
-
+      // Shipping revenue via order_shipping -> order_shipping_method
       const shippingQuery = this.knex_("order as o")
-        .leftJoin(shippingSubquery, "ship.order_id", "o.id")
-        .select(this.knex_.raw("COALESCE(SUM(CAST(ship.shipping_amount AS NUMERIC)), 0) as shipping"))
+        .leftJoin(this.buildOrderShippingSubquery("ship"), function () {
+          this.on("ship.order_id", "=", "o.id").andOn("ship.version", "=", "o.version")
+        })
+        .select(
+          this.knex_.raw("COALESCE(SUM(CAST(ship.shipping_amount AS NUMERIC)), 0) as shipping")
+        )
       nonCanceledFilter(shippingQuery)
       const shippingRes = await shippingQuery.first()
       const shipping = Number(shippingRes?.shipping ?? 0)
 
-      // Shipping tax
-      const shippingTaxSubquery = this.knex_("order_shipping_method_tax_line as osmtl")
-        .join("order_shipping_method as osm", "osmtl.shipping_method_id", "osm.id")
-        .select("osm.order_id", this.knex_.raw("COALESCE(SUM(osmtl.amount), 0) as shipping_tax_amount"))
-        .whereNull("osm.deleted_at")
-        .whereNull("osmtl.deleted_at")
-        .groupBy("osm.order_id")
-        .as("shiptax")
-
+      // Shipping tax via order_shipping -> order_shipping_method -> order_shipping_method_tax_line.rate
       const shippingTaxQuery = this.knex_("order as o")
-        .leftJoin(shippingTaxSubquery, "shiptax.order_id", "o.id")
-        .select(this.knex_.raw("COALESCE(SUM(CAST(shiptax.shipping_tax_amount AS NUMERIC)), 0) as shipping_tax"))
+        .leftJoin(this.buildOrderShippingTaxSubquery("shiptax"), function () {
+          this.on("shiptax.order_id", "=", "o.id").andOn("shiptax.version", "=", "o.version")
+        })
+        .select(
+          this.knex_.raw(
+            "COALESCE(SUM(CAST(shiptax.shipping_tax_amount AS NUMERIC)), 0) as shipping_tax"
+          ),
+          this.knex_.raw(
+            "COALESCE(SUM(CAST(shiptax.exclusive_shipping_tax_amount AS NUMERIC)), 0) as exclusive_shipping_tax"
+          )
+        )
       nonCanceledFilter(shippingTaxQuery)
       const shippingTaxRes = await shippingTaxQuery.first()
       const shippingTax = Number(shippingTaxRes?.shipping_tax ?? 0)
+      const addedShippingTax =
+        shippingTaxRes?.exclusive_shipping_tax !== undefined
+          ? Number(shippingTaxRes.exclusive_shipping_tax)
+          : shippingTax
 
       const tax = itemTax + shippingTax
+      const addedTax = addedItemTax + addedShippingTax
 
       // Refunds
       const refundQuery = this.knex_("order as o")
         .join("order_transaction as ot", "ot.order_id", "o.id")
-        .select(this.knex_.raw("COALESCE(SUM(ABS(CAST(ot.amount AS NUMERIC))), 0) as refund_amount"))
+        .select(
+          this.knex_.raw(
+            "COALESCE(SUM(ABS(CAST(ot.amount AS NUMERIC))), 0) as refund_amount"
+          )
+        )
         .where("ot.amount", "<", 0)
         .whereNull("ot.deleted_at")
       nonCanceledFilter(refundQuery)
@@ -277,8 +429,14 @@ export class MarginReportingService {
 
       // Cancelled order amount
       const canceledQuery = this.knex_("order as o")
-        .leftJoin("order_item as oi", "oi.order_id", "o.id")
-        .leftJoin("order_line_item as oli", "oi.item_id", "oli.id")
+        .leftJoin("order_item as oi", function () {
+          this.on("oi.order_id", "=", "o.id")
+            .andOn("oi.version", "=", "o.version")
+            .andOnNull("oi.deleted_at")
+        })
+        .leftJoin("order_line_item as oli", function () {
+          this.on("oi.item_id", "=", "oli.id").andOnNull("oli.deleted_at")
+        })
         .select(
           this.knex_.raw(
             "COALESCE(SUM(CAST(oi.quantity AS NUMERIC) * CAST(COALESCE(oi.unit_price, oli.unit_price, 0) AS NUMERIC)), 0) as cancelled_amount"
@@ -289,9 +447,10 @@ export class MarginReportingService {
       const canceledRes = await canceledQuery.first()
       const cancelledOrderAmount = Number(canceledRes?.cancelled_amount ?? 0)
 
-      const netSales = grossSales - discounts + tax + shipping - refundAmount
+      const netSales = grossSales - discounts + addedTax + shipping - refundAmount
       const grossProfit = netSales - cogs
-      const grossMarginPercentage = netSales !== 0 ? Number(((grossProfit / netSales) * 100).toFixed(2)) : 0
+      const grossMarginPercentage =
+        netSales !== 0 ? Number(((grossProfit / netSales) * 100).toFixed(2)) : 0
 
       summaryByCurrency[curr] = {
         currency_code: curr,
@@ -318,7 +477,7 @@ export class MarginReportingService {
     } else if (options.currency && summaryByCurrency[options.currency.toLowerCase()]) {
       summary = summaryByCurrency[options.currency.toLowerCase()]
     } else if (currencies.length === 0) {
-      const fallbackCurr = options.currency?.toLowerCase() || "usd"
+      const fallbackCurr = options.currency?.toLowerCase() || "irr"
       summary = {
         currency_code: fallbackCurr,
         gross_sales: 0,
@@ -358,29 +517,44 @@ export class MarginReportingService {
     }
   }
 
-  private async getBreakdown(options: MarginReportOptions, limit: number, offset: number) {
+  private async getBreakdown(
+    options: MarginReportOptions,
+    limit: number,
+    offset: number
+  ) {
     const groupBy = options.group_by
     const unitCostSql = this.getUnitCostExpression()
 
-    if (groupBy === "day" || groupBy === "week" || groupBy === "month") {
-      const dateTrunc = groupBy === "day" ? "day" : groupBy === "week" ? "week" : "month"
+    if (
+      groupBy === "day" ||
+      groupBy === "week" ||
+      groupBy === "month" ||
+      groupBy === "year"
+    ) {
+      const dateTrunc =
+        groupBy === "day"
+          ? "day"
+          : groupBy === "week"
+            ? "week"
+            : groupBy === "month"
+              ? "month"
+              : "year"
       const dateExpr = `DATE_TRUNC('${dateTrunc}', o.created_at)`
 
       const orderItemsAgg = this.knex_("order_item as oi")
         .join("order_line_item as oli", "oi.item_id", "oli.id")
         .leftJoin("product_variant as pv", "oli.variant_id", "pv.id")
         .leftJoin("inventory_item as ii", "oli.variant_sku", "ii.sku")
-        .leftJoin(
-          this.knex_("order_line_item_adjustment")
-            .select("item_id", this.knex_.raw("COALESCE(SUM(amount), 0) as discount_amount"))
-            .whereNull("deleted_at")
-            .groupBy("item_id")
-            .as("adj_sub"),
-          "adj_sub.item_id",
-          "oli.id"
-        )
+        .leftJoin(this.buildItemAdjustmentsSubquery("adj_sub"), function () {
+          this.on("adj_sub.item_id", "=", "oli.id").andOn(
+            "adj_sub.version",
+            "=",
+            "oi.version"
+          )
+        })
         .select(
           "oi.order_id",
+          "oi.version",
           this.knex_.raw("COALESCE(SUM(CAST(oi.quantity AS NUMERIC)), 0) as items_sold"),
           this.knex_.raw(
             "COALESCE(SUM(CAST(oi.quantity AS NUMERIC) * CAST(COALESCE(oi.unit_price, oli.unit_price, 0) AS NUMERIC)), 0) as gross_sales"
@@ -392,25 +566,33 @@ export class MarginReportingService {
         )
         .whereNull("oi.deleted_at")
         .whereNull("oli.deleted_at")
-        .groupBy("oi.order_id")
+        .groupBy("oi.order_id", "oi.version")
         .as("oitem_agg")
 
-      const orderShippingAgg = this.knex_("order_shipping_method")
-        .select("order_id", this.knex_.raw("COALESCE(SUM(amount), 0) as shipping"))
-        .whereNull("deleted_at")
-        .groupBy("order_id")
-        .as("oship_agg")
-
       const baseQuery = this.knex_("order as o")
-        .leftJoin(orderItemsAgg, "oitem_agg.order_id", "o.id")
-        .leftJoin(orderShippingAgg, "oship_agg.order_id", "o.id")
+        .leftJoin(orderItemsAgg, function () {
+          this.on("oitem_agg.order_id", "=", "o.id").andOn(
+            "oitem_agg.version",
+            "=",
+            "o.version"
+          )
+        })
+        .leftJoin(this.buildOrderShippingSubquery("oship_agg"), function () {
+          this.on("oship_agg.order_id", "=", "o.id").andOn(
+            "oship_agg.version",
+            "=",
+            "o.version"
+          )
+        })
         .select(
           this.knex_.raw(`TO_CHAR(${dateExpr}, 'YYYY-MM-DD') as date`),
           this.knex_.raw("COUNT(DISTINCT o.id) as orders"),
           this.knex_.raw("COALESCE(SUM(CAST(oitem_agg.items_sold AS NUMERIC)), 0) as items_sold"),
           this.knex_.raw("COALESCE(SUM(CAST(oitem_agg.gross_sales AS NUMERIC)), 0) as gross_sales"),
           this.knex_.raw("COALESCE(SUM(CAST(oitem_agg.discounts AS NUMERIC)), 0) as discounts"),
-          this.knex_.raw("COALESCE(SUM(CAST(oship_agg.shipping AS NUMERIC)), 0) as shipping"),
+          this.knex_.raw(
+            "COALESCE(SUM(CAST(oship_agg.shipping_amount AS NUMERIC)), 0) as shipping"
+          ),
           this.knex_.raw("COALESCE(SUM(CAST(oitem_agg.cogs AS NUMERIC)), 0) as cogs")
         )
         .groupByRaw(`${dateExpr}`)
@@ -422,7 +604,7 @@ export class MarginReportingService {
       }
 
       const rows = await baseQuery
-      const formatted = rows.map((r) => {
+      const formatted = rows.map((r: any) => {
         const gross = Number(r.gross_sales || 0)
         const disc = Number(r.discounts || 0)
         const ship = Number(r.shipping || 0)
@@ -449,18 +631,16 @@ export class MarginReportingService {
     }
 
     if (groupBy === "product") {
-      const adjustmentsSubquery = this.knex_("order_line_item_adjustment")
-        .select("item_id", this.knex_.raw("COALESCE(SUM(amount), 0) as discount_amount"))
-        .whereNull("deleted_at")
-        .groupBy("item_id")
-        .as("adj")
-
       const baseQuery = this.knex_("order_line_item as oli")
         .join("order_item as oi", "oi.item_id", "oli.id")
-        .join("order as o", "oi.order_id", "o.id")
+        .join("order as o", function () {
+          this.on("oi.order_id", "=", "o.id").andOn("oi.version", "=", "o.version")
+        })
         .leftJoin("product_variant as pv", "oli.variant_id", "pv.id")
         .leftJoin("inventory_item as ii", "oli.variant_sku", "ii.sku")
-        .leftJoin(adjustmentsSubquery, "adj.item_id", "oli.id")
+        .leftJoin(this.buildItemAdjustmentsSubquery("adj"), function () {
+          this.on("adj.item_id", "=", "oli.id").andOn("adj.version", "=", "oi.version")
+        })
         .select(
           "oli.product_id",
           "oli.product_title",
@@ -486,12 +666,15 @@ export class MarginReportingService {
         baseQuery.where("o.status", "<>", "canceled")
       }
 
-      const countQuery = this.knex_.from(baseQuery.clone().as("sub")).count("* as count").first()
+      const countQuery = this.knex_
+        .from(baseQuery.clone().clearOrder().as("sub"))
+        .count("* as count")
+        .first()
       const countRes = await countQuery
       const totalCount = Number(countRes?.count ?? 0)
 
       const rows = await baseQuery.limit(limit).offset(offset)
-      const formatted = rows.map((r) => {
+      const formatted = rows.map((r: any) => {
         const gross = Number(r.gross_sales || 0)
         const disc = Number(r.discounts || 0)
         const net = gross - disc
@@ -517,18 +700,16 @@ export class MarginReportingService {
     }
 
     if (groupBy === "variant") {
-      const adjustmentsSubquery = this.knex_("order_line_item_adjustment")
-        .select("item_id", this.knex_.raw("COALESCE(SUM(amount), 0) as discount_amount"))
-        .whereNull("deleted_at")
-        .groupBy("item_id")
-        .as("adj")
-
       const baseQuery = this.knex_("order_line_item as oli")
         .join("order_item as oi", "oi.item_id", "oli.id")
-        .join("order as o", "oi.order_id", "o.id")
+        .join("order as o", function () {
+          this.on("oi.order_id", "=", "o.id").andOn("oi.version", "=", "o.version")
+        })
         .leftJoin("product_variant as pv", "oli.variant_id", "pv.id")
         .leftJoin("inventory_item as ii", "oli.variant_sku", "ii.sku")
-        .leftJoin(adjustmentsSubquery, "adj.item_id", "oli.id")
+        .leftJoin(this.buildItemAdjustmentsSubquery("adj"), function () {
+          this.on("adj.item_id", "=", "oli.id").andOn("adj.version", "=", "oi.version")
+        })
         .select(
           "oli.variant_id",
           "oli.variant_sku",
@@ -563,12 +744,15 @@ export class MarginReportingService {
         baseQuery.where("o.status", "<>", "canceled")
       }
 
-      const countQuery = this.knex_.from(baseQuery.clone().as("sub")).count("* as count").first()
+      const countQuery = this.knex_
+        .from(baseQuery.clone().clearOrder().as("sub"))
+        .count("* as count")
+        .first()
       const countRes = await countQuery
       const totalCount = Number(countRes?.count ?? 0)
 
       const rows = await baseQuery.limit(limit).offset(offset)
-      const formatted = rows.map((r) => {
+      const formatted = rows.map((r: any) => {
         const gross = Number(r.gross_sales || 0)
         const disc = Number(r.discounts || 0)
         const net = gross - disc
@@ -597,20 +781,18 @@ export class MarginReportingService {
     }
 
     if (groupBy === "category") {
-      const adjustmentsSubquery = this.knex_("order_line_item_adjustment")
-        .select("item_id", this.knex_.raw("COALESCE(SUM(amount), 0) as discount_amount"))
-        .whereNull("deleted_at")
-        .groupBy("item_id")
-        .as("adj")
-
       const baseQuery = this.knex_("product_category as pc")
         .join("product_category_product as pcp", "pcp.product_category_id", "pc.id")
         .join("order_line_item as oli", "oli.product_id", "pcp.product_id")
         .join("order_item as oi", "oi.item_id", "oli.id")
-        .join("order as o", "oi.order_id", "o.id")
+        .join("order as o", function () {
+          this.on("oi.order_id", "=", "o.id").andOn("oi.version", "=", "o.version")
+        })
         .leftJoin("product_variant as pv", "oli.variant_id", "pv.id")
         .leftJoin("inventory_item as ii", "oli.variant_sku", "ii.sku")
-        .leftJoin(adjustmentsSubquery, "adj.item_id", "oli.id")
+        .leftJoin(this.buildItemAdjustmentsSubquery("adj"), function () {
+          this.on("adj.item_id", "=", "oli.id").andOn("adj.version", "=", "oi.version")
+        })
         .select(
           "pc.id as category_id",
           "pc.name as category_name",
@@ -639,12 +821,15 @@ export class MarginReportingService {
         baseQuery.where("o.status", "<>", "canceled")
       }
 
-      const countQuery = this.knex_.from(baseQuery.clone().as("sub")).count("* as count").first()
+      const countQuery = this.knex_
+        .from(baseQuery.clone().clearOrder().as("sub"))
+        .count("* as count")
+        .first()
       const countRes = await countQuery
       const totalCount = Number(countRes?.count ?? 0)
 
       const rows = await baseQuery.limit(limit).offset(offset)
-      const formatted = rows.map((r) => {
+      const formatted = rows.map((r: any) => {
         const gross = Number(r.gross_sales || 0)
         const disc = Number(r.discounts || 0)
         const net = gross - disc
@@ -676,17 +861,16 @@ export class MarginReportingService {
         .join("order_line_item as oli", "oi.item_id", "oli.id")
         .leftJoin("product_variant as pv", "oli.variant_id", "pv.id")
         .leftJoin("inventory_item as ii", "oli.variant_sku", "ii.sku")
-        .leftJoin(
-          this.knex_("order_line_item_adjustment")
-            .select("item_id", this.knex_.raw("COALESCE(SUM(amount), 0) as discount_amount"))
-            .whereNull("deleted_at")
-            .groupBy("item_id")
-            .as("adj_curr"),
-          "adj_curr.item_id",
-          "oli.id"
-        )
+        .leftJoin(this.buildItemAdjustmentsSubquery("adj_curr"), function () {
+          this.on("adj_curr.item_id", "=", "oli.id").andOn(
+            "adj_curr.version",
+            "=",
+            "oi.version"
+          )
+        })
         .select(
           "oi.order_id",
+          "oi.version",
           this.knex_.raw(
             "COALESCE(SUM(CAST(oi.quantity AS NUMERIC) * CAST(COALESCE(oi.unit_price, oli.unit_price, 0) AS NUMERIC)), 0) as gross_sales"
           ),
@@ -697,24 +881,36 @@ export class MarginReportingService {
         )
         .whereNull("oi.deleted_at")
         .whereNull("oli.deleted_at")
-        .groupBy("oi.order_id")
+        .groupBy("oi.order_id", "oi.version")
         .as("osales_curr")
 
-      const orderShippingAgg = this.knex_("order_shipping_method")
-        .select("order_id", this.knex_.raw("COALESCE(SUM(amount), 0) as shipping"))
-        .whereNull("deleted_at")
-        .groupBy("order_id")
-        .as("oship_curr")
-
       const baseQuery = this.knex_("order as o")
-        .leftJoin(orderSalesAgg, "osales_curr.order_id", "o.id")
-        .leftJoin(orderShippingAgg, "oship_curr.order_id", "o.id")
+        .leftJoin(orderSalesAgg, function () {
+          this.on("osales_curr.order_id", "=", "o.id").andOn(
+            "osales_curr.version",
+            "=",
+            "o.version"
+          )
+        })
+        .leftJoin(this.buildOrderShippingSubquery("oship_curr"), function () {
+          this.on("oship_curr.order_id", "=", "o.id").andOn(
+            "oship_curr.version",
+            "=",
+            "o.version"
+          )
+        })
         .select(
           this.knex_.raw("LOWER(o.currency_code) as currency_code"),
           this.knex_.raw("COUNT(DISTINCT o.id) as orders"),
-          this.knex_.raw("COALESCE(SUM(CAST(osales_curr.gross_sales AS NUMERIC)), 0) as gross_sales"),
-          this.knex_.raw("COALESCE(SUM(CAST(osales_curr.discounts AS NUMERIC)), 0) as discounts"),
-          this.knex_.raw("COALESCE(SUM(CAST(oship_curr.shipping AS NUMERIC)), 0) as shipping"),
+          this.knex_.raw(
+            "COALESCE(SUM(CAST(osales_curr.gross_sales AS NUMERIC)), 0) as gross_sales"
+          ),
+          this.knex_.raw(
+            "COALESCE(SUM(CAST(osales_curr.discounts AS NUMERIC)), 0) as discounts"
+          ),
+          this.knex_.raw(
+            "COALESCE(SUM(CAST(oship_curr.shipping_amount AS NUMERIC)), 0) as shipping"
+          ),
           this.knex_.raw("COALESCE(SUM(CAST(osales_curr.cogs AS NUMERIC)), 0) as cogs")
         )
         .groupByRaw("LOWER(o.currency_code)")
@@ -726,7 +922,7 @@ export class MarginReportingService {
       }
 
       const rows = await baseQuery.limit(limit).offset(offset)
-      const formatted = rows.map((r) => {
+      const formatted = rows.map((r: any) => {
         const gross = Number(r.gross_sales || 0)
         const disc = Number(r.discounts || 0)
         const ship = Number(r.shipping || 0)

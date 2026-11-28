@@ -12,6 +12,7 @@ import {
   extractPromotionMetadataFields,
   refetchPromotion,
 } from "./helpers"
+import { invalidateStorePricingAndPromotionCache } from "./reconcile-carts"
 import { AdditionalData, HttpTypes } from "@medusajs/framework/types"
 
 export const GET = async (
@@ -53,6 +54,8 @@ export const POST = async (
   const { result } = await createPromotions.run({
     input: { promotionsData, additional_data },
   })
+
+  await invalidateStorePricingAndPromotionCache(req.scope)
 
   const promotion = await refetchPromotion(
     result[0].id,

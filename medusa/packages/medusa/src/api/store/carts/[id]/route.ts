@@ -7,17 +7,32 @@ import {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
-import { attachAuthenticatedCustomerToCart, refetchCart } from "../helpers"
+import {
+  attachAuthenticatedCustomerToCart,
+  reconcileStaleCartPromotions,
+  refetchCart,
+} from "../helpers"
 
 export const GET = async (
   req: MedusaRequest<HttpTypes.StoreGetCartsCart>,
   res: MedusaResponse<HttpTypes.StoreCartResponse>
 ) => {
-  const cart = await refetchCart(
+  let cart = await refetchCart(
     req.params.id,
     req.scope,
     req.queryConfig.fields
   )
+
+  const reconciled = await reconcileStaleCartPromotions(req.scope, cart).catch(
+    () => false
+  )
+  if (reconciled) {
+    cart = await refetchCart(
+      req.params.id,
+      req.scope,
+      req.queryConfig.fields
+    )
+  }
 
   res.json({ cart })
 }

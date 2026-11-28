@@ -18,6 +18,8 @@ export const adminSalesReportRoutesMiddlewares: MiddlewareRoute[] = [
           defaults: [
             "from",
             "to",
+            "start_date",
+            "end_date",
             "group_by",
             "order_status",
             "product_id",

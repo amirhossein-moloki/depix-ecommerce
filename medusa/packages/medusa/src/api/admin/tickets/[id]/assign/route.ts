@@ -1,5 +1,6 @@
 import { assignTicketWorkflow } from "@medusajs/core-flows"
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { enrichTicketWithCustomer } from "../../helpers"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest,
@@ -19,5 +20,5 @@ export const POST = async (
     },
   })
 
-  res.json({ ticket })
+  res.json({ ticket: await enrichTicketWithCustomer(req.scope, ticket) })
 }

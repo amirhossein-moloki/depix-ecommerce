@@ -194,7 +194,8 @@ const getVariantRealPrice = (
     compareAt !== undefined &&
     compareAt !== null &&
     Number.isFinite(Number(compareAt)) &&
-    Number(compareAt) > 0
+    Number(compareAt) > 0 &&
+    (finalPrice === null || Number(compareAt) > finalPrice)
   ) {
     return Number(compareAt)
   }
@@ -260,15 +261,23 @@ export const enrichProductsWithStoreSummary = (products: any[]) => {
 }
 
 function isPromotionTimeActive(promo: any, now: number): boolean {
-  const startsAt = promo?.metadata?.starts_at ?? promo?.campaign?.starts_at
-  const endsAt = promo?.metadata?.ends_at ?? promo?.campaign?.ends_at
-  if (startsAt && new Date(startsAt).getTime() > now) {
-    return false
+  const checkStart = (val: unknown) => {
+    if (!val) return true
+    const ts = new Date(val as string | number | Date).getTime()
+    return !Number.isFinite(ts) || ts <= now
   }
-  if (endsAt && new Date(endsAt).getTime() < now) {
-    return false
+  const checkEnd = (val: unknown) => {
+    if (!val) return true
+    const ts = new Date(val as string | number | Date).getTime()
+    return !Number.isFinite(ts) || ts > now
   }
-  return true
+
+  return (
+    checkStart(promo?.metadata?.starts_at) &&
+    checkEnd(promo?.metadata?.ends_at) &&
+    checkStart(promo?.campaign?.starts_at) &&
+    checkEnd(promo?.campaign?.ends_at)
+  )
 }
 
 function doesPromotionMatchProduct(promo: any, productId: string): boolean {
@@ -322,11 +331,14 @@ export async function applyActiveAutomaticPromotionsToProducts(
         fields: [
           "id",
           "code",
+          "type",
           "status",
           "is_automatic",
+          "deleted_at",
           "metadata",
           "campaign.starts_at",
           "campaign.ends_at",
+          "campaign.metadata",
           "application_method.type",
           "application_method.value",
           "application_method.target_type",
@@ -346,8 +358,12 @@ export async function applyActiveAutomaticPromotionsToProducts(
   const activePromos = promotions.filter(
     (p: any) =>
       p?.status === "active" &&
+      !p?.deleted_at &&
       p?.is_automatic === true &&
+      p?.type !== "buyget" &&
       p?.application_method &&
+      p.application_method.target_type !== "shipping_methods" &&
+      p?.campaign?.metadata?.is_active !== false &&
       isPromotionTimeActive(p, now)
   )
 
@@ -430,8 +446,11 @@ export async function applyActiveAutomaticPromotionsToProducts(
         }
       }
       if (variantBestFinal < variantOriginal) {
-        cp.original_amount = variantOriginal
-        cp.calculated_amount = variantBestFinal
+        variant.calculated_price = {
+          ...cp,
+          original_amount: variantOriginal,
+          calculated_amount: variantBestFinal,
+        }
       }
     }
   }

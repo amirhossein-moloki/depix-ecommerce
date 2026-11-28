@@ -105,9 +105,6 @@ async function getProductsWithIndexEngine(
       context,
     },
     {
-      cache: {
-        enable: true,
-      },
       locale: req.locale,
     }
   )
@@ -118,6 +115,7 @@ async function getProductsWithIndexEngine(
 
   await wrapProductsWithTaxPrices(req, products)
   enrichProductsWithStoreSummary(products)
+  await applyActiveAutomaticPromotionsToProducts(req.scope, products)
   await enrichProductsWithBrand(req.scope, products)
 
   res.json({
@@ -193,9 +191,6 @@ async function getProducts(
         context,
       },
       {
-        cache: {
-          enable: true,
-        },
         locale: req.locale,
       }
     )
@@ -230,9 +225,6 @@ async function getProducts(
       context,
     },
     {
-      cache: {
-        enable: true,
-      },
       locale: req.locale,
     }
   )
@@ -240,6 +232,9 @@ async function getProducts(
   if (withInventoryQuantity) {
     await populateInventoryQuantity(req, candidateProducts, true)
   }
+
+  enrichProductsWithStoreSummary(candidateProducts)
+  await applyActiveAutomaticPromotionsToProducts(req.scope, candidateProducts)
 
   const filteredProducts = await filterCatalogProducts(
     candidateProducts,
@@ -257,8 +252,6 @@ async function getProducts(
   const pagedProducts = sortedProducts.slice(skip, skip + take)
 
   await wrapProductsWithTaxPrices(req, pagedProducts)
-  enrichProductsWithStoreSummary(pagedProducts)
-  await applyActiveAutomaticPromotionsToProducts(req.scope, pagedProducts)
   await enrichProductsWithBrand(req.scope, pagedProducts)
 
   return res.json({

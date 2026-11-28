@@ -3,11 +3,13 @@ import { POST as adjustProductInventory } from "../../products/[id]/inventory/ad
 import { GET as getProductInventoryHistory } from "../../products/[id]/inventory/history/route"
 import { GET as getLowStock } from "../low-stock/route"
 import { GET as getGlobalHistory } from "../history/route"
-import { MedusaError } from "@medusajs/framework/utils"
+import { MedusaError, Modules } from "@medusajs/framework/utils"
 
 describe("Inventory Management and History API Routes", () => {
   let mockRemoteQuery: jest.Mock
   let mockInventoryService: any
+  let mockUserService: any
+  let mockCustomerService: any
   let req: any
   let res: any
 
@@ -17,6 +19,12 @@ describe("Inventory Management and History API Routes", () => {
       createInventoryLevels: jest.fn(),
       updateInventoryLevels: jest.fn(),
       createInventoryTransaction: jest.fn(),
+    }
+    mockUserService = {
+      listUsers: jest.fn().mockResolvedValue([]),
+    }
+    mockCustomerService = {
+      listCustomers: jest.fn().mockResolvedValue([]),
     }
 
     req = {
@@ -28,6 +36,8 @@ describe("Inventory Management and History API Routes", () => {
         resolve: jest.fn((key) => {
           if (key === "remoteQuery") return mockRemoteQuery
           if (key === "inventory") return mockInventoryService
+          if (key === Modules.USER) return mockUserService
+          if (key === Modules.CUSTOMER) return mockCustomerService
           return null
         }),
       },
@@ -324,7 +334,7 @@ describe("Inventory Management and History API Routes", () => {
   })
 
   describe("GET /admin/inventory/history", () => {
-    it("returns paginated inventory transaction log with applied filters", async () => {
+    it("returns paginated inventory transaction log enriched with product_title, variant_title, sku, and actor_name", async () => {
       req.query = {
         product_id: "prod_123",
         reason: "purchase",
@@ -335,28 +345,257 @@ describe("Inventory Management and History API Routes", () => {
       const mockHistoryRows = [
         {
           id: "itrx_1",
+          inventory_item_id: "iitem_1",
           product_id: "prod_123",
+          variant_id: "var_1",
           quantity_before: 0,
           quantity_change: 10,
           quantity_after: 10,
           type: "increase",
           reason: "purchase",
+          created_by: "usr_admin",
         },
       ]
 
-      mockRemoteQuery.mockResolvedValueOnce({
-        rows: mockHistoryRows,
-        metadata: { count: 1, skip: 0, take: 10 },
-      })
+      mockRemoteQuery
+        .mockResolvedValueOnce({
+          rows: mockHistoryRows,
+          metadata: { count: 1, skip: 0, take: 10 },
+        })
+        .mockResolvedValueOnce([
+          {
+            id: "var_1",
+            title: "مشکی",
+            sku: "SKU-BLK-1",
+            product_id: "prod_123",
+            product: { id: "prod_123", title: "هدفون بی‌سیم" },
+          },
+        ])
+      mockUserService.listUsers.mockResolvedValueOnce([
+        {
+          id: "usr_admin",
+          first_name: "Ali",
+          last_name: "Rezaei",
+          metadata: { name: "مدیر انبار" },
+        },
+      ])
 
       await getGlobalHistory(req, res)
 
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith({
-        history: mockHistoryRows,
+        history: [
+          expect.objectContaining({
+            id: "itrx_1",
+            product_id: "prod_123",
+            variant_id: "var_1",
+            product_title: "هدفون بی‌سیم",
+            variant_title: "مشکی",
+            sku: "SKU-BLK-1",
+            actor_name: "مدیر انبار",
+          }),
+        ],
         count: 1,
         offset: 0,
         limit: 10,
+      })
+    })
+
+    it("enriches multiple transactions in batch across admin users, customers, system/admin sentinels, and deleted-variant inventory_item fallbacks", async () => {
+      const mockHistoryRows = [
+        {
+          id: "itrx_admin_name",
+          inventory_item_id: "iitem_1",
+          product_id: "prod_1",
+          variant_id: "var_1",
+          quantity_change: 5,
+          type: "increase",
+          created_by: "usr_1",
+        },
+        {
+          id: "itrx_admin_email",
+          inventory_item_id: "iitem_1",
+          product_id: "prod_1",
+          variant_id: "var_1",
+          quantity_change: 2,
+          type: "increase",
+          created_by: "usr_2",
+        },
+        {
+          id: "itrx_customer",
+          inventory_item_id: "iitem_1",
+          product_id: "prod_1",
+          variant_id: "var_1",
+          quantity_change: -1,
+          type: "decrease",
+          created_by: "cus_1",
+        },
+        {
+          id: "itrx_system",
+          inventory_item_id: "iitem_deleted",
+          product_id: "prod_deleted_var",
+          variant_id: "var_deleted",
+          quantity_change: -3,
+          type: "decrease",
+          created_by: "system",
+        },
+        {
+          id: "itrx_admin_sentinel",
+          inventory_item_id: "iitem_1",
+          product_id: "prod_1",
+          variant_id: "var_1",
+          quantity_change: 4,
+          type: "increase",
+          created_by: "admin",
+        },
+      ]
+
+      mockRemoteQuery
+        .mockResolvedValueOnce({
+          rows: mockHistoryRows,
+          metadata: { count: 5, skip: 0, take: 20 },
+        })
+        // product_variant batch lookup (var_deleted omitted to simulate deleted variant)
+        .mockResolvedValueOnce([
+          {
+            id: "var_1",
+            title: "Large",
+            sku: "SHIRT-L",
+            product_id: "prod_1",
+            product: { id: "prod_1", title: "Classic Tee" },
+          },
+        ])
+        // product fallback lookup for prod_deleted_var
+        .mockResolvedValueOnce([
+          {
+            id: "prod_deleted_var",
+            title: "Archived Jacket",
+          },
+        ])
+        // inventory_items fallback lookup for iitem_deleted
+        .mockResolvedValueOnce([
+          {
+            id: "iitem_deleted",
+            sku: "JKT-OLD-M",
+            title: "Medium Jacket",
+          },
+        ])
+
+      mockUserService.listUsers.mockResolvedValueOnce([
+        {
+          id: "usr_1",
+          first_name: "Sara",
+          last_name: "Mohammadi",
+          email: "sara@example.com",
+        },
+        {
+          id: "usr_2",
+          email: "ops@example.com",
+        },
+      ])
+      mockCustomerService.listCustomers.mockResolvedValueOnce([
+        {
+          id: "cus_1",
+          first_name: "Reza",
+          last_name: "Karimi",
+        },
+      ])
+
+      await getGlobalHistory(req, res)
+
+      expect(mockUserService.listUsers).toHaveBeenCalledTimes(1)
+      expect(mockCustomerService.listCustomers).toHaveBeenCalledTimes(1)
+      expect(res.status).toHaveBeenCalledWith(200)
+
+      const payload = res.json.mock.calls[0][0]
+      expect(payload.history).toEqual([
+        expect.objectContaining({
+          id: "itrx_admin_name",
+          product_title: "Classic Tee",
+          variant_title: "Large",
+          sku: "SHIRT-L",
+          actor_name: "Sara Mohammadi",
+        }),
+        expect.objectContaining({
+          id: "itrx_admin_email",
+          actor_name: "ops@example.com",
+        }),
+        expect.objectContaining({
+          id: "itrx_customer",
+          actor_name: "Reza Karimi",
+        }),
+        expect.objectContaining({
+          id: "itrx_system",
+          product_title: "Archived Jacket",
+          variant_title: "Medium Jacket",
+          sku: "JKT-OLD-M",
+          actor_name: "System",
+        }),
+        expect.objectContaining({
+          id: "itrx_admin_sentinel",
+          actor_name: "Admin",
+        }),
+      ])
+    })
+  })
+
+  describe("GET /admin/products/:id/inventory/history", () => {
+    it("returns enriched product inventory history with product_title, variant_title, sku, and actor_name", async () => {
+      req.params = { id: "prod_123" }
+      req.query = {}
+
+      mockRemoteQuery
+        .mockResolvedValueOnce([{ id: "prod_123" }])
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: "itrx_p1",
+              inventory_item_id: "iitem_1",
+              product_id: "prod_123",
+              variant_id: "var_1",
+              quantity_before: 10,
+              quantity_change: -2,
+              quantity_after: 8,
+              type: "decrease",
+              reason: "sale",
+              created_by: "cus_buyer",
+            },
+          ],
+          metadata: { count: 1, skip: 0, take: 20 },
+        })
+        .mockResolvedValueOnce([
+          {
+            id: "var_1",
+            title: "آبی",
+            sku: "BLUE-01",
+            product_id: "prod_123",
+            product: { id: "prod_123", title: "کوله‌پشتی" },
+          },
+        ])
+      mockCustomerService.listCustomers.mockResolvedValueOnce([
+        {
+          id: "cus_buyer",
+          first_name: "Nima",
+          last_name: "Ahmadi",
+        },
+      ])
+
+      await getProductInventoryHistory(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res.json).toHaveBeenCalledWith({
+        history: [
+          expect.objectContaining({
+            id: "itrx_p1",
+            product_title: "کوله‌پشتی",
+            variant_title: "آبی",
+            sku: "BLUE-01",
+            actor_name: "Nima Ahmadi",
+          }),
+        ],
+        count: 1,
+        offset: 0,
+        limit: 20,
       })
     })
   })

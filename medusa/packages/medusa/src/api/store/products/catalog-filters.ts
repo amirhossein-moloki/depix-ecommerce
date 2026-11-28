@@ -273,6 +273,20 @@ export const isProductInStock = (product: any): boolean => {
 }
 
 export const hasProductDiscount = (product: any): boolean => {
+  if (Number(product?.discount ?? 0) > 0) {
+    return true
+  }
+
+  if (
+    product?.realPrice !== undefined &&
+    product?.realPrice !== null &&
+    product?.finalPrice !== undefined &&
+    product?.finalPrice !== null &&
+    Number(product.realPrice) > Number(product.finalPrice)
+  ) {
+    return true
+  }
+
   const metadata = product?.metadata ?? {}
   if (
     metadata.has_discount === true ||
@@ -283,6 +297,16 @@ export const hasProductDiscount = (product: any): boolean => {
 
   const variants = product?.variants ?? []
   return variants.some((variant: any) => {
+    const compareAt = Number(variant?.metadata?.compare_at_price ?? 0)
+    const variantPrice = getVariantPrice(variant)
+    if (
+      Number.isFinite(compareAt) &&
+      compareAt > 0 &&
+      compareAt > (variantPrice ?? Infinity)
+    ) {
+      return true
+    }
+
     const calc = variant?.calculated_price
     if (!calc) {
       return false

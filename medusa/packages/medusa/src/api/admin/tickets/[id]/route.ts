@@ -1,6 +1,6 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
-import { formatTicketMessage } from "../helpers"
+import { enrichTicketWithCustomer, formatTicketMessage } from "../helpers"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -51,9 +51,11 @@ export const GET = async (
     }
   }
 
+  const enrichedTicket = await enrichTicketWithCustomer(req.scope, ticket)
+
   res.json({
     ticket: {
-      ...ticket,
+      ...enrichedTicket,
       messages: sortedMessages,
       history: sortedHistory,
       order: orderInfo,

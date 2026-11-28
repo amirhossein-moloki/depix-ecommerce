@@ -714,15 +714,21 @@ paths:
         in: query
         schema:
           type: integer
+          default: 20
       - name: offset
         in: query
         schema:
           type: integer
+          default: 0
       - name: is_active
         in: query
         schema:
           type: boolean
       - name: parent_category_id
+        in: query
+        schema:
+          type: string
+      - name: q
         in: query
         schema:
           type: string
@@ -775,12 +781,20 @@ paths:
                   type: string
                 image_id:
                   type: string
+                  nullable: true
                 is_active:
                   type: boolean
                 display_order:
                   type: integer
+                rank:
+                  type: integer
                 parent_category_id:
                   type: string
+                  nullable: true
+                metadata:
+                  type: object
+                  nullable: true
+                  additionalProperties: true
       responses:
         '201':
           description: Category created.
@@ -855,12 +869,20 @@ paths:
                   type: string
                 image_id:
                   type: string
+                  nullable: true
                 is_active:
                   type: boolean
                 display_order:
                   type: integer
+                rank:
+                  type: integer
                 parent_category_id:
                   type: string
+                  nullable: true
+                metadata:
+                  type: object
+                  nullable: true
+                  additionalProperties: true
       responses:
         '200':
           description: Category updated.
@@ -1701,7 +1723,8 @@ paths:
       summary: Get Global Inventory Transaction History
       operationId: getGlobalInventoryHistory
       description: Retrieve paginated audit trail of inventory balance adjustments
-        and transactions across all products.
+        and transactions across all products, enriched with `product_title`,
+        `variant_title`, `sku`, and `actor_name`.
       tags:
       - Admin Inventory
       security:
@@ -1917,6 +1940,16 @@ paths:
       security:
       - bearerAuth: []
       parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
       - name: status
         in: query
         schema:
@@ -1924,6 +1957,8 @@ paths:
           enum:
           - open
           - in_progress
+          - waiting_for_customer
+          - answered
           - resolved
           - closed
       - name: priority
@@ -1934,9 +1969,32 @@ paths:
           - low
           - normal
           - high
-          - urgent
+      - name: category_id
+        in: query
+        schema:
+          type: string
+      - name: customer_id
+        in: query
+        description: Filter by customer ID.
+        schema:
+          type: string
+      - name: user_id
+        in: query
+        description: Legacy alias for customer_id.
+        schema:
+          type: string
       - name: assigned_to_id
         in: query
+        schema:
+          type: string
+      - name: assigned_to
+        in: query
+        description: Alias for assigned_to_id.
+        schema:
+          type: string
+      - name: q
+        in: query
+        description: Search query across ticket number and subject.
         schema:
           type: string
       responses:
@@ -1955,6 +2013,10 @@ paths:
                     items:
                       $ref: '#/components/schemas/Ticket'
                   count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
                     type: integer
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -2064,19 +2126,32 @@ paths:
       operationId: getAdminMarginReport
       description: Retrieve financial margin analysis aggregating Gross Sales, COGS,
         Discounts, Shipping, Tax, Net Sales, Gross Profit, and Gross Margin percentage
-        across date ranges and product breakdowns.
+        across optional date ranges, filters, and product/time breakdowns. All query
+        parameters are optional; calling with no parameters returns overall margin KPIs.
       tags:
       - Admin Reports
       security:
       - bearerAuth: []
       parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
       - name: start_date
         in: query
+        description: Alias for `from`.
         schema:
           type: string
           format: date
       - name: end_date
         in: query
+        description: Alias for `to`.
         schema:
           type: string
           format: date
@@ -2088,52 +2163,55 @@ paths:
           - day
           - week
           - month
+          - year
           - product
           - variant
           - category
-          default: day
+          - currency
+      - name: order_status
+        in: query
+        schema:
+          type: string
+      - name: product_id
+        in: query
+        schema:
+          type: string
+      - name: variant_id
+        in: query
+        schema:
+          type: string
+      - name: category_id
+        in: query
+        schema:
+          type: string
+      - name: customer_id
+        in: query
+        schema:
+          type: string
+      - name: currency
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+          maximum: 250
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
       responses:
         '200':
           description: Financial margin report.
           content:
             application/json:
               schema:
-                type: object
-                required:
-                - summary
-                - breakdown
-                properties:
-                  summary:
-                    type: object
-                    required:
-                    - gross_sales
-                    - net_sales
-                    - cogs
-                    - gross_profit
-                    - gross_margin_percentage
-                    properties:
-                      gross_sales:
-                        type: number
-                      discounts:
-                        type: number
-                      taxes:
-                        type: number
-                      shipping:
-                        type: number
-                      refunds:
-                        type: number
-                      net_sales:
-                        type: number
-                      cogs:
-                        type: number
-                      gross_profit:
-                        type: number
-                      gross_margin_percentage:
-                        type: number
-                  breakdown:
-                    type: array
-                    items:
-                      type: object
+                $ref: '#/components/schemas/MarginReportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /auth/phone/send-otp:
@@ -3321,6 +3399,10 @@ paths:
   /store/carts/{id}/promotions:
     post:
       summary: Apply Promotion / Discount Code to Cart
+      description: >
+        Applies one or more active promotion codes to the cart and recomputes item and shipping
+        adjustments. Inactive, draft, soft-deleted, or expired promotion codes (or codes belonging
+        to an inactive or expired campaign) are rejected with HTTP 400 Bad Request.
       tags:
       - Carts & Checkout
       parameters:
@@ -3353,7 +3435,11 @@ paths:
                   cart:
                     $ref: '#/components/schemas/Cart'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Invalid, inactive, draft, deleted, or expired promotion code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /store/carts/{id}/promotions/{code}:
     delete:
       summary: Remove Promotion Code from Cart
@@ -3799,8 +3885,11 @@ paths:
   /admin/reports/sales:
     get:
       summary: Sales Analytics Report
+      operationId: getAdminSalesReport
+      description: Returns aggregated sales and order KPIs (`summary.net_sales`, `summary.gross_sales`, `summary.order_count`, `summary.items_sold`, `summary.average_order_value`, etc.) and optional grouped breakdowns. All query parameters are optional; calling with no parameters returns overall dashboard KPIs.
       tags:
       - Reports & Analytics
+      - Admin Reports
       security:
       - bearerAuth: []
       parameters:
@@ -3814,6 +3903,18 @@ paths:
         schema:
           type: string
           format: date
+      - name: start_date
+        in: query
+        description: Alias for `from`.
+        schema:
+          type: string
+          format: date
+      - name: end_date
+        in: query
+        description: Alias for `to`.
+        schema:
+          type: string
+          format: date
       - name: group_by
         in: query
         schema:
@@ -3824,11 +3925,61 @@ paths:
           - month
           - year
           - product
+          - variant
           - category
           - customer
+          - payment_method
+          - currency
+      - name: order_status
+        in: query
+        schema:
+          type: string
+      - name: product_id
+        in: query
+        schema:
+          type: string
+      - name: variant_id
+        in: query
+        schema:
+          type: string
+      - name: category_id
+        in: query
+        schema:
+          type: string
+      - name: customer_id
+        in: query
+        schema:
+          type: string
+      - name: currency
+        in: query
+        schema:
+          type: string
+      - name: payment_method
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+          maximum: 250
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
       responses:
         '200':
           description: Sales report data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesReportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /store/customers/me:
     get:
       summary: Get Authenticated Customer Profile
@@ -6523,8 +6674,9 @@ paths:
         Bulk imports simple and multi-variant products from JSON. Automatically performs
         find-or-create for categories (including parent_slug hierarchy) and brands, links
         products to the default sales channel, provisions real Inventory Module stock levels,
-        stores compare_at_price in variant metadata, and supports upsert/skip/create_only modes
-        plus dry_run validation.
+        stores compare_at_price in variant metadata (passing compare_at_price: null or
+        compare_at_price_irr: null in upsert mode clears a previously saved compare_at_price),
+        and supports upsert/skip/create_only modes plus dry_run validation.
       tags:
       - Admin Products
       security:
@@ -6648,6 +6800,395 @@ paths:
                   deleted:
                     type: boolean
                     example: true
+  /admin/products/{id}/variants:
+    get:
+      summary: List Product Variants (Admin)
+      operationId: listAdminProductVariants
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: fields
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of product variants.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - variants
+                - count
+                - offset
+                - limit
+                properties:
+                  variants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductVariant'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create Product Variant (Admin)
+      operationId: createAdminProductVariant
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: fields
+        in: query
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              - prices
+              properties:
+                title:
+                  type: string
+                sku:
+                  type: string
+                  nullable: true
+                ean:
+                  type: string
+                  nullable: true
+                upc:
+                  type: string
+                  nullable: true
+                barcode:
+                  type: string
+                  nullable: true
+                allow_backorder:
+                  type: boolean
+                  default: false
+                manage_inventory:
+                  type: boolean
+                  default: true
+                variant_rank:
+                  type: integer
+                weight:
+                  type: number
+                  nullable: true
+                length:
+                  type: number
+                  nullable: true
+                height:
+                  type: number
+                  nullable: true
+                width:
+                  type: number
+                  nullable: true
+                origin_country:
+                  type: string
+                  nullable: true
+                material:
+                  type: string
+                  nullable: true
+                options:
+                  type: object
+                  additionalProperties:
+                    type: string
+                metadata:
+                  type: object
+                  nullable: true
+                  additionalProperties: true
+                prices:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - currency_code
+                    - amount
+                    properties:
+                      currency_code:
+                        type: string
+                      amount:
+                        type: number
+                      min_quantity:
+                        type: integer
+                        nullable: true
+                      max_quantity:
+                        type: integer
+                        nullable: true
+                      rules:
+                        type: object
+                        additionalProperties:
+                          type: string
+                inventory_items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - inventory_item_id
+                    - required_quantity
+                    properties:
+                      inventory_item_id:
+                        type: string
+                      required_quantity:
+                        type: number
+      responses:
+        '200':
+          description: Product with newly created variant.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/products/{id}/variants/{variant_id}:
+    get:
+      summary: Get Product Variant (Admin)
+      operationId: getAdminProductVariant
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: fields
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product variant details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - variant
+                properties:
+                  variant:
+                    $ref: '#/components/schemas/ProductVariant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Product Variant (Admin)
+      operationId: updateAdminProductVariant
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: fields
+        in: query
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                sku:
+                  type: string
+                  nullable: true
+                ean:
+                  type: string
+                  nullable: true
+                upc:
+                  type: string
+                  nullable: true
+                barcode:
+                  type: string
+                  nullable: true
+                thumbnail:
+                  type: string
+                  nullable: true
+                allow_backorder:
+                  type: boolean
+                manage_inventory:
+                  type: boolean
+                variant_rank:
+                  type: integer
+                weight:
+                  type: number
+                  nullable: true
+                length:
+                  type: number
+                  nullable: true
+                height:
+                  type: number
+                  nullable: true
+                width:
+                  type: number
+                  nullable: true
+                origin_country:
+                  type: string
+                  nullable: true
+                material:
+                  type: string
+                  nullable: true
+                options:
+                  type: object
+                  additionalProperties:
+                    type: string
+                metadata:
+                  type: object
+                  nullable: true
+                  additionalProperties: true
+                prices:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      currency_code:
+                        type: string
+                      amount:
+                        type: number
+                      min_quantity:
+                        type: integer
+                        nullable: true
+                      max_quantity:
+                        type: integer
+                        nullable: true
+                      rules:
+                        type: object
+                        additionalProperties:
+                          type: string
+      responses:
+        '200':
+          description: Updated product with updated variant.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - product
+                properties:
+                  product:
+                    $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Product Variant (Admin)
+      operationId: deleteAdminProductVariant
+      description: Deletes a single product variant by ID and returns deletion confirmation along with the updated parent product.
+      tags:
+      - Admin Products
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: fields
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Product variant deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - object
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: variant
+                  deleted:
+                    type: boolean
+                    example: true
+                  parent:
+                    $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /store/orders:
     get:
       summary: List Customer Orders
@@ -6694,6 +7235,7 @@ paths:
     get:
       summary: List Orders (Admin)
       operationId: listAdminOrders
+      description: Lists non-draft orders for admin management (sorted by `-created_at` by default) and returns `customer_id`, `email`, `currency_code`, `region_id`, `sales_channel_id`, `subtotal`, `discount_total`, `shipping_total`, `tax_total`, `total`, `summary`, `items`, `shipping_address`, `billing_address`, `shipping_methods`, `payment_collections`, `payment_status`, `fulfillment_status`, `promotions`, and `metadata` by default.
       tags:
       - Admin Orders
       security:
@@ -6719,6 +7261,20 @@ paths:
           type: string
       - name: payment_status
         in: query
+        schema:
+          type: string
+      - name: customer_id
+        in: query
+        description: Filter orders by customer ID (supports a single customer ID or an array of customer IDs).
+        schema:
+          oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
+      - name: fields
+        in: query
+        description: Comma-separated fields or Medusa modifiers (e.g. `+customer.*`, `-billing_address`).
         schema:
           type: string
       - name: order
@@ -6759,6 +7315,7 @@ paths:
     get:
       summary: Get Order Details (Admin)
       operationId: getAdminOrder
+      description: Retrieves order details for admin management, including `customer_id`, `email`, `currency_code`, `region_id`, `sales_channel_id`, `shipping_address`, `billing_address`, `shipping_methods`, `payment_collections`, `items`, and order totals by default.
       tags:
       - Admin Orders
       security:
@@ -6767,6 +7324,11 @@ paths:
       - name: id
         in: path
         required: true
+        schema:
+          type: string
+      - name: fields
+        in: query
+        description: Comma-separated fields or Medusa modifiers (e.g. `+customer.*`).
         schema:
           type: string
       responses:
@@ -7079,6 +7641,9 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       summary: Update Promotion
+      description: >
+        Updates a promotion and reconciles affected open carts and pricing/promotion caches
+        (for example, removing stale adjustments when deactivating a promotion).
       tags:
       - Admin Promotions & Discounts
       security:
@@ -7152,6 +7717,8 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       summary: Update Promotion (Medusa Alias)
+      description: >
+        Updates a promotion and reconciles affected open carts and pricing/promotion caches.
       tags:
       - Admin Promotions & Discounts
       security:
@@ -7181,6 +7748,9 @@ paths:
                     $ref: '#/components/schemas/AdminPromotion'
     delete:
       summary: Delete Promotion
+      description: >
+        Soft-deletes a promotion, invalidates pricing/promotion caches, and reconciles
+        affected open carts to remove stale adjustments and links.
       tags:
       - Admin Promotions & Discounts
       security:
@@ -7361,6 +7931,10 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       summary: Update Campaign
+      description: >
+        Updates a campaign and reconciles affected open carts and
+        pricing/promotion caches (for example, removing stale adjustments when
+        deactivating or expiring a campaign).
       tags:
       - Admin Promotions & Discounts
       security:
@@ -7434,6 +8008,9 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       summary: Update Campaign (Medusa Alias)
+      description: >
+        Updates a campaign and reconciles affected open carts and
+        pricing/promotion caches.
       tags:
       - Admin Promotions & Discounts
       security:
@@ -7463,6 +8040,9 @@ paths:
                     $ref: '#/components/schemas/AdminCampaign'
     delete:
       summary: Delete Campaign
+      description: >
+        Deletes a campaign, invalidates pricing/promotion caches, and reconciles
+        affected open carts to remove stale adjustments and links.
       tags:
       - Admin Promotions & Discounts
       security:
@@ -7489,6 +8069,355 @@ paths:
                     example: campaign
                   deleted:
                     type: boolean
+  /admin/price-lists:
+    get:
+      summary: List Price Lists
+      description: Retrieve a paginated list of admin price lists.
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - active
+            - draft
+      responses:
+        '200':
+          description: Paginated list of price lists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price_lists:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminPriceList'
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create Price List
+      description: >
+        Creates a new price list and invalidates store pricing and promotion caches.
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              - description
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - draft
+                type:
+                  type: string
+                  enum:
+                  - sale
+                  - override
+                rules:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                prices:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - currency_code
+                    - amount
+                    - variant_id
+                    properties:
+                      currency_code:
+                        type: string
+                      amount:
+                        type: number
+                      variant_id:
+                        type: string
+                      min_quantity:
+                        type: integer
+                        nullable: true
+                      max_quantity:
+                        type: integer
+                        nullable: true
+                      rules:
+                        type: object
+                        additionalProperties:
+                          type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+      responses:
+        '200':
+          description: Created price list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price_list:
+                    $ref: '#/components/schemas/AdminPriceList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/price-lists/{id}:
+    get:
+      summary: Get Price List
+      description: Retrieve details of a single price list by ID.
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Price list details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price_list:
+                    $ref: '#/components/schemas/AdminPriceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Update Price List
+      description: >
+        Updates a price list, invalidates pricing/promotion caches, and
+        reconciles open carts (for example, recalculating prices and clearing
+        stale `compare_at_unit_price`).
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - draft
+                type:
+                  type: string
+                  enum:
+                  - sale
+                  - override
+                rules:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+      responses:
+        '200':
+          description: Updated price list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price_list:
+                    $ref: '#/components/schemas/AdminPriceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Price List (PATCH)
+      description: >
+        Updates a price list, invalidates pricing/promotion caches, and
+        reconciles open carts (for example, recalculating prices and clearing
+        stale `compare_at_unit_price`).
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                starts_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - draft
+                type:
+                  type: string
+                  enum:
+                  - sale
+                  - override
+                rules:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+      responses:
+        '200':
+          description: Updated price list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price_list:
+                    $ref: '#/components/schemas/AdminPriceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Price List
+      description: >
+        Deletes a price list, invalidates pricing/promotion caches, and
+        reconciles open carts (including clearing stale `compare_at_unit_price`).
+      tags:
+      - Admin Promotions & Discounts
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Price list deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    example: price_list
+                  deleted:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/free-shipping-rules:
     get:
       summary: List Free Shipping Rules
@@ -8775,6 +9704,8 @@ components:
           type: string
         name:
           type: string
+        handle:
+          type: string
         slug:
           type: string
         description:
@@ -8785,11 +9716,19 @@ components:
           nullable: true
         is_active:
           type: boolean
+        is_internal:
+          type: boolean
+        rank:
+          type: integer
         display_order:
           type: integer
         parent_category_id:
           type: string
           nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
         created_at:
           type: string
           format: date-time
@@ -9063,7 +10002,6 @@ components:
       required:
       - id
       - inventory_item_id
-      - location_id
       - quantity_change
       - type
       properties:
@@ -9071,21 +10009,68 @@ components:
           type: string
         inventory_item_id:
           type: string
+        inventory_level_id:
+          type: string
+          nullable: true
+        product_id:
+          type: string
+          nullable: true
+        product_title:
+          type: string
+          nullable: true
+        variant_id:
+          type: string
+          nullable: true
+        variant_title:
+          type: string
+          nullable: true
+        sku:
+          type: string
+          nullable: true
         location_id:
           type: string
+          nullable: true
+        quantity_before:
+          type: integer
         quantity_change:
+          type: integer
+        quantity_after:
           type: integer
         type:
           type: string
           enum:
-          - adjustment
+          - increase
+          - decrease
+        reason:
+          type: string
+          enum:
+          - initial_stock
+          - purchase
           - sale
+          - cancellation
           - return
-          - transfer
-          - reservation
-        description:
+          - damaged
+          - manual_adjustment
+          - inventory_count
+        note:
           type: string
           nullable: true
+        reference_type:
+          type: string
+          nullable: true
+        reference_id:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          nullable: true
+        actor_name:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
         created_at:
           type: string
           format: date-time
@@ -9107,6 +10092,17 @@ components:
           example: TKT-2026-000123
         customer_id:
           type: string
+        user_id:
+          type: string
+          description: Legacy alias for customer_id.
+        customer_name:
+          type: string
+          nullable: true
+          description: Customer full name resolved from the Customer module.
+        customer_phone:
+          type: string
+          nullable: true
+          description: Customer phone number resolved from the Customer module.
         category_id:
           type: string
         subject:
@@ -9135,6 +10131,10 @@ components:
         assigned_to_id:
           type: string
           nullable: true
+        assigned_to:
+          type: string
+          nullable: true
+          description: Legacy alias for assigned_to_id.
         created_at:
           type: string
           format: date-time
@@ -9799,6 +10799,12 @@ components:
                 type: string
               code:
                 type: string
+              status:
+                type: string
+                enum:
+                - draft
+                - active
+                - inactive
               is_automatic:
                 type: boolean
               type:
@@ -9830,6 +10836,9 @@ components:
           type: string
         display_id:
           type: integer
+        custom_display_id:
+          type: string
+          nullable: true
         customer_id:
           type: string
           nullable: true
@@ -9838,6 +10847,17 @@ components:
           nullable: true
         currency_code:
           type: string
+        region_id:
+          type: string
+          nullable: true
+        sales_channel_id:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        locale:
+          type: string
+          nullable: true
         status:
           type: string
         payment_status:
@@ -9920,9 +10940,11 @@ components:
         shipping_address:
           type: object
           nullable: true
+          additionalProperties: true
         billing_address:
           type: object
           nullable: true
+          additionalProperties: true
         metadata:
           type: object
           nullable: true
@@ -10556,6 +11578,59 @@ components:
         updated_at:
           type: string
           format: date-time
+    AdminPriceList:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum:
+          - sale
+          - override
+        status:
+          type: string
+          enum:
+          - active
+          - draft
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        rules:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        prices:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
     AdminFreeShippingRule:
       type: object
       properties:
@@ -10813,3 +11888,155 @@ components:
         updated_at:
           type: string
           format: date-time
+    SalesReportMetricSummary:
+      type: object
+      required:
+      - currency_code
+      - gross_sales
+      - discounts
+      - tax
+      - shipping
+      - refund_amount
+      - net_sales
+      - order_count
+      - items_sold
+      - average_order_value
+      - cancelled_order_amount
+      properties:
+        currency_code:
+          type: string
+        gross_sales:
+          type: number
+        discounts:
+          type: number
+        tax:
+          type: number
+        shipping:
+          type: number
+        refund_amount:
+          type: number
+        net_sales:
+          type: number
+        order_count:
+          type: integer
+        items_sold:
+          type: number
+        average_order_value:
+          type: number
+        cancelled_order_amount:
+          type: number
+    SalesReportResponse:
+      type: object
+      required:
+      - currencies
+      - summary
+      - breakdown
+      - count
+      - limit
+      - offset
+      properties:
+        currencies:
+          type: array
+          items:
+            type: string
+        summary:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/SalesReportMetricSummary'
+        summary_by_currency:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/SalesReportMetricSummary'
+        breakdown:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    MarginReportMetricSummary:
+      type: object
+      required:
+      - currency_code
+      - gross_sales
+      - discounts
+      - tax
+      - shipping
+      - refund_amount
+      - net_sales
+      - cogs
+      - gross_profit
+      - gross_margin_percentage
+      - order_count
+      - items_sold
+      - items_with_missing_cost
+      - orders_with_missing_cost
+      - cancelled_order_amount
+      properties:
+        currency_code:
+          type: string
+        gross_sales:
+          type: number
+        discounts:
+          type: number
+        tax:
+          type: number
+        shipping:
+          type: number
+        refund_amount:
+          type: number
+        net_sales:
+          type: number
+        cogs:
+          type: number
+        gross_profit:
+          type: number
+        gross_margin_percentage:
+          type: number
+        order_count:
+          type: integer
+        items_sold:
+          type: number
+        items_with_missing_cost:
+          type: number
+        orders_with_missing_cost:
+          type: integer
+        cancelled_order_amount:
+          type: number
+    MarginReportResponse:
+      type: object
+      required:
+      - currencies
+      - summary
+      - breakdown
+      - count
+      - limit
+      - offset
+      properties:
+        currencies:
+          type: array
+          items:
+            type: string
+        summary:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/MarginReportMetricSummary'
+        summary_by_currency:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/MarginReportMetricSummary'
+        breakdown:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer

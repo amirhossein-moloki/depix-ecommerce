@@ -57,18 +57,11 @@ export const updateCartPromotionsStep = createStep(
 
     if (promo_codes?.length) {
       const query = container.resolve(ContainerRegistrationKeys.QUERY)
-      const { data: promotions } = await query.graph(
-        {
-          entity: "promotion",
-          fields: ["id", "code"],
-          filters: { code: promo_codes },
-        },
-        {
-          cache: {
-            enable: true,
-          },
-        }
-      )
+      const { data: promotions } = await query.graph({
+        entity: "promotion",
+        fields: ["id", "code"],
+        filters: { code: promo_codes },
+      })
 
       for (const promotion of promotions) {
         const linkObject = {
